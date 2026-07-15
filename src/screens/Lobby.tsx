@@ -15,12 +15,14 @@ import type { MatchSummary } from '../lib/protocol'
 import { timeAgo } from '../lib/timeAgo'
 import { duelBucket, soloBucket } from '../multi/lobby'
 import {
+  getSavedName,
   listSeats,
   loadLobbyCache,
   removeMatchAuth,
   saveLobbyCache,
+  saveMatchAuth,
 } from '../multi/storage'
-import { loadSoloSave, type SoloSave } from '../solo/useSoloMatch'
+import { loadSoloSave, SOLO_SAVE_KEY, type SoloSave } from '../solo/useSoloMatch'
 
 interface LobbyProps {
   onBack: () => void
@@ -53,6 +55,19 @@ function Score({ you, them }: { you: number; them: number }) {
   )
 }
 
+/** Destructive, but local-only and reversible — deleting just drops this
+ *  device's seat; the match lives on and comes back if it's ever played. */
+function RemoveButton({ onDelete }: { onDelete: () => void }) {
+  return (
+    <button
+      onClick={onDelete}
+      className="shrink-0 h-10 px-3.5 rounded-xl bg-[#FBEAEA] text-[#C8372E] font-extrabold text-[13px] active:translate-y-0.5"
+    >
+      Remove
+    </button>
+  )
+}
+
 function OpponentRow({
   name,
   live,
@@ -61,6 +76,8 @@ function OpponentRow({
   pill,
   ago,
   onClick,
+  editing,
+  onDelete,
 }: {
   name: string
   live: boolean
@@ -69,30 +86,42 @@ function OpponentRow({
   pill: ReactNode
   ago?: string
   onClick: () => void
+  editing: boolean
+  onDelete: () => void
 }) {
   const initial = name.trim()[0]?.toUpperCase() ?? '?'
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left bg-white rounded-2xl shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 px-3.5 py-3 flex items-center gap-3"
-    >
+  const body = (
+    <>
       <span className="w-11 h-11 shrink-0 rounded-xl bg-p2 text-white font-extrabold text-lg flex items-center justify-center shadow-[0_3px_0_var(--color-p2-lip)]">
         {initial}
       </span>
       <span className="flex-1 min-w-0">
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="font-extrabold text-ink-strong truncate">{name}</span>
-          {live && (
-            <span
-              className="w-2 h-2 rounded-full bg-[#34C759] shrink-0"
-              aria-label="online now"
-            />
+          {live && !editing && (
+            <span className="w-2 h-2 rounded-full bg-[#34C759] shrink-0" aria-label="online now" />
           )}
         </span>
         <span className="block mt-0.5">
           <Score you={you} them={them} />
         </span>
       </span>
+    </>
+  )
+  if (editing) {
+    return (
+      <div className="w-full bg-white rounded-2xl shadow-[0_4px_0_#E2DDD3] px-3.5 py-3 flex items-center gap-3">
+        {body}
+        <RemoveButton onDelete={onDelete} />
+      </div>
+    )
+  }
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-white rounded-2xl shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 px-3.5 py-3 flex items-center gap-3"
+    >
+      {body}
       <span className="shrink-0 flex flex-col items-end gap-1">
         {pill}
         {ago && <span className="text-[11px] font-bold text-dim">{ago}</span>}
@@ -105,44 +134,61 @@ function PendingRow({
   s,
   onOpen,
   onShare,
+  editing,
+  onDelete,
 }: {
   s: MatchSummary
   onOpen: () => void
   onShare: () => void
+  editing: boolean
+  onDelete: () => void
 }) {
   const word = s.openingWord?.toUpperCase() ?? null
+  const info = (
+    <>
+      <span className="flex gap-[3px] shrink-0">
+        {s.code.split('').map((ch, i) => (
+          <span key={i} className={tileClass('you', true, true)}>
+            {ch}
+          </span>
+        ))}
+      </span>
+      <span className="min-w-0">
+        <span className="block font-extrabold text-ink-strong truncate">Waiting to join</span>
+        <span className="block mt-0.5 text-[12px] font-semibold text-dim truncate">
+          {word ? (
+            <>
+              Opened with <b className="text-ink">{word}</b>
+            </>
+          ) : (
+            'Invite a friend to take the seat'
+          )}
+        </span>
+      </span>
+    </>
+  )
   return (
     <div className="bg-white rounded-2xl shadow-[0_4px_0_#E2DDD3] px-3.5 py-3 flex items-center gap-3">
-      <button
-        onClick={onOpen}
-        className="flex items-center gap-3 flex-1 min-w-0 text-left active:translate-y-0.5"
-      >
-        <span className="flex gap-[3px] shrink-0">
-          {s.code.split('').map((ch, i) => (
-            <span key={i} className={tileClass('you', true, true)}>
-              {ch}
-            </span>
-          ))}
-        </span>
-        <span className="min-w-0">
-          <span className="block font-extrabold text-ink-strong truncate">Waiting to join</span>
-          <span className="block mt-0.5 text-[12px] font-semibold text-dim truncate">
-            {word ? (
-              <>
-                Opened with <b className="text-ink">{word}</b>
-              </>
-            ) : (
-              'Invite a friend to take the seat'
-            )}
-          </span>
-        </span>
-      </button>
-      <button
-        onClick={onShare}
-        className="shrink-0 h-10 px-3.5 rounded-xl bg-p2 text-white font-extrabold text-[13px] shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center gap-1.5"
-      >
-        <ShareIcon className="w-4 h-4 text-white" /> Share
-      </button>
+      {editing ? (
+        <div className="flex items-center gap-3 flex-1 min-w-0">{info}</div>
+      ) : (
+        <button
+          onClick={onOpen}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left active:translate-y-0.5"
+        >
+          {info}
+        </button>
+      )}
+      {editing ? (
+        <RemoveButton onDelete={onDelete} />
+      ) : (
+        <button
+          onClick={onShare}
+          className="shrink-0 h-10 px-3.5 rounded-xl bg-p2 text-white font-extrabold text-[13px] shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center gap-1.5"
+        >
+          <ShareIcon className="w-4 h-4 text-white" /> Share
+        </button>
+      )}
     </div>
   )
 }
@@ -161,9 +207,15 @@ function Section({ title, count, children }: { title: string; count: number; chi
 
 export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode }: LobbyProps) {
   const [summaries, setSummaries] = useState<MatchSummary[]>(() => loadLobbyCache())
-  const [solo] = useState<SoloSave | null>(() => loadSoloSave())
+  const [solo, setSolo] = useState<SoloSave | null>(() => loadSoloSave())
   const [showFinished, setShowFinished] = useState(false)
   const [sharing, setSharing] = useState<MatchSummary | null>(null)
+  const [editing, setEditing] = useState(false)
+  // Inline "Have a code?" join, sharing the header space with the title.
+  const [joinOpen, setJoinOpen] = useState(false)
+  const [joinCode, setJoinCode] = useState('')
+  const [joinPending, setJoinPending] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
   // Only surface a spinner on a truly empty first open — otherwise the cached
   // list is already on screen and a refresh happens quietly behind it.
   const [loading, setLoading] = useState(() => loadLobbyCache().length === 0)
@@ -190,6 +242,35 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
     }
   }, [])
 
+  // Delete = drop this device's copy only. The match lives on server-side and
+  // returns to the list the next time it's played (or via its invite link).
+  const deleteDuel = (code: string) => {
+    removeMatchAuth(code)
+    const next = summaries.filter((s) => s.code !== code)
+    setSummaries(next)
+    saveLobbyCache(next)
+    if (next.length === 0 && !solo) setEditing(false)
+  }
+  const deleteSolo = () => {
+    localStorage.removeItem(SOLO_SAVE_KEY)
+    setSolo(null)
+    if (summaries.length === 0) setEditing(false)
+  }
+
+  async function submitJoin() {
+    const code = joinCode.trim().toUpperCase()
+    if (code.length !== 4) return setJoinError('A match code is 4 characters.')
+    const name = getSavedName()
+    if (!name) return onJoinCode() // no name saved yet — the full screen collects one
+    setJoinPending(true)
+    setJoinError(null)
+    const r = await api.join(code, name)
+    setJoinPending(false)
+    if (!r.ok) return setJoinError(r.error)
+    saveMatchAuth(code, { token: r.token, you: 'p2' })
+    onOpenMatch(code)
+  }
+
   const byRecent = (a: MatchSummary, b: MatchSummary) => (b.lastMoveAt ?? 0) - (a.lastMoveAt ?? 0)
   const yourMove = summaries.filter((s) => duelBucket(s) === 'yourMove').sort(byRecent)
   const theirMove = summaries.filter((s) => duelBucket(s) === 'theirMove').sort(byRecent)
@@ -211,6 +292,8 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
         pill={pill}
         ago={s.lastMoveAt ? timeAgo(s.lastMoveAt) : undefined}
         onClick={() => onOpenMatch(s.code)}
+        editing={editing}
+        onDelete={() => deleteDuel(s.code)}
       />
     )
   }
@@ -229,6 +312,8 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
         them={st.players.p2.gold}
         pill={pill}
         onClick={() => onResumeSolo(save)}
+        editing={editing}
+        onDelete={deleteSolo}
       />
     )
   }
@@ -244,7 +329,62 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
         <button onClick={onBack} className="h-11 -ml-2 px-2 font-extrabold text-[13px] text-dim">
           ← Back
         </button>
-        <h1 className="text-2xl font-extrabold text-ink-strong mt-1">Your games</h1>
+        <div className="flex items-center justify-between gap-3 mt-1">
+          <h1 className="text-2xl font-extrabold text-ink-strong">Your games</h1>
+          {!empty && (
+            <button
+              onClick={() => setEditing((v) => !v)}
+              className="h-11 px-2 font-extrabold text-[13px] text-p1-lip"
+            >
+              {editing ? 'Done' : 'Edit'}
+            </button>
+          )}
+        </div>
+        {/* Have a code? — the join input shares the header space, no bottom button. */}
+        {joinOpen ? (
+          <div className="mt-1.5 flex flex-col gap-1.5">
+            <div className="flex gap-2">
+              <input
+                value={joinCode}
+                onChange={(e) =>
+                  setJoinCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4))
+                }
+                onKeyDown={(e) => e.key === 'Enter' && submitJoin()}
+                maxLength={4}
+                autoFocus
+                placeholder="CODE"
+                aria-label="Match code"
+                className="flex-1 min-w-0 h-11 rounded-xl bg-white px-3.5 font-extrabold text-lg tracking-[0.3em] uppercase text-ink-strong shadow-[0_3px_0_#E2DDD3] outline-none placeholder:text-dim placeholder:tracking-normal"
+              />
+              <button
+                onClick={submitJoin}
+                disabled={joinPending}
+                className="shrink-0 h-11 px-4 rounded-xl font-extrabold bg-p2 text-white shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5 disabled:opacity-50"
+              >
+                Join
+              </button>
+              <button
+                onClick={() => {
+                  setJoinOpen(false)
+                  setJoinError(null)
+                  setJoinCode('')
+                }}
+                aria-label="Cancel"
+                className="shrink-0 h-11 px-2 font-extrabold text-dim"
+              >
+                ✕
+              </button>
+            </div>
+            {joinError && <p className="text-[13px] font-bold text-p2-lip px-1">{joinError}</p>}
+          </div>
+        ) : (
+          <button
+            onClick={() => setJoinOpen(true)}
+            className="mt-0.5 h-9 -ml-1 px-1 font-extrabold text-[13px] text-p1-lip"
+          >
+            Have a code? ›
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-8 max-w-[430px] w-full mx-auto flex flex-col gap-6 pt-2">
@@ -285,6 +425,8 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
                     s={s}
                     onOpen={() => onOpenMatch(s.code)}
                     onShare={() => setSharing(s)}
+                    editing={editing}
+                    onDelete={() => deleteDuel(s.code)}
                   />
                 ))}
               </Section>
@@ -309,19 +451,14 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
           </>
         )}
 
-        {/* The lobby is also the launch pad — start a new game right here. */}
-        <div className="flex flex-col gap-3 mt-auto pt-4">
+        {/* The lobby is also the launch pad — start a new game right here.
+            Joining by code lives up in the header ("Have a code?"). */}
+        <div className="mt-auto pt-4">
           <button
             onClick={onNewDuel}
-            className="h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5"
+            className="w-full h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5"
           >
             Duel a friend
-          </button>
-          <button
-            onClick={onJoinCode}
-            className="h-12 rounded-2xl font-extrabold bg-white text-ink shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5"
-          >
-            Join with a code
           </button>
         </div>
       </div>

@@ -2,12 +2,12 @@ import type { Difficulty } from '../game'
 import { tileClass } from '../components/tiles'
 
 const OPTIONS: Array<{ difficulty: Difficulty; label: string; blurb: string }> = [
-  { difficulty: 'easy', label: 'Lloyd · Mellow', blurb: 'Takes the shallow overlap, rarely doubts your words.' },
-  { difficulty: 'medium', label: 'Llois · Curious', blurb: 'Unpredictable picks, keeps one eye on you.' },
+  { difficulty: 'easy', label: 'Lloyd · Mellow', blurb: 'New llama in town, trusting.' },
+  { difficulty: 'medium', label: 'Llois · Curious', blurb: "Clever, doesn't let nonsense slide." },
   {
     difficulty: 'hard',
     label: 'Llarry · Unhinged',
-    blurb: 'Greedy overlaps, sharp accusations… and it bluffs.',
+    blurb: 'Big vocabulary. Not afraid to bluff.',
   },
 ]
 

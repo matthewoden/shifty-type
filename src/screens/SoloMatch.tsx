@@ -17,9 +17,11 @@ import { useSoloMatch, type SoloEvent, type SoloSave } from '../solo/useSoloMatc
 interface SoloMatchProps {
   save: SoloSave
   onExit: () => void
+  /** Where the back button returns to, for its label ("Home" or "Games"). */
+  backLabel?: string
 }
 
-export function SoloMatch({ save, onExit }: SoloMatchProps) {
+export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) {
   const m = useSoloMatch(save)
   const [confirmingChallenge, setConfirmingChallenge] = useState(false)
 
@@ -50,7 +52,7 @@ export function SoloMatch({ save, onExit }: SoloMatchProps) {
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
         <button onClick={onExit} className="h-11 px-2 font-extrabold text-[13px] text-dim">
-          ← Home
+          ← {backLabel}
         </button>
         <PassButton disabled={!playerTurn} onPass={m.pass} />
       </div>
@@ -118,6 +120,7 @@ export function SoloMatch({ save, onExit }: SoloMatchProps) {
           state={state}
           you="p1"
           rematchLabel={`Rematch (${m.opener === 'p1' ? `${botName} opens` : 'you open'})`}
+          backLabel={backLabel === 'Games' ? 'Games' : 'home'}
           onRematch={m.rematch}
           onExit={onExit}
         />

@@ -252,6 +252,7 @@ export function GameOverPanel({
   onDuel,
   onRematch,
   onExit,
+  backLabel = 'home',
 }: {
   state: MatchState
   you: PlayerId
@@ -263,6 +264,8 @@ export function GameOverPanel({
   onDuel?: () => void
   onRematch: () => void
   onExit: () => void
+  /** Where the exit button returns to, for its label ("home" or "Games"). */
+  backLabel?: string
 }) {
   const me = state.players[you]
   const them = state.players[opponentOf(you)]
@@ -323,7 +326,7 @@ export function GameOverPanel({
           {rematchLabel}
         </button>
         <button onClick={onExit} className="h-11 rounded-xl font-extrabold text-dim">
-          Back home
+          {backLabel === 'home' ? 'Back home' : `Back to ${backLabel}`}
         </button>
       </div>
     </Overlay>

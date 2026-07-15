@@ -18,12 +18,12 @@ type Screen =
   | { name: 'home' }
   | { name: 'lobby' }
   | { name: 'solo-setup' }
-  | { name: 'solo'; save: SoloSave }
+  | { name: 'solo'; save: SoloSave; from?: 'lobby' }
   | { name: 'duel-create' }
   | { name: 'join-code' }
   | { name: 'invite'; code: string }
   | { name: 'howto' }
-  | { name: 'duel'; code: string }
+  | { name: 'duel'; code: string; from?: 'lobby' }
   | { name: 'tutorial-welcome' }
   | { name: 'tutorial' }
 
@@ -54,15 +54,20 @@ export default function App() {
     window.history.pushState(null, '', '/')
     setScreen({ name: 'home' })
   }
-  const enterSolo = (save: SoloSave) => {
-    setMatchKey((k) => k + 1)
-    setScreen({ name: 'solo', save })
+  const goLobby = () => {
+    setPendingInvite(null)
+    window.history.pushState(null, '', '/')
+    setScreen({ name: 'lobby' })
   }
-  const enterDuel = (code: string) => {
+  const enterSolo = (save: SoloSave, from?: 'lobby') => {
+    setMatchKey((k) => k + 1)
+    setScreen({ name: 'solo', save, from })
+  }
+  const enterDuel = (code: string, from?: 'lobby') => {
     setPendingInvite(null)
     window.history.pushState(null, '', `/m/${code}`)
     setMatchKey((k) => k + 1)
-    setScreen({ name: 'duel', code })
+    setScreen({ name: 'duel', code, from })
   }
   const showInvite = (code: string) => {
     setPendingInvite(code)
@@ -83,7 +88,14 @@ export default function App() {
         />
       )
     case 'solo':
-      return <SoloMatch key={matchKey} save={screen.save} onExit={goHome} />
+      return (
+        <SoloMatch
+          key={matchKey}
+          save={screen.save}
+          onExit={screen.from === 'lobby' ? goLobby : goHome}
+          backLabel={screen.from === 'lobby' ? 'Games' : 'Home'}
+        />
+      )
     case 'howto':
       return (
         <HowTo
@@ -116,8 +128,8 @@ export default function App() {
       return (
         <Lobby
           onBack={goHome}
-          onOpenMatch={enterDuel}
-          onResumeSolo={enterSolo}
+          onOpenMatch={(code) => enterDuel(code, 'lobby')}
+          onResumeSolo={(save) => enterSolo(save, 'lobby')}
           onNewDuel={() => setScreen({ name: 'duel-create' })}
           onJoinCode={() => setScreen({ name: 'join-code' })}
         />
@@ -164,7 +176,15 @@ export default function App() {
           />
         )
       }
-      return <MultiMatch key={matchKey} code={screen.code} token={auth.token} onExit={goHome} />
+      return (
+        <MultiMatch
+          key={matchKey}
+          code={screen.code}
+          token={auth.token}
+          onExit={screen.from === 'lobby' ? goLobby : goHome}
+          backLabel={screen.from === 'lobby' ? 'Games' : 'Home'}
+        />
+      )
     }
     default:
       return (

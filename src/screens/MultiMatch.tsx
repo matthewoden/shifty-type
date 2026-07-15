@@ -24,9 +24,11 @@ interface MultiMatchProps {
   code: string
   token: string
   onExit: () => void
+  /** Where the back button returns to, for its label ("Home" or "Games"). */
+  backLabel?: string
 }
 
-export function MultiMatch({ code, token, onExit }: MultiMatchProps) {
+export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMatchProps) {
   const m = useMultiMatch(code, token)
   const [confirmingChallenge, setConfirmingChallenge] = useState(false)
   // The invite sheet opens itself once the opener has played and rides atop
@@ -69,6 +71,7 @@ export function MultiMatch({ code, token, onExit }: MultiMatchProps) {
       <CenteredNote
         text={m.lost}
         hint="This match may have expired, or the link belongs to another device."
+        backLabel={backLabel}
         onExit={() => {
           clearActiveCode()
           onExit()
@@ -77,7 +80,7 @@ export function MultiMatch({ code, token, onExit }: MultiMatchProps) {
     )
   }
   if (!m.view) {
-    return <CenteredNote text="Opening your match…" pulse onExit={onExit} />
+    return <CenteredNote text="Opening your match…" pulse backLabel={backLabel} onExit={onExit} />
   }
 
   const { state, you, refereeOffline, presence } = m.view
@@ -114,7 +117,7 @@ export function MultiMatch({ code, token, onExit }: MultiMatchProps) {
       <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
         <div className="flex items-center gap-2">
           <button onClick={onExit} className="h-11 px-2 font-extrabold text-[13px] text-dim">
-            ← Home
+            ← {backLabel}
           </button>
           <span className="font-extrabold text-[13px] text-dim tracking-widest">{code}</span>
         </div>
@@ -245,6 +248,7 @@ export function MultiMatch({ code, token, onExit }: MultiMatchProps) {
           you={you}
           rematchLabel="Rematch (openers swap)"
           busy={m.busy}
+          backLabel={backLabel === 'Games' ? 'Games' : 'home'}
           onRematch={() => void m.rematch()}
           onExit={() => {
             clearActiveCode()
@@ -367,11 +371,13 @@ function CenteredNote({
   hint,
   pulse,
   onExit,
+  backLabel = 'Home',
 }: {
   text: string
   hint?: string
   pulse?: boolean
   onExit: () => void
+  backLabel?: string
 }) {
   return (
     <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-4 p-8 text-center">
@@ -382,7 +388,7 @@ function CenteredNote({
       </p>
       {hint && <p className="text-ink font-semibold text-sm max-w-xs">{hint}</p>}
       <button onClick={onExit} className="h-11 px-4 font-extrabold text-dim">
-        ← Back to the hideout
+        ← {backLabel}
       </button>
     </div>
   )
