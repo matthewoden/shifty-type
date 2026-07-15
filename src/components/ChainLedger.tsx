@@ -1,0 +1,737 @@
+// The staircase ledger with the camera on a rail (GAME_DESIGN §The ledger
+// camera) and inline play (GAME_DESIGN §Inline play & the deck). The chain
+// is a pure staircase on a virtual canvas; vertical scroll drives position
+// along it while the canvas translates horizontally to follow the true
+// x-path. The word being typed is itself a row (the draft), so the "parked
+// camera" is just the ordinary newest-row anchor applied to it: its head —
+// the grip — pins to the left edge and the previous word's spent letters
+// bleed off-screen. Before the first letter, the shallow grips render as a
+// ghost fan, each seed aligned under the letters it takes.
+// prefers-reduced-motion gets a flat vertical list; tint-joints carry the
+// overlap info either way.
+
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import type { ChainLink, Player, PlayerId } from '../game'
+import { FlagIcon } from './icons'
+import { playerTextClass, sideOf } from './tiles'
+import { WordTiles } from './WordTiles'
+
+const TILE_W = 23
+const GAP = 3
+const STEP = TILE_W + GAP
+const ROW_H = 49
+const ANCHOR_X = 14 // where the current row's head sits, from the left
+const ANCHOR_BOTTOM = 86 // …and from the container bottom — roomy enough that the
+// fan's hint floats clear of the deck (the reclaimed slack, split below)
+const BOTTOM_SNAP = 40 // within this of the end counts as "at latest"
+
+export interface LedgerComposer {
+  typed: string
+  grip: number
+  gold: number
+  canPlay: boolean
+  /** Tutorial-only: the suggested finish, rendered as ghost tiles after the draft. */
+  hintTail?: string
+}
+
+export interface GripOption {
+  letters: string
+  overlap: number
+  gold: number
+}
+
+interface ChainLedgerProps {
+  chain: ChainLink[]
+  /** Which server slot the viewer holds — their words render indigo. */
+  you: PlayerId
+  players: Record<PlayerId, Player>
+  /** True when the newest word may be challenged by the local player. */
+  canChallenge: boolean
+  onChallenge: () => void
+  /** The draft word, when the local player is composing. */
+  composer?: LedgerComposer | null
+  /** Ghost seeds, when it's the local player's move and nothing is typed. */
+  fan?: GripOption[] | null
+  onSeed?: (letters: string) => void
+  onPlay?: () => void
+}
+
+type DisplayRow =
+  | { kind: 'link'; key: string; link: ChainLink; index: number; x: number; y: number; anchorX: number }
+  | { kind: 'ghost'; key: string; option: GripOption; x: number; y: number; anchorX: number }
+  | { kind: 'draft'; key: string; x: number; y: number; anchorX: number }
+
+const GHOST_TILE =
+  'w-[23px] h-[35px] shrink-0 rounded-[7px] border-2 border-dashed border-[#C9CFD8] text-dim flex items-center justify-center font-extrabold text-lg uppercase select-none'
+
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const onChange = () => setReduced(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return reduced
+}
+
+function linkMeta(link: ChainLink, index: number): string {
+  if (index === 0) return 'opener'
+  return `+${link.gold}${link.challengeSurvived ? ' · real' : ''}`
+}
+
+function buildRows(
+  chain: ChainLink[],
+  composer: LedgerComposer | null | undefined,
+  fan: GripOption[] | null | undefined,
+): DisplayRow[] {
+  const rows: DisplayRow[] = []
+  let x = 0
+  chain.forEach((link, index) => {
+    if (index > 0) x += (chain[index - 1].word.length - link.overlap) * STEP
+    rows.push({ kind: 'link', key: `${index}-${link.word}`, link, index, x, y: index * ROW_H, anchorX: x })
+  })
+  const last = chain[chain.length - 1]
+  const lastX = x
+
+  if (composer && composer.typed) {
+    // The draft parks: its own x anchors the camera, pinning the grip head
+    // to the screen edge. With no valid grip yet, park at the shallowest.
+    const grip = Math.max(composer.grip, 2)
+    const draftX = last ? lastX + (last.word.length - grip) * STEP : 0
+    rows.push({
+      kind: 'draft',
+      key: 'draft',
+      x: draftX,
+      y: rows.length * ROW_H,
+      anchorX: draftX,
+    })
+  } else if (fan && fan.length > 0 && last) {
+    // Ghost seeds anchor the camera to the word they grip, so the whole
+    // fan reveals beneath it without dragging the view off the chain.
+    for (const option of fan) {
+      rows.push({
+        kind: 'ghost',
+        key: `ghost-${option.overlap}`,
+        option,
+        x: lastX + (last.word.length - option.overlap) * STEP,
+        y: rows.length * ROW_H,
+        anchorX: lastX,
+      })
+    }
+  }
+  return rows
+}
+
+export function ChainLedger(props: ChainLedgerProps) {
+  const reduced = useReducedMotion()
+  const [detail, setDetail] = useState<{ link: ChainLink; index: number } | null>(null)
+
+  const rows = useMemo(
+    () => buildRows(props.chain, props.composer, props.fan),
+    [props.chain, props.composer, props.fan],
+  )
+
+  return (
+    <div className="flex-1 relative overflow-hidden" aria-live="polite">
+      {reduced ? (
+        <FlatLedger {...props} rows={rows} onDetail={setDetail} />
+      ) : (
+        <RailLedger {...props} rows={rows} onDetail={setDetail} />
+      )}
+      {detail && (
+        <DetailCard
+          link={detail.link}
+          index={detail.index}
+          you={props.you}
+          players={props.players}
+          onClose={() => setDetail(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+interface LedgerViewProps extends ChainLedgerProps {
+  rows: DisplayRow[]
+  onDetail: (row: { link: ChainLink; index: number }) => void
+}
+
+/** The draft row wears its entrance only briefly: `seed-pop` staggers the
+ *  arrival tiles, but it must come OFF once played — its per-tile animation
+ *  rules would otherwise delay every subsequently typed letter. */
+function DraftRow({
+  seeded,
+  style,
+  children,
+}: {
+  seeded: boolean
+  style: CSSProperties
+  children: ReactNode
+}) {
+  const [entrance, setEntrance] = useState(seeded ? 'seed-pop' : 'draft-in')
+  useEffect(() => {
+    if (entrance !== 'seed-pop') return
+    // Fallback only — the class normally retires on the caret's own
+    // animationend, so a slow frame can't cut the pops short.
+    const t = setTimeout(() => setEntrance(''), 1600)
+    return () => clearTimeout(t)
+  }, [entrance])
+  return (
+    <div
+      className={`flex items-center ${entrance}`}
+      style={style}
+      onAnimationEnd={(e) => {
+        // The caret pops last; its end means the whole entrance has played.
+        if (
+          entrance === 'seed-pop' &&
+          e.animationName === 'fill-pop' &&
+          e.target === e.currentTarget.lastElementChild
+        )
+          setEntrance('')
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Draft tiles: grip letters tinted, the rest solid, caret after. */
+function DraftTiles({ composer }: { composer: LedgerComposer }) {
+  return (
+    <>
+      <WordTiles
+        word={composer.typed}
+        side="you"
+        headTint={Math.min(composer.grip, composer.typed.length)}
+      />
+      {composer.hintTail && (
+        <span className="flex gap-[3px] ml-[3px]">
+          {composer.hintTail.split('').map((ch, j) => (
+            <span
+              key={j}
+              className="w-[23px] h-[35px] shrink-0 rounded-[7px] border-2 border-dashed border-[var(--color-p1-tint-lip)] text-p1-tint-ink flex items-center justify-center font-extrabold text-lg uppercase select-none"
+            >
+              {ch}
+            </span>
+          ))}
+        </span>
+      )}
+      <span className="w-[3px] h-6 bg-p1 rounded ml-1 self-center motion-safe:animate-pulse" />
+    </>
+  )
+}
+
+/** The Play chip that rides the gripped word's row. */
+function PlayChip({ composer, onPlay }: { composer: LedgerComposer; onPlay?: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={!composer.canPlay}
+      onClick={onPlay}
+      className="absolute right-3 bottom-[103px] h-11 px-5 rounded-[13px] font-extrabold text-[14px] bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5 active:shadow-[0_2px_0_var(--color-p1-lip)] disabled:opacity-40 disabled:active:translate-y-0 flex items-center gap-1.5 draft-in"
+    >
+      Play it!
+      {composer.gold > 0 && <small className="text-[11px] opacity-85">+{composer.gold}</small>}
+    </button>
+  )
+}
+
+function RailLedger(props: LedgerViewProps) {
+  const { rows, you, canChallenge, onChallenge, composer, onSeed, onPlay, onDetail } = props
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const rowsRef = useRef(rows)
+  rowsRef.current = rows
+  const atBottomRef = useRef(true)
+  const firstRef = useRef(true)
+  const animatingRef = useRef(false)
+  const [atBottom, setAtBottom] = useState(true)
+  // The turn the camera is nearest to — glowed while scrolled back so you
+  // can see which step of the path you're locked onto. `away` is true only
+  // when the *user* holds a scrolled-back position: it stays false during
+  // programmatic glides so the glow and the pill don't chase the animation.
+  const [step, setStep] = useState(0)
+  const [away, setAway] = useState(false)
+  // Ghost-tap choreography — the camera rides, the words never move
+  // (direction settled 2026-07-13): the whole fan bows out, the camera
+  // glides along the rail to the draft's parked position (the same scroll +
+  // pan it uses everywhere else), and only once it has arrived do the seed
+  // tiles pop in, caret last. The scroll target is the new parked position
+  // in BOTH geometries, so the fan→draft swap never moves a pixel.
+  const [seeding, setSeeding] = useState(false)
+  const seedingRef = useRef(false)
+  // Whether the current draft arrived by seed ride (tiles pop in) or by
+  // typing (draft-in settle) — must hold steady across re-renders.
+  const [seeded, setSeeded] = useState(false)
+  const seededRef = useRef(false)
+  seededRef.current = seeded
+  // Whether the draft row was present last render — so we can catch the exact
+  // frame typing turns the fan into a draft and ride the camera in.
+  const hadDraftRef = useRef(false)
+  const seedTimer = useRef(0)
+  const composerTypedRef = useRef(false)
+  composerTypedRef.current = !!composer?.typed
+  useEffect(() => () => clearTimeout(seedTimer.current), [])
+  useEffect(() => {
+    if (!composer?.typed && seeded) setSeeded(false)
+  }, [composer?.typed, seeded])
+
+  // Glide the camera along the rail to a parked framing: pan the canvas to
+  // pin targetX at the anchor while the scroll carries the board to targetTop.
+  // applyCamera stays hands-off (seedingRef) until the commit so the two
+  // glides can't fight; the scroll target is the parked position in BOTH the
+  // outgoing and incoming geometries, so a landed swap can't re-snap or jump.
+  // onArrive fires once the ride has actually settled — a hard deadline covers
+  // an interrupted ride. Shared by grip-tap seeding and type-to-start.
+  const glideCamera = (targetX: number, targetTop: number, onArrive?: () => void) => {
+    const sc = scrollerRef.current
+    const cv = canvasRef.current
+    if (!sc || !cv) return
+    seedingRef.current = true // sync — scroll events land before the re-render
+    animatingRef.current = true
+    cv.style.transition = 'transform 0.35s cubic-bezier(0.2, 0.8, 0.3, 1.12)'
+    cv.style.transform = `translate3d(${Math.round(ANCHOR_X - targetX)}px, 0, 0)`
+    sc.scrollTo({ top: targetTop, behavior: 'smooth' })
+    const start = performance.now()
+    const commit = () => {
+      const elapsed = performance.now() - start
+      if ((Math.abs(sc.scrollTop - targetTop) > 1 || elapsed < 380) && elapsed < 900) {
+        seedTimer.current = window.setTimeout(commit, 40)
+        return
+      }
+      sc.scrollTop = targetTop
+      cv.style.transition = ''
+      seedingRef.current = false
+      onArrive?.()
+    }
+    seedTimer.current = window.setTimeout(commit, 380)
+  }
+
+  const seedTap = (option: GripOption, x: number) => {
+    if (!onSeed || seedingRef.current || !scrollerRef.current || !canvasRef.current) return
+    setSeeding(true)
+    // Ride to the seed's parked framing; only once landed do the tiles pop in.
+    glideCamera(x, props.chain.length * ROW_H, () => {
+      setSeeded(true)
+      // If they typed (or the turn moved on) mid-ride, the tap yields.
+      if (!composerTypedRef.current) onSeed(option.letters)
+      setSeeding(false)
+    })
+  }
+
+  const scrollRange = Math.max(0, rows.length - 1) * ROW_H
+
+  /** Camera x at fractional row position t, following per-row anchors. */
+  const xAt = (t: number): number => {
+    const r = rowsRef.current
+    if (r.length === 0) return 0
+    if (t <= 0) return r[0].anchorX
+    if (t >= r.length - 1) return r[r.length - 1].anchorX
+    const i = Math.floor(t)
+    return r[i].anchorX + (r[i + 1].anchorX - r[i].anchorX) * (t - i)
+  }
+
+  const applyCamera = () => {
+    const sc = scrollerRef.current
+    const cv = canvasRef.current
+    if (!sc || !cv) return
+    const t = sc.scrollTop / ROW_H
+    // During the seed ride the canvas pans on its own CSS transition.
+    if (!seedingRef.current) cv.style.transform = `translate3d(${Math.round(ANCHOR_X - xAt(t))}px, 0, 0)`
+    const fromBottom = Math.max(0, rowsRef.current.length - 1) * ROW_H - sc.scrollTop
+    const near = fromBottom < BOTTOM_SNAP
+    atBottomRef.current = near
+    if (near) animatingRef.current = false
+    setAtBottom((prev) => (prev === near ? prev : near))
+    const isAway = !near && !animatingRef.current
+    setAway((prev) => (prev === isAway ? prev : isAway))
+    const at = Math.min(Math.max(0, rowsRef.current.length - 1), Math.max(0, Math.round(t)))
+    setStep((prev) => (prev === at ? prev : at))
+  }
+  const applyCameraRef = useRef(applyCamera)
+  applyCameraRef.current = applyCamera
+
+  // Same-frame, no rAF hop: the horizontal follow must not trail the
+  // native vertical motion or the camera wobbles off the diagonal mid-flick.
+  const onScroll = () => applyCameraRef.current()
+  // Any touch or wheel means the user owns the scroll again.
+  const onTake = () => {
+    animatingRef.current = false
+  }
+
+  // Follow new rows when pinned to the latest; never yank when scrolled back.
+  useLayoutEffect(() => {
+    const sc = scrollerRef.current
+    if (!sc) return
+    const draftRow = rows.find((r) => r.kind === 'draft')
+    // The frame typing turns the parked fan into a draft: ride the camera to
+    // the draft's park instead of snapping the horizontal pan. Only when
+    // parked (never yank a scrolled-back view) and not a seed tap (that ride
+    // already framed the draft, tiles-first).
+    const enteringDraft = !!draftRow && !hadDraftRef.current
+    hadDraftRef.current = !!draftRow
+    if (firstRef.current) {
+      firstRef.current = false
+      sc.scrollTop = scrollRange
+    } else if (
+      enteringDraft &&
+      atBottomRef.current &&
+      !seededRef.current &&
+      !seedingRef.current
+    ) {
+      glideCamera(draftRow!.x, scrollRange, () => applyCameraRef.current())
+      return
+    } else if (atBottomRef.current && !seedingRef.current) {
+      animatingRef.current = true
+      sc.scrollTo({ top: scrollRange, behavior: 'smooth' })
+    }
+    applyCameraRef.current()
+  }, [scrollRange, rows])
+
+  useEffect(() => {
+    const sc = scrollerRef.current
+    if (!sc) return
+    const ro = new ResizeObserver(() => {
+      if (atBottomRef.current) sc.scrollTop = Math.max(0, rowsRef.current.length - 1) * ROW_H
+      applyCameraRef.current()
+    })
+    ro.observe(sc)
+    return () => ro.disconnect()
+  }, [])
+
+  const chainLast = props.chain.length - 1
+
+  const rowNodes = rows.map((row, rowIndex) => {
+            const common = { position: 'absolute' as const, left: row.x, top: row.y }
+            // The locked-turn glow: only while scrolled back along the path,
+            // in the color of whoever played the word.
+            const locked = away && rowIndex === step
+            if (row.kind === 'link') {
+              const side = sideOf(row.link.owner, you)
+              const glow = !locked
+                ? ''
+                : side === 'you'
+                  ? ' bg-white shadow-[0_0_0_3px_rgba(139,144,244,0.9),0_0_18px_6px_rgba(139,144,244,0.35)]'
+                  : ' bg-white shadow-[0_0_0_3px_rgba(249,139,87,0.9),0_0_18px_6px_rgba(249,139,87,0.35)]'
+              const next = props.chain[row.index + 1]
+              const isChainTip = row.index === chainLast
+              const liveTint = isChainTip && composer?.typed ? composer.grip : 0
+              const challengeable = isChainTip && canChallenge && !composer?.typed
+              return (
+                <button
+                  key={row.key}
+                  type="button"
+                  onClick={() =>
+                    challengeable ? onChallenge() : onDetail({ link: row.link, index: row.index })
+                  }
+                  className={`flex items-center gap-2 -m-1.5 p-1.5 rounded-xl active:bg-board-lo row-settle transition-shadow duration-150${glow}`}
+                  style={common}
+                  aria-label={
+                    challengeable
+                      ? `Challenge ${row.link.word.toUpperCase()}`
+                      : `${row.link.word.toUpperCase()} details`
+                  }
+                >
+                  <WordTiles
+                    word={row.link.word}
+                    side={side}
+                    headTint={row.link.overlap}
+                    tailTint={next?.overlap ?? liveTint}
+                  />
+                  {challengeable && (
+                    <span className="bg-white text-p2-lip rounded-full w-7 h-7 flex items-center justify-center shadow-[0_3px_0_#E2DDD3]"><FlagIcon className="w-4 h-4" /></span>
+                  )}
+                  <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
+                    {locked
+                      ? `word ${row.index + 1} of ${props.chain.length} · ${linkMeta(row.link, row.index)}`
+                      : isChainTip && composer?.typed
+                        ? `overlap ${composer.grip}`
+                        : linkMeta(row.link, row.index)}
+                  </span>
+                </button>
+              )
+            }
+            if (row.kind === 'ghost') {
+              return (
+                <button
+                  key={row.key}
+                  type="button"
+                  onClick={() => seedTap(row.option, row.x)}
+                  className={`flex items-center gap-2 -m-1.5 p-1.5 rounded-xl active:bg-board-lo transition-opacity duration-150${
+                    seeding ? ' opacity-0 pointer-events-none' : ''
+                  }`}
+                  style={common}
+                  aria-label={`Start with ${row.option.letters.toUpperCase()}`}
+                >
+                  <span className="flex gap-[3px]">
+                    {row.option.letters.split('').map((ch, j) => (
+                      <span key={j} className={GHOST_TILE}>
+                        {ch}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
+                    · {row.option.gold}+
+                  </span>
+                </button>
+              )
+            }
+            // draft
+            return (
+              <DraftRow key={row.key} seeded={seeded} style={common}>
+                {composer && <DraftTiles composer={composer} />}
+              </DraftRow>
+            )
+  })
+
+  const fanShowing = rows.some((r) => r.kind === 'ghost')
+
+  return (
+    <>
+      <div
+        ref={scrollerRef}
+        onScroll={onScroll}
+        onPointerDown={onTake}
+        onWheel={onTake}
+        className="absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain snap-y snap-mandatory"
+      >
+        {/* One snap marker per row: the scroll can only settle on a turn,
+            never between two — and a fling stops at the very next one, so
+            the path is walked step by step. The tail spacer adds a viewport
+            (minus the last marker) so the newest row can sit at the anchor.
+            Markers are keyed by INDEX on purpose: they are pure geometry,
+            and keeping the snapped node alive across a fan→draft swap stops
+            the snap container from re-snapping to the top. */}
+        {rows.map((_, i) => (
+          <div key={i} className="snap-start snap-always" style={{ height: ROW_H }} />
+        ))}
+        <div style={{ height: `calc(100% - ${rows.length ? ROW_H : 0}px)` }} />
+        <div
+          ref={canvasRef}
+          className="absolute left-0 will-change-transform"
+          style={{ top: `calc(100% - ${ANCHOR_BOTTOM}px)` }}
+        >
+          <Rail rows={rows} />
+          {rows.length === 0 && (
+            <p className="absolute left-3.5 top-0 w-64 text-dim font-bold text-sm">
+              The chain starts with you. Any word, three letters or more…
+            </p>
+          )}
+          {rowNodes}
+        </div>
+      </div>
+      {/* The nudge is screen furniture, not a board object: centered so a
+          long word's far-right fan can't drag it off the edge. */}
+      {fanShowing && atBottom && (
+        <p
+          className={`absolute inset-x-0 bottom-[28px] text-center text-[10px] font-extrabold text-dim uppercase tracking-wider pointer-events-none transition-opacity duration-150${
+            seeding ? ' opacity-0' : ''
+          }`}
+        >
+          tap a starter, or just type — deeper scores more
+        </p>
+      )}
+      {composer?.typed && atBottom && <PlayChip composer={composer} onPlay={onPlay} />}
+      {away && (
+        <button
+          type="button"
+          // pointerdown, not click: a tap that lands while the snap glide is
+          // still settling gets eaten as "stop scrolling" and never clicks —
+          // the double-tap-to-go-home bug on the phone.
+          onPointerDown={() => {
+            animatingRef.current = true
+            scrollerRef.current?.scrollTo({ top: scrollRange, behavior: 'smooth' })
+          }}
+          className="absolute bottom-3 right-3 bg-ink-strong text-white font-extrabold text-xs rounded-full px-3.5 py-2 shadow-[0_4px_0_#262E38] z-10"
+        >
+          ▼ Latest
+        </button>
+      )}
+    </>
+  )
+}
+
+/** The dotted thread tracing the chain's diagonal, behind the tiles. */
+function Rail({ rows }: { rows: DisplayRow[] }) {
+  const pathRows = rows.filter((r) => r.kind === 'link' || r.kind === 'draft')
+  if (pathRows.length < 2) return null
+  const pts = pathRows.map((r) => `${r.x + 12},${r.y + 16}`)
+  const maxX = Math.max(...pathRows.map((r) => r.x)) + 400
+  return (
+    <svg
+      className="absolute left-0 top-0 pointer-events-none"
+      width={maxX}
+      height={rows.length * ROW_H + 40}
+    >
+      <polyline
+        points={pts.join(' ')}
+        fill="none"
+        stroke="#E4DFD5"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray="1 8"
+      />
+    </svg>
+  )
+}
+
+/** Accessibility fallback: plain vertical list, tint-joints intact. */
+function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: boolean }) {
+  const { rows, you, canChallenge, onChallenge, composer, onSeed, onPlay, onDetail } = props
+  const { initialRow, pinBottom = true } = props
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const target =
+      initialRow !== undefined ? el.querySelector(`[data-row="${initialRow}"]`) : null
+    if (target) target.scrollIntoView({ block: 'center' })
+    else el.scrollTop = el.scrollHeight
+    // position once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (el && pinBottom) el.scrollTop = el.scrollHeight
+  }, [rows.length, pinBottom])
+  const chainLast = props.chain.length - 1
+  const ghosts = rows.filter((r) => r.kind === 'ghost')
+  return (
+    <div ref={ref} className="absolute inset-0 overflow-y-auto px-3.5 py-3 flex flex-col">
+      <div className="mt-auto" />
+      {props.chain.length === 0 && !composer?.typed && (
+        <p className="text-dim font-bold text-sm pb-4">
+          The chain starts with you. Any word, three letters or more…
+        </p>
+      )}
+      {props.chain.map((link, index) => {
+        const next = props.chain[index + 1]
+        const isChainTip = index === chainLast
+        const liveTint = isChainTip && composer?.typed ? composer.grip : 0
+        const challengeable = isChainTip && canChallenge && !composer?.typed
+        return (
+          <button
+            key={`${index}-${link.word}`}
+            data-row={index}
+            type="button"
+            onClick={() => (challengeable ? onChallenge() : onDetail({ link, index }))}
+            className="flex items-center gap-2 min-h-11 py-1 text-left"
+            aria-label={
+              challengeable
+                ? `Challenge ${link.word.toUpperCase()}`
+                : `${link.word.toUpperCase()} details`
+            }
+          >
+            <WordTiles
+              word={link.word}
+              side={sideOf(link.owner, you)}
+              headTint={link.overlap}
+              tailTint={next?.overlap ?? liveTint}
+            />
+            {challengeable && (
+              <span className="bg-white text-p2-lip rounded-full w-7 h-7 flex items-center justify-center shadow-[0_3px_0_#E2DDD3]"><FlagIcon className="w-4 h-4" /></span>
+            )}
+            <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
+              {isChainTip && composer?.typed ? `overlap ${composer.grip}` : linkMeta(link, index)}
+            </span>
+          </button>
+        )
+      })}
+      {ghosts.length > 0 && (
+        <div className="flex items-center gap-3 min-h-11 flex-wrap py-1">
+          {ghosts.map(
+            (g) =>
+              g.kind === 'ghost' && (
+                <button
+                  key={g.key}
+                  type="button"
+                  onClick={() => onSeed?.(g.option.letters)}
+                  className="flex items-center gap-1.5"
+                >
+                  <span className="flex gap-[3px]">
+                    {g.option.letters.split('').map((ch, j) => (
+                      <span key={j} className={GHOST_TILE}>
+                        {ch}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="text-[10px] font-extrabold text-dim">· {g.option.gold}+</span>
+                </button>
+              ),
+          )}
+        </div>
+      )}
+      {composer?.typed && (
+        <div className="flex items-center gap-3 min-h-11 py-1">
+          <DraftTiles composer={composer} />
+          <span className="ml-auto">
+            <PlayChipFlat composer={composer} onPlay={onPlay} />
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PlayChipFlat({ composer, onPlay }: { composer: LedgerComposer; onPlay?: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={!composer.canPlay}
+      onClick={onPlay}
+      className="h-11 px-5 rounded-[13px] font-extrabold text-[14px] bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] disabled:opacity-40 flex items-center gap-1.5"
+    >
+      Play it!
+      {composer.gold > 0 && <small className="text-[11px] opacity-85">+{composer.gold}</small>}
+    </button>
+  )
+}
+
+/** The margin receipts: tap any history row for the full story. */
+function DetailCard({
+  link,
+  index,
+  you,
+  players,
+  onClose,
+}: {
+  link: ChainLink
+  index: number
+  you: PlayerId
+  players: Record<PlayerId, Player>
+  onClose: () => void
+}) {
+  const side = sideOf(link.owner, you)
+  return (
+    <div className="fixed inset-0 bg-ink-strong/30 flex items-end z-20" onClick={onClose}>
+      <div
+        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-9 flex flex-col gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <WordTiles word={link.word} side={side} />
+        <p className="font-bold text-ink text-[14px]">
+          <span className={`font-extrabold ${playerTextClass(side)}`}>
+            {players[link.owner].name}
+          </span>{' '}
+          · word {index + 1}
+          {index === 0
+            ? ' · the opener (no points)'
+            : ` · overlapped ${link.overlap} letters for ${link.gold} points`}
+        </p>
+        {link.challengeSurvived && (
+          <p className="font-bold text-ink text-[14px] flex items-center gap-1.5">
+            <FlagIcon className="w-4 h-4 text-p2-lip" /> Challenged — and it was real.
+          </p>
+        )}
+        <button onClick={onClose} className="h-11 rounded-xl font-extrabold text-dim self-start">
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}

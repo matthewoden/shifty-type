@@ -1,0 +1,107 @@
+// The deck: a custom in-app keyboard in board style. 26 chiclet letter keys
+// plus backspace — never the system keyboard (viewport jumps, autocorrect
+// mangling bluffs). Submit does NOT live here — Play rides the chain (see
+// ChainLedger), a full deck-row away from backspace. Pass doesn't either:
+// it's a real button in the top bar (PassButton below), a whole screen away
+// from the keys and still behind its two-step confirm.
+
+import { useEffect, useState } from 'react'
+
+const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'] as const
+
+interface DeckProps {
+  disabled: boolean
+  /** Slide up on mount — multiplayer, where the deck's arrival is the turn signal. */
+  rise?: boolean
+  /** Tutorial-only: this letter's key glows indigo (the guided next press). */
+  glowKey?: string
+  onKey: (letter: string) => void
+  onBackspace: () => void
+}
+
+const KEY =
+  'flex-1 max-w-[34px] h-12 bg-white rounded-[7px] shadow-[0_3px_0_#DDD8CE] flex items-center justify-center font-extrabold text-base uppercase text-ink-strong select-none active:translate-y-0.5 active:shadow-[0_1px_0_#DDD8CE] disabled:opacity-40 disabled:active:translate-y-0'
+
+export function Deck({ disabled, rise = false, glowKey, onKey, onBackspace }: DeckProps) {
+  return (
+    // Installed to the home screen, the page runs under the iOS home
+    // indicator — pad the deck past it (max() keeps 1rem in browsers).
+    <div
+      className={`bg-[#E7E2D9] px-1.5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-1.5 ${rise ? 'deck-rise' : ''}`}
+    >
+      {KEY_ROWS.map((row, i) => (
+        <div key={row} className={`flex gap-[5px] justify-center ${i === 1 ? 'px-4' : ''}`}>
+          {row.split('').map((letter) => (
+            <button
+              key={letter}
+              type="button"
+              disabled={disabled}
+              onClick={() => onKey(letter)}
+              className={
+                letter === glowKey
+                  ? `${KEY} !bg-p1 !text-white !shadow-[0_3px_0_var(--color-p1-lip)]`
+                  : KEY
+              }
+            >
+              {letter}
+            </button>
+          ))}
+          {i === 2 && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={onBackspace}
+              aria-label="Backspace"
+              className={`${KEY} max-w-[54px] flex-[1.6] text-lg text-ink`}
+            >
+              ⌫
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Pass as a real button — top bar, opposite corner of the screen from the
+ *  keys, still behind its two-step confirm (it costs a life). */
+export function PassButton({ disabled, onPass }: { disabled: boolean; onPass: () => void }) {
+  const [confirm, setConfirm] = useState(false)
+  useEffect(() => {
+    if (disabled) setConfirm(false)
+  }, [disabled])
+
+  if (confirm)
+    return (
+      <div className="fixed inset-x-0 top-0 z-20 bg-board px-3.5 py-2 flex items-center gap-2.5 shadow-[0_3px_0_#E2DDD3]">
+        <span className="text-[13px] font-bold text-ink">Pass and lose a life?</span>
+        <button
+          type="button"
+          onClick={() => {
+            setConfirm(false)
+            onPass()
+          }}
+          className="ml-auto h-10 px-3.5 rounded-xl font-extrabold text-[13px] bg-p2 text-white shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5"
+        >
+          Yes, Pass
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirm(false)}
+          className="h-10 px-3.5 rounded-xl font-extrabold text-[13px] bg-white text-ink shadow-[0_3px_0_#DDD8CE] active:translate-y-0.5"
+        >
+          Wait, no
+        </button>
+      </div>
+    )
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => setConfirm(true)}
+      className="h-11 px-4 rounded-[13px] font-extrabold text-[13px] bg-white text-ink shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 active:shadow-[0_2px_0_#E2DDD3] disabled:opacity-40 disabled:active:translate-y-0"
+    >
+      Pass?
+    </button>
+  )
+}

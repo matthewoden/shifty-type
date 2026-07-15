@@ -1,0 +1,182 @@
+import { useState } from 'react'
+import type { Difficulty } from './game'
+import { loadMatchAuth } from './multi/storage'
+import { DuelCreate } from './screens/DuelCreate'
+import { JoinByCode } from './screens/JoinByCode'
+import { InviteLanding } from './screens/InviteLanding'
+import { Home } from './screens/Home'
+import { HowTo } from './screens/HowTo'
+import { Lobby } from './screens/Lobby'
+import { MultiMatch } from './screens/MultiMatch'
+import { SoloMatch } from './screens/SoloMatch'
+import { SoloSetup } from './screens/SoloSetup'
+import { TutorialMatch } from './screens/TutorialMatch'
+import { TutorialWelcome } from './screens/TutorialWelcome'
+import { newSoloSave, type SoloSave } from './solo/useSoloMatch'
+
+type Screen =
+  | { name: 'home' }
+  | { name: 'lobby' }
+  | { name: 'solo-setup' }
+  | { name: 'solo'; save: SoloSave }
+  | { name: 'duel-create' }
+  | { name: 'join-code' }
+  | { name: 'invite'; code: string }
+  | { name: 'howto' }
+  | { name: 'duel'; code: string }
+  | { name: 'tutorial-welcome' }
+  | { name: 'tutorial' }
+
+/** Deep link: /m/CODE resumes with a stored token or lands on the invite. */
+function initialScreen(): Screen {
+  const dm = window.location.pathname.match(/^\/m\/([A-Za-z0-9]{4})$/)
+  if (dm) {
+    const code = dm[1].toUpperCase()
+    return loadMatchAuth(code) ? { name: 'duel', code } : { name: 'invite', code }
+  }
+  return { name: 'home' }
+}
+
+export default function App() {
+  const initial = initialScreen()
+  const [screen, setScreen] = useState<Screen>(initial)
+  // Bumped on every entry into a match so the match screen remounts fresh.
+  const [matchKey, setMatchKey] = useState(0)
+  // The invite an unseated friend arrived on: How-to and the tutorial return
+  // here instead of Home, so tapping either never loses the game they're
+  // being invited into.
+  const [pendingInvite, setPendingInvite] = useState<string | null>(
+    initial.name === 'invite' ? initial.code : null,
+  )
+
+  const goHome = () => {
+    setPendingInvite(null)
+    window.history.pushState(null, '', '/')
+    setScreen({ name: 'home' })
+  }
+  const enterSolo = (save: SoloSave) => {
+    setMatchKey((k) => k + 1)
+    setScreen({ name: 'solo', save })
+  }
+  const enterDuel = (code: string) => {
+    setPendingInvite(null)
+    window.history.pushState(null, '', `/m/${code}`)
+    setMatchKey((k) => k + 1)
+    setScreen({ name: 'duel', code })
+  }
+  const showInvite = (code: string) => {
+    setPendingInvite(code)
+    window.history.pushState(null, '', `/m/${code}`)
+    setScreen({ name: 'invite', code })
+  }
+  // Back out of How-to / the tutorial: to the pending invite if there is one,
+  // otherwise Home.
+  const backFromDetour = () =>
+    pendingInvite ? showInvite(pendingInvite) : goHome()
+
+  switch (screen.name) {
+    case 'solo-setup':
+      return (
+        <SoloSetup
+          onStart={(difficulty: Difficulty) => enterSolo(newSoloSave(difficulty))}
+          onBack={goHome}
+        />
+      )
+    case 'solo':
+      return <SoloMatch key={matchKey} save={screen.save} onExit={goHome} />
+    case 'howto':
+      return (
+        <HowTo
+          onBack={backFromDetour}
+          onPlayLlama={() => enterSolo(newSoloSave('easy'))}
+          onTutorial={() => setScreen({ name: 'tutorial-welcome' })}
+        />
+      )
+    case 'tutorial-welcome':
+      return (
+        <TutorialWelcome
+          onPlay={() => {
+            setMatchKey((k) => k + 1)
+            setScreen({ name: 'tutorial' })
+          }}
+          onRules={() => setScreen({ name: 'howto' })}
+          onBack={backFromDetour}
+        />
+      )
+    case 'tutorial':
+      return (
+        <TutorialMatch
+          key={matchKey}
+          onExit={backFromDetour}
+          onDuel={() => setScreen({ name: 'duel-create' })}
+          onRematchLloyd={() => enterSolo(newSoloSave('easy', 'p2'))}
+        />
+      )
+    case 'lobby':
+      return (
+        <Lobby
+          onBack={goHome}
+          onOpenMatch={enterDuel}
+          onResumeSolo={enterSolo}
+          onNewDuel={() => setScreen({ name: 'duel-create' })}
+          onJoinCode={() => setScreen({ name: 'join-code' })}
+        />
+      )
+    case 'duel-create':
+      return <DuelCreate onEnterMatch={enterDuel} onBack={goHome} />
+    case 'join-code':
+      return <JoinByCode onEnterMatch={enterDuel} onBack={goHome} />
+    case 'invite': {
+      const inviteCode = screen.code
+      return (
+        <InviteLanding
+          code={inviteCode}
+          onEnterMatch={enterDuel}
+          onHowTo={() => {
+            setPendingInvite(inviteCode)
+            setScreen({ name: 'howto' })
+          }}
+          onTutorial={() => {
+            setPendingInvite(inviteCode)
+            setScreen({ name: 'tutorial-welcome' })
+          }}
+          onBack={goHome}
+        />
+      )
+    }
+    case 'duel': {
+      const auth = loadMatchAuth(screen.code)
+      if (!auth) {
+        const inviteCode = screen.code
+        return (
+          <InviteLanding
+            code={inviteCode}
+            onEnterMatch={enterDuel}
+            onHowTo={() => {
+              setPendingInvite(inviteCode)
+              setScreen({ name: 'howto' })
+            }}
+            onTutorial={() => {
+              setPendingInvite(inviteCode)
+              setScreen({ name: 'tutorial-welcome' })
+            }}
+            onBack={goHome}
+          />
+        )
+      }
+      return <MultiMatch key={matchKey} code={screen.code} token={auth.token} onExit={goHome} />
+    }
+    default:
+      return (
+        <Home
+          onHowTo={() => setScreen({ name: 'howto' })}
+          onSolo={() => setScreen({ name: 'solo-setup' })}
+          onDuel={() => setScreen({ name: 'duel-create' })}
+          onJoinCode={() => setScreen({ name: 'join-code' })}
+          onTutorial={() => setScreen({ name: 'tutorial-welcome' })}
+          onOpenGames={() => setScreen({ name: 'lobby' })}
+          onResumeDuel={enterDuel}
+        />
+      )
+  }
+}

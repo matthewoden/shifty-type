@@ -1,0 +1,245 @@
+@import '@fontsource/baloo-2/600.css';
+@import '@fontsource/baloo-2/700.css';
+@import '@fontsource/baloo-2/800.css';
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Baloo 2', ui-rounded, system-ui, sans-serif;
+
+  --color-board: #f6f3ee;
+  --color-board-lo: #eae6de;
+  --color-ink: #55606e;
+  --color-ink-strong: #3e4854;
+  --color-dim: #a8aeb8;
+
+  --color-p1: #8B90F4;
+  --color-p1-lip: #6A6FDC;
+  --color-p1-tint: #DCDEFB;
+  --color-p1-tint-lip: #BFC2F3;
+  --color-p1-tint-ink: #565CC4;
+
+  --color-p2: #F98B57;
+  --color-p2-lip: #DE6A2E;
+  --color-p2-tint: #FDE2D3;
+  --color-p2-tint-lip: #F5C4A6;
+  --color-p2-tint-ink: #D0682A;
+}
+
+/* Desktop: the game is a phone-shaped column, centered. */
+body {
+  background: #ece8e1;
+}
+#root {
+  max-width: 430px;
+  margin-inline: auto;
+}
+@media (min-width: 480px) {
+  #root {
+    box-shadow: 0 0 44px rgba(62, 72, 84, 0.16);
+  }
+}
+
+/* The home logo plays itself in: SHIFTY pops in solid, TYPE types itself
+   in tile by tile (same fill-pop as the ghost seeds), and SHIFTY's tail TY
+   "spends" (solid → tint) as the grip lands. */
+.logo-pop {
+  animation: logo-pop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.3) both;
+}
+.logo-pop.logo-spend {
+  animation:
+    logo-pop 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.3) both,
+    logo-spend 0.6s ease both;
+}
+.logo-typein {
+  animation: fill-pop 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+@keyframes logo-pop {
+  from {
+    scale: 0.2;
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+@keyframes logo-spend {
+  from {
+    background: var(--color-p1);
+    color: #fff;
+    box-shadow: 0 4px 0 var(--color-p1-lip);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-pop,
+  .logo-pop.logo-spend,
+  .logo-typein {
+    animation: none;
+  }
+}
+
+/* The solo setup header replays the logo's move-in on a tighter clock; the
+   subhead, llama cards, and back button fade up while the tiles still land,
+   so repeat players are never stuck waiting to tap. */
+.setup-fade {
+  animation: setup-fade 0.45s ease 0.4s both;
+}
+@keyframes setup-fade {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .setup-fade {
+    animation: none;
+  }
+}
+
+/* New ledger rows slide in along the rail and land with a small settle. */
+.row-settle {
+  animation: row-settle 0.35s cubic-bezier(0.2, 0.8, 0.3, 1.15);
+}
+@keyframes row-settle {
+  from {
+    translate: 28px 6px;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-settle {
+    animation: none;
+  }
+}
+
+/* Typing the first letter: the draft materializes and settles into the
+   anchor row instead of teleporting there. */
+.draft-in {
+  animation: draft-in 0.28s cubic-bezier(0.2, 0.8, 0.3, 1.15);
+}
+@keyframes draft-in {
+  from {
+    translate: 0 12px;
+    scale: 0.94;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .draft-in {
+    animation: none;
+  }
+}
+
+/* Tapping a ghost seed: once the camera has ridden to the input position,
+   the seed tiles pop in one after another, caret last. Scoped to TINTED
+   tiles only — the seed letters are the tinted grip; letters typed after
+   must never inherit the stagger or typing feels laggy. */
+.seed-pop > span:first-child > [class*='p1-tint'] {
+  animation: fill-pop 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+.seed-pop > span:first-child > [class*='p1-tint']:nth-child(2) { animation-delay: 55ms; }
+.seed-pop > span:first-child > [class*='p1-tint']:nth-child(3) { animation-delay: 110ms; }
+.seed-pop > span:first-child > [class*='p1-tint']:nth-child(4) { animation-delay: 165ms; }
+.seed-pop > span:first-child > [class*='p1-tint']:nth-child(5) { animation-delay: 220ms; }
+.seed-pop > span:first-child > [class*='p1-tint']:nth-child(6) { animation-delay: 275ms; }
+.seed-pop > span:last-child {
+  animation: fill-pop 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+  animation-delay: 320ms;
+}
+@keyframes fill-pop {
+  from {
+    opacity: 0;
+    scale: 0.6;
+    translate: 0 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seed-pop > span:first-child > [class*='p1-tint'],
+  .seed-pop > span:last-child {
+    animation: none;
+  }
+}
+
+/* Table talk (passes, plays) slides up to arrive and sinks away to leave.
+   Reduced motion keeps a 10ms flicker of animation so the animationend
+   event that unmounts the leaving toast still fires. */
+.toast-in {
+  animation: toast-in 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.15);
+  overflow: hidden;
+}
+@keyframes toast-in {
+  from {
+    translate: 0 10px;
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+  to {
+    max-height: 44px;
+  }
+}
+.toast-out {
+  animation: toast-out 0.22s ease-in both;
+  overflow: hidden;
+}
+@keyframes toast-out {
+  from {
+    max-height: 44px;
+  }
+  to {
+    translate: 0 10px;
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-in,
+  .toast-out {
+    animation-duration: 0.01s;
+  }
+}
+
+/* The deck slides up when your turn arrives — the arrival IS the signal. */
+.deck-rise {
+  animation: deck-rise 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.05);
+}
+@keyframes deck-rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .deck-rise {
+    animation: none;
+  }
+}
+
+/* Challenge verdicts stamp down onto the screen. */
+.stamp-in {
+  animation: stamp-in 0.25s cubic-bezier(0.2, 0.8, 0.3, 1.2);
+}
+@keyframes stamp-in {
+  from {
+    scale: 2.2;
+    opacity: 0;
+  }
+}
+
+/* Game-over gold bars grow to their totals. */
+.gold-bar {
+  width: var(--gold-w);
+  animation: gold-grow 1s ease-out;
+}
+@keyframes gold-grow {
+  from {
+    width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamp-in,
+  .gold-bar {
+    animation: none;
+  }
+}

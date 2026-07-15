@@ -1,0 +1,574 @@
+<title>Shifty Type — Duel invite flow</title>
+<style>
+  :root {
+    --board: #f6f3ee;
+    --board-lo: #eae6de;
+    --ink: #55606e;
+    --ink-strong: #3e4854;
+    --dim: #a8aeb8;
+    --p1: #8B90F4; --p1-lip: #6A6FDC; --p1-tint: #DCDEFB; --p1-tint-lip: #BFC2F3; --p1-tint-ink: #565CC4;
+    --p2: #F98B57; --p2-lip: #DE6A2E; --p2-tint: #FDE2D3; --p2-tint-lip: #F5C4A6; --p2-tint-ink: #D0682A;
+    --page: #ece8e1;
+    --ring: #2fb16b; /* proposal marker */
+    --ring-soft: #d7f0e2;
+    font-family: ui-rounded, "Baloo 2", system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --page: #201f1d; }
+  }
+  :root[data-theme="light"] { --page: #ece8e1; }
+  :root[data-theme="dark"] { --page: #201f1d; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink-strong); -webkit-font-smoothing: antialiased; }
+
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  header.intro { max-width: 720px; margin: 0 auto 12px; }
+  .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--p2-lip); }
+  h1 { font-size: clamp(26px, 5vw, 36px); font-weight: 800; margin: 8px 0 14px; color: var(--ink-strong); text-wrap: balance; }
+  .lede { font-size: 16px; line-height: 1.55; font-weight: 600; color: var(--ink); }
+  .lede b { color: var(--ink-strong); }
+
+  .problem {
+    max-width: 720px; margin: 22px auto 8px; background: #fff; border-radius: 18px;
+    padding: 18px 20px; box-shadow: 0 3px 0 var(--board-lo);
+    display: grid; gap: 10px;
+  }
+  .problem .row { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; color: var(--ink); font-size: 14.5px; line-height: 1.5; }
+  .problem .row b { color: var(--ink-strong); }
+  .xmark { color: var(--p2-lip); font-weight: 800; flex: 0 0 auto; }
+  .check { color: var(--ring); font-weight: 800; flex: 0 0 auto; }
+
+  .legend { max-width: 720px; margin: 18px auto 0; font-size: 13px; font-weight: 700; color: var(--dim); display: flex; align-items: center; gap: 8px; }
+  .legend .chip { display: inline-block; width: 18px; height: 12px; border-radius: 4px; border: 2.5px solid var(--ring); background: var(--ring-soft); }
+
+  /* ---- flow layout ---- */
+  .flow { display: flex; flex-direction: column; gap: 8px; margin-top: 40px; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 26px; align-items: start; }
+
+  .step-h { text-align: center; margin: 44px auto 6px; max-width: 720px; }
+  .step-h .kicker { font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  .step-h h2 { font-size: 22px; font-weight: 800; margin: 6px 0 6px; color: var(--ink-strong); }
+  .step-h p { font-size: 14.5px; font-weight: 600; color: var(--ink); line-height: 1.5; margin: 0; }
+
+  .col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .caption { max-width: 340px; text-align: center; font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.5; }
+  .caption b { color: var(--ink-strong); }
+  .optlabel {
+    font-size: 12.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--p1-lip); background: var(--p1-tint); padding: 5px 12px; border-radius: 999px;
+  }
+  .optlabel.b { color: var(--p2-lip); background: var(--p2-tint); }
+
+  /* ---- phone frame ---- */
+  .phone {
+    width: 340px; max-width: 100%; background: var(--board); border-radius: 30px;
+    box-shadow: 0 0 0 8px #fff, 0 14px 40px rgba(62,72,84,.22); overflow: hidden;
+    position: relative; display: flex; flex-direction: column; height: 660px;
+  }
+  .phone.propose { box-shadow: 0 0 0 3px var(--ring), 0 0 0 11px #fff, 0 14px 40px rgba(47,177,107,.28); }
+
+  /* board header */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; }
+  .topbar .left { display: flex; align-items: center; gap: 8px; }
+  .home { font-size: 13px; font-weight: 800; color: var(--dim); }
+  .code { font-size: 13px; font-weight: 800; color: var(--dim); letter-spacing: .18em; }
+  .pass { font-size: 13px; font-weight: 800; color: var(--dim); background: #fff; padding: 8px 14px; border-radius: 999px; box-shadow: 0 3px 0 var(--board-lo); opacity: .55; }
+
+  /* hud */
+  .hud { display: flex; gap: 10px; padding: 4px 14px 8px; }
+  .hcard { flex: 1; background: #fff; border-radius: 16px; padding: 8px 12px; box-shadow: 0 4px 0 #E2DDD3; }
+  .hcard.active-you { box-shadow: 0 4px 0 var(--p1); }
+  .hcard.active-them { box-shadow: 0 4px 0 var(--p2); }
+  .hcard.them { text-align: right; }
+  .hname { font-size: 12px; font-weight: 800; }
+  .hname.you { color: var(--p1-lip); }
+  .hname.them { color: var(--p2-lip); }
+  .hpts { font-size: 22px; font-weight: 800; color: var(--ink-strong); line-height: 1.1; }
+  .hpts small { font-size: 10px; color: var(--dim); font-weight: 800; }
+  .pips { display: flex; gap: 4px; margin-top: 5px; }
+  .hcard.them .pips { justify-content: flex-end; }
+  .pip { width: 9px; height: 9px; border-radius: 999px; }
+  .pip.you { background: var(--p1); box-shadow: 0 2px 0 var(--p1-lip); }
+  .pip.them { background: var(--p2); box-shadow: 0 2px 0 var(--p2-lip); }
+  .pip.off { background: var(--board-lo); box-shadow: 0 2px 0 #DDD8CE; }
+  .ends { align-self: center; text-align: center; font-size: 9px; font-weight: 800; letter-spacing: .12em; color: var(--dim); text-transform: uppercase; line-height: 1.2; }
+  .ends b { display: block; font-size: 19px; color: var(--ink-strong); letter-spacing: 0; }
+
+  /* ledger / board area */
+  .board { flex: 1; position: relative; overflow: hidden; }
+  .rail { position: absolute; left: 0; right: 0; top: 0; bottom: 0; padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  .row-word { display: flex; align-items: center; gap: 10px; }
+  .tiles { display: flex; gap: 3px; }
+  .tile {
+    width: 23px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; text-transform: uppercase; color: #fff;
+  }
+  .tile.you { background: var(--p1); box-shadow: 0 4px 0 var(--p1-lip); }
+  .tile.you.tint { background: var(--p1-tint); color: var(--p1-tint-ink); box-shadow: 0 4px 0 var(--p1-tint-lip); }
+  .tile.them { background: var(--p2); box-shadow: 0 4px 0 var(--p2-lip); }
+  .tile.them.tint { background: var(--p2-tint); color: var(--p2-tint-ink); box-shadow: 0 4px 0 var(--p2-tint-lip); }
+
+  .ghost {
+    width: 23px; height: 32px; border-radius: 7px; border: 2px dashed var(--dim); opacity: .5;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--dim); font-size: 15px;
+  }
+  .fanrow { display: flex; align-items: center; gap: 8px; opacity: .8; }
+  .meta { font-size: 11px; font-weight: 800; color: var(--dim); }
+
+  .prompt-banner {
+    margin: 2px 0 0; background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 3px 0 var(--board-lo);
+    font-size: 13.5px; font-weight: 700; color: var(--ink-strong); line-height: 1.45;
+  }
+  .prompt-banner .sub { font-weight: 600; color: var(--ink); font-size: 12.5px; margin-top: 3px; }
+
+  /* keyboard deck */
+  .deck { padding: 8px 8px 16px; display: flex; flex-direction: column; gap: 6px; background: linear-gradient(to bottom, transparent, rgba(234,230,222,.5)); }
+  .krow { display: flex; gap: 5px; justify-content: center; }
+  .key {
+    flex: 1; max-width: 30px; height: 40px; background: #fff; border-radius: 8px; box-shadow: 0 3px 0 var(--board-lo);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: var(--ink-strong);
+  }
+  .key.wide { max-width: 46px; }
+
+  /* not-your-turn waiting zone */
+  .waitzone { padding: 14px 18px 22px; text-align: center; }
+  .waitzone .big { font-size: 15px; font-weight: 800; color: var(--ink-strong); }
+  .waitzone .small { font-size: 12px; font-weight: 600; color: var(--dim); margin-top: 4px; }
+  .bell {
+    display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; height: 40px; padding: 0 16px;
+    background: #fff; border-radius: 999px; box-shadow: 0 3px 0 var(--board-lo); font-size: 13px; font-weight: 800; color: var(--ink);
+  }
+  .bell .b { color: var(--p1-lip); }
+
+  /* ---- Option A: inline invite bar ---- */
+  .invite-bar {
+    margin: 0 8px; padding: 14px 14px 18px;
+    background: #fff; border-radius: 18px 18px 0 0; box-shadow: 0 -3px 0 var(--ring-soft), 0 0 0 3px var(--ring);
+    text-align: center; display: flex; flex-direction: column; gap: 10px;
+  }
+  .invite-bar .lead { font-size: 14px; font-weight: 800; color: var(--ink-strong); }
+  .invite-bar .lead small { display: block; font-size: 12px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+  .btn-share {
+    height: 50px; border-radius: 14px; background: var(--p2); color: #fff; box-shadow: 0 4px 0 var(--p2-lip);
+    display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 16px; font-weight: 800;
+  }
+  .btn-share .ico { font-size: 18px; }
+  .subrow { display: flex; gap: 10px; }
+  .btn-sub {
+    flex: 1; height: 42px; border-radius: 12px; background: var(--board); box-shadow: 0 3px 0 var(--board-lo);
+    display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 13px; font-weight: 800; color: var(--ink);
+  }
+  .btn-sub .mono { letter-spacing: .12em; color: var(--ink-strong); }
+
+  /* ---- Option B: invite sheet ---- */
+  .board.dimmed .rail { filter: saturate(.7); opacity: .5; }
+  .scrim { position: absolute; inset: 0; background: rgba(62,72,84,.28); }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 24px 24px 0 0;
+    padding: 20px 18px 22px; box-shadow: 0 0 0 3px var(--ring), 0 -18px 40px rgba(62,72,84,.22);
+    display: flex; flex-direction: column; gap: 14px; text-align: center;
+  }
+  .grab { width: 42px; height: 5px; border-radius: 999px; background: var(--board-lo); margin: -6px auto 0; }
+  .sheet h3 { margin: 0; font-size: 18px; font-weight: 800; color: var(--ink-strong); }
+  .sheet .sh-sub { font-size: 13px; font-weight: 600; color: var(--ink); margin: -8px 0 0; line-height: 1.45; }
+  .preview-card {
+    background: var(--board); border-radius: 16px; padding: 14px; box-shadow: inset 0 0 0 2px var(--board-lo);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .preview-card .pv-name { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--p1-lip); }
+  .preview-card .pv-line { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .dismiss { font-size: 13px; font-weight: 800; color: var(--dim); margin-top: -2px; }
+
+  /* friend arrival badge */
+  .arrive-flag {
+    display: inline-flex; gap: 7px; align-items: center; background: var(--p2-tint); color: var(--p2-lip);
+    padding: 8px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 800; margin: 0 auto;
+  }
+
+  .ic { width: 18px; height: 18px; flex: 0 0 auto; }
+  .ic.sm { width: 15px; height: 15px; }
+
+  /* invite landing */
+  .land { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 30px 26px; text-align: center; }
+  .land .invited { font-size: 22px; font-weight: 800; color: var(--ink-strong); line-height: 1.2; text-wrap: balance; }
+  .land .invited b { color: var(--p2-lip); }
+  .land .blurb { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.5; max-width: 250px; }
+  .land .opened-card {
+    background: #fff; border-radius: 16px; padding: 13px 16px; box-shadow: 0 3px 0 var(--board-lo);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .land .opened-card .cap { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--p2-lip); }
+  .land .ctas { width: 100%; max-width: 260px; display: flex; flex-direction: column; gap: 11px; }
+  .cta-primary { height: 54px; border-radius: 16px; background: var(--p2); color: #fff; box-shadow: 0 4px 0 var(--p2-lip); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; }
+  .cta-ghost { height: 48px; border-radius: 16px; background: #fff; box-shadow: 0 3px 0 var(--board-lo); display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 15px; color: var(--ink); }
+  .land .tut-note { font-size: 12px; font-weight: 600; color: var(--dim); max-width: 230px; line-height: 1.4; }
+
+  .codecell {
+    width: 48px; height: 58px; border-radius: 13px; background: #fff; box-shadow: 0 4px 0 var(--board-lo);
+    display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800;
+    color: var(--ink-strong); text-transform: uppercase;
+  }
+  .codecell.filled { box-shadow: 0 4px 0 var(--p2-tint-lip); }
+  .codecell.caret { box-shadow: 0 0 0 3px var(--p2), 0 4px 0 var(--p2-lip); }
+  .codecell:empty::after { content: ""; }
+
+  .footnote {
+    max-width: 720px; margin: 56px auto 0; background: #fff; border-radius: 18px; padding: 20px 22px;
+    box-shadow: 0 3px 0 var(--board-lo);
+  }
+  .footnote h3 { margin: 0 0 12px; font-size: 16px; font-weight: 800; color: var(--ink-strong); }
+  .footnote ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+  .footnote li { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.5; }
+  .footnote li b { color: var(--ink-strong); }
+  .footnote .q { margin-top: 16px; font-size: 14.5px; font-weight: 700; color: var(--p2-lip); }
+
+  @media (max-width: 680px) {
+    .phone { height: 620px; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow">Duel a friend · invite flow</div>
+    <h1>Play your opening word first, then hand off the invite</h1>
+    <p class="lede">
+      Today, creating a match drops you in a <b>dead lobby</b> — you can't move until your friend
+      joins, and they land on a blank "waiting for them to play" screen. Both people are waiting on
+      each other. The fix: <b>you open with a word the moment you create the match</b>, then share a
+      one-tap invite. Your friend arrives to a live board with a word to answer.
+    </p>
+  </header>
+
+  <div class="problem">
+    <div class="row"><span class="xmark">Today</span><span><b>Create → dead lobby.</b> You see a code, but the rules block your move until someone joins. Your friend opens the link and waits for you. Nobody can start.</span></div>
+    <div class="row"><span class="check">Proposed</span><span><b>Create → you play your opening word → share.</b> The invite carries your word. Your friend opens it and it's already their turn — no empty screen, no typing a code.</span></div>
+  </div>
+
+  <div class="legend"><span class="chip"></span> Green outline = new / changed. Everything else is the shipped board, drawn as-is.</div>
+
+  <!-- ENTRY: split create & join -->
+  <div class="step-h">
+    <div class="kicker">The front door · split the screens</div>
+    <h2>Creating and joining stop sharing one cramped screen</h2>
+    <p>Today "Duel a friend" opens a single screen with a name field, a Create button, <em>and</em> a tiny join-code input jammed underneath — the code entry feels like an afterthought. We split them: <b>Duel a friend</b> goes straight to starting your match; <b>Join with a code</b> gets its own room.</p>
+  </div>
+  <div class="steps">
+    <!-- HOME -->
+    <div class="col">
+      <span class="optlabel">Home</span>
+      <div class="phone propose">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; padding:24px;">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:8px;">
+            <div class="tiles">
+              <span class="tile you">S</span><span class="tile you">H</span><span class="tile you">I</span><span class="tile you">F</span><span class="tile you tint">T</span><span class="tile you tint">Y</span>
+            </div>
+            <div class="tiles" style="margin-left:104px">
+              <span class="tile them tint">T</span><span class="tile them tint">Y</span><span class="tile them">P</span><span class="tile them">E</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink);margin-top:6px">It's your word against theirs.</div>
+          </div>
+          <div style="width:100%; max-width:250px; display:flex; flex-direction:column; gap:12px;">
+            <div style="height:52px;border-radius:16px;background:var(--p2);color:#fff;box-shadow:0 4px 0 var(--p2-lip);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">Duel a friend</div>
+            <div style="height:52px;border-radius:16px;background:var(--p1);color:#fff;box-shadow:0 4px 0 var(--p1-lip);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">Play a local llama</div>
+            <div style="height:48px;border-radius:16px;background:#fff;box-shadow:0 3px 0 var(--board-lo), 0 0 0 3px var(--ring);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:15px;color:var(--ink)"><svg class="ic sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="9" r="4"/><path d="M11 12l8 8"/><path d="M16 17l2-2"/></svg> Join with a code</div>
+            <div style="text-align:center;font-size:13px;font-weight:800;color:var(--dim);margin-top:4px">How to play · Tutorial</div>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><b>"Duel a friend"</b> now leads straight to starting your match (no code box in sight). A quiet, green-ringed <b>"Join with a code"</b> is the front door for the read-me-the-code case — the tap-a-link case never needs it.</p>
+    </div>
+
+    <!-- JOIN SCREEN -->
+    <div class="col">
+      <span class="optlabel b">Join with a code · its own screen</span>
+      <div class="phone propose">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; padding:26px;">
+          <div style="text-align:center">
+            <div style="font-size:22px;font-weight:800;color:var(--ink-strong)">Join a friend's match</div>
+            <div style="font-size:13.5px;font-weight:600;color:var(--ink);margin-top:6px;max-width:230px;line-height:1.45">Got a 4-letter code from a friend? Pop it in.</div>
+          </div>
+          <div style="width:100%;max-width:250px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:12px;font-weight:800;color:var(--ink)">Your name</div>
+            <div style="height:48px;border-radius:14px;background:#fff;box-shadow:0 4px 0 var(--board-lo);display:flex;align-items:center;padding:0 14px;font-weight:800;font-size:17px;color:var(--ink-strong)">Sam</div>
+          </div>
+          <div style="width:100%;max-width:250px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:12px;font-weight:800;color:var(--ink)">Their code</div>
+            <div style="display:flex;gap:10px;justify-content:center">
+              <span class="codecell filled">7</span>
+              <span class="codecell filled">X</span>
+              <span class="codecell caret">Q</span>
+              <span class="codecell"></span>
+            </div>
+          </div>
+          <div style="width:100%;max-width:250px;height:52px;border-radius:16px;background:var(--p2);color:#fff;box-shadow:0 4px 0 var(--p2-lip);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">Join the match</div>
+          <div style="font-size:12.5px;font-weight:600;color:var(--dim);text-align:center;max-width:240px;line-height:1.45">Sent a <b style="color:var(--ink)">link</b> instead? Just tap it — no code needed.</div>
+        </div>
+      </div>
+      <p class="caption">Big, spaced <b>code cells</b> that auto-advance as you type, with the name field above and room to breathe. This is the whole screen's job — no Create button competing for the tap.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+
+    <!-- STEP 1 -->
+    <div class="step-h">
+      <div class="kicker">Step 1 · shared by both options</div>
+      <h2>Create drops you straight onto the board — your move</h2>
+      <p>No lobby. You land in your own turn with the letter fan and deck ready. A quiet banner tells you the invite comes next, so the empty board never feels like a mistake.</p>
+    </div>
+    <div class="steps">
+      <div class="col">
+        <div class="phone propose">
+          <div class="topbar">
+            <div class="left"><span class="home">← Home</span><span class="code">7XQ2</span></div>
+            <span class="pass">Pass?</span>
+          </div>
+          <div class="hud">
+            <div class="hcard you active-you">
+              <div class="hname you">MATTHEW</div>
+              <div class="hpts">0<small> pts</small></div>
+              <div class="pips"><span class="pip you"></span><span class="pip you"></span><span class="pip you"></span></div>
+            </div>
+            <div class="ends">ENDS IN<b>10</b>WORDS</div>
+            <div class="hcard them">
+              <div class="hname them">FRIEND</div>
+              <div class="hpts">0<small> pts</small></div>
+              <div class="pips"><span class="pip them"></span><span class="pip them"></span><span class="pip them"></span></div>
+            </div>
+          </div>
+          <div class="board">
+            <div class="rail">
+              <div class="prompt-banner" style="box-shadow:0 3px 0 var(--ring-soft),0 0 0 2px var(--ring)">
+                Play your opening word — anything goes.
+                <div class="sub">The second it lands, we'll hand you the invite to send.</div>
+              </div>
+              <div class="fanrow"><span class="ghost">·</span><span class="ghost">·</span><span class="ghost">·</span><span class="ghost">·</span><span class="meta">type to start…</span></div>
+            </div>
+          </div>
+          <div class="deck">
+            <div class="krow"><span class="key">Q</span><span class="key">W</span><span class="key">E</span><span class="key">R</span><span class="key">T</span><span class="key">Y</span><span class="key">U</span><span class="key">I</span><span class="key">O</span><span class="key">P</span></div>
+            <div class="krow"><span class="key">A</span><span class="key">S</span><span class="key">D</span><span class="key">F</span><span class="key">G</span><span class="key">H</span><span class="key">J</span><span class="key">K</span><span class="key">L</span></div>
+            <div class="krow"><span class="key">Z</span><span class="key">X</span><span class="key">C</span><span class="key">V</span><span class="key">B</span><span class="key">N</span><span class="key">M</span><span class="key wide"><svg class="ic sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H8L3 12l5 7h13a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M12 9l5 6M17 9l-5 6"/></svg></span></div>
+          </div>
+        </div>
+        <p class="caption">The only change here is the <b>banner</b>. The board, HUD, letter fan and deck are exactly what ships today — you're just here immediately instead of stuck in a lobby.</p>
+      </div>
+    </div>
+
+    <!-- STEP 2: two share options -->
+    <div class="step-h">
+      <div class="kicker">Step 2 · pick one</div>
+      <h2>Your word lands — now the invite. Two ways to surface it</h2>
+      <p>Both replace today's "waiting for them to arrive…" copy with a real one-tap share (native share sheet on phones, copy-link fallback everywhere). The question is whether it's a <b>quiet bar under your word</b> or a <b>dedicated moment</b>.</p>
+    </div>
+    <div class="steps">
+
+      <!-- OPTION A -->
+      <div class="col">
+        <span class="optlabel">Option A · inline invite bar</span>
+        <div class="phone propose">
+          <div class="topbar">
+            <div class="left"><span class="home">← Home</span><span class="code">7XQ2</span></div>
+            <span class="pass">Pass?</span>
+          </div>
+          <div class="hud">
+            <div class="hcard you">
+              <div class="hname you">MATTHEW</div>
+              <div class="hpts">6<small> pts</small></div>
+              <div class="pips"><span class="pip you"></span><span class="pip you"></span><span class="pip you"></span></div>
+            </div>
+            <div class="ends">ENDS IN<b>9</b>WORDS</div>
+            <div class="hcard them active-them">
+              <div class="hname them">FRIEND</div>
+              <div class="hpts">0<small> pts</small></div>
+              <div class="pips"><span class="pip them"></span><span class="pip them"></span><span class="pip them"></span></div>
+            </div>
+          </div>
+          <div class="board">
+            <div class="rail">
+              <div class="row-word">
+                <div class="tiles">
+                  <span class="tile you">S</span><span class="tile you">H</span><span class="tile you">I</span><span class="tile you">F</span><span class="tile you tint">T</span><span class="tile you tint">Y</span>
+                </div>
+              </div>
+              <div class="meta" style="padding-left:2px">You opened. It's your friend's move next.</div>
+            </div>
+          </div>
+          <div class="invite-bar">
+            <div class="lead">Your word's in — invite your friend<small>They'll answer SHIFTY the moment they open it</small></div>
+            <div class="btn-share"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6"/></svg> Share the invite</div>
+            <div class="subrow">
+              <div class="btn-sub"><svg class="ic sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copy link</div>
+              <div class="btn-sub">Code <span class="mono">7XQ2</span></div>
+            </div>
+            <div class="bell"><svg class="ic sm b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></svg> Ring me when they sit down</div>
+          </div>
+        </div>
+        <p class="caption"><b>Board stays in view.</b> Your SHIFTY sits right above the bar, so the share feels like a natural next step, not a separate screen. Least chrome, fastest to send. The bar collapses to the normal "their move — we'll be here" once they join.</p>
+      </div>
+
+      <!-- OPTION B -->
+      <div class="col">
+        <span class="optlabel b">Option B · invite sheet</span>
+        <div class="phone propose">
+          <div class="topbar">
+            <div class="left"><span class="home">← Home</span><span class="code">7XQ2</span></div>
+            <span class="pass">Pass?</span>
+          </div>
+          <div class="hud">
+            <div class="hcard you">
+              <div class="hname you">MATTHEW</div>
+              <div class="hpts">6<small> pts</small></div>
+              <div class="pips"><span class="pip you"></span><span class="pip you"></span><span class="pip you"></span></div>
+            </div>
+            <div class="ends">ENDS IN<b>9</b>WORDS</div>
+            <div class="hcard them active-them">
+              <div class="hname them">FRIEND</div>
+              <div class="hpts">0<small> pts</small></div>
+              <div class="pips"><span class="pip them"></span><span class="pip them"></span><span class="pip them"></span></div>
+            </div>
+          </div>
+          <div class="board dimmed">
+            <div class="rail">
+              <div class="row-word">
+                <div class="tiles">
+                  <span class="tile you">S</span><span class="tile you">H</span><span class="tile you">I</span><span class="tile you">F</span><span class="tile you tint">T</span><span class="tile you tint">Y</span>
+                </div>
+              </div>
+            </div>
+            <div class="scrim"></div>
+            <div class="sheet">
+              <div class="grab"></div>
+              <h3>Nice — SHIFTY's on the table</h3>
+              <p class="sh-sub">Send the invite. Your friend opens it and it's their move.</p>
+              <div class="preview-card">
+                <div class="pv-name">Matthew opened with</div>
+                <div class="tiles">
+                  <span class="tile you">S</span><span class="tile you">H</span><span class="tile you">I</span><span class="tile you">F</span><span class="tile you">T</span><span class="tile you">Y</span>
+                </div>
+                <div class="pv-line">"Your move on Shifty Type →"</div>
+              </div>
+              <div class="btn-share"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6"/></svg> Share the invite</div>
+              <div class="subrow">
+                <div class="btn-sub"><svg class="ic sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copy link</div>
+                <div class="btn-sub">Code <span class="mono">7XQ2</span></div>
+              </div>
+              <div class="dismiss">Show the board · ring me when they sit down</div>
+            </div>
+          </div>
+        </div>
+        <p class="caption"><b>A proper moment.</b> The sheet previews exactly what your friend receives — your word as tiles + the "your move" line. More celebratory and clearer about what you're sending, at the cost of one extra dismiss to get back to the board.</p>
+      </div>
+    </div>
+
+    <!-- STEP 3: the invite landing (friend's first screen) -->
+    <div class="step-h">
+      <div class="kicker">Step 3 · the friend opens the link</div>
+      <h2>A landing that says who invited them — and offers a way in</h2>
+      <p>Tapping the link on a device that isn't yet in the match lands here (replacing today's bare join form). It names the inviter, shows the word already on the table, and gives three ways forward. First-timers aren't dropped cold into a game they don't understand.</p>
+    </div>
+    <div class="steps">
+      <div class="col">
+        <span class="optlabel b">Invite landing · new screen</span>
+        <div class="phone propose">
+          <div class="land">
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:5px">
+              <div class="tiles" style="transform:scale(.8);transform-origin:left">
+                <span class="tile you">S</span><span class="tile you">H</span><span class="tile you">I</span><span class="tile you">F</span><span class="tile you tint">T</span><span class="tile you tint">Y</span>
+              </div>
+              <div class="tiles" style="margin-left:66px;transform:scale(.8);transform-origin:left">
+                <span class="tile them tint">T</span><span class="tile them tint">Y</span><span class="tile them">P</span><span class="tile them">E</span>
+              </div>
+            </div>
+            <div class="invited"><b>Matthew</b> invited you to Shifty&nbsp;Type</div>
+            <div class="blurb">An async word duel — you and a friend trade words that overlap. Matthew already opened. You're up.</div>
+            <div class="opened-card">
+              <div class="cap">Matthew opened with</div>
+              <div class="tiles">
+                <span class="tile them">S</span><span class="tile them">H</span><span class="tile them">I</span><span class="tile them">F</span><span class="tile them">T</span><span class="tile them">Y</span>
+              </div>
+            </div>
+            <div class="ctas">
+              <div class="cta-primary">Get started</div>
+              <div class="cta-ghost">How to play</div>
+              <div class="cta-ghost">Try the 2-minute tutorial</div>
+            </div>
+            <div class="tut-note">Do the tutorial first and we'll bring you right back to Matthew's match.</div>
+          </div>
+        </div>
+        <p class="caption"><b>Get started</b> → a name (only if this device doesn't have one saved), then straight into the match. <b>How to play</b> and <b>the tutorial</b> both return here so the invite is never lost — the tutorial hands off directly into Matthew's game when it ends.</p>
+      </div>
+    </div>
+
+    <!-- STEP 4: friend arrival -->
+    <div class="step-h">
+      <div class="kicker">Step 4 · the payoff (both options)</div>
+      <h2>They're in — straight into their turn</h2>
+      <p>After "Get started" (or finishing the tutorial), no "waiting for Matthew." Your SHIFTY is already on the board — coral, because on <em>their</em> screen you're the opponent — and the board is already prompting their answer.</p>
+    </div>
+    <div class="steps">
+      <div class="col">
+        <div class="phone">
+          <div class="arrive-flag" style="margin-top:14px"><svg class="ic sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M11 6l1-1a4 4 0 0 1 6 6l-1 1"/><path d="M13 18l-1 1a4 4 0 0 1-6-6l1-1"/></svg> Opened from Matthew's invite</div>
+          <div class="topbar">
+            <div class="left"><span class="home">← Home</span><span class="code">7XQ2</span></div>
+            <span class="pass">Pass?</span>
+          </div>
+          <div class="hud">
+            <div class="hcard you active-you">
+              <div class="hname you">YOU</div>
+              <div class="hpts">0<small> pts</small></div>
+              <div class="pips"><span class="pip you"></span><span class="pip you"></span><span class="pip you"></span></div>
+            </div>
+            <div class="ends">ENDS IN<b>9</b>WORDS</div>
+            <div class="hcard them">
+              <div class="hname them">MATTHEW</div>
+              <div class="hpts">6<small> pts</small></div>
+              <div class="pips"><span class="pip them"></span><span class="pip them"></span><span class="pip them"></span></div>
+            </div>
+          </div>
+          <div class="board">
+            <div class="rail">
+              <div class="row-word">
+                <div class="tiles">
+                  <span class="tile them">S</span><span class="tile them">H</span><span class="tile them">I</span><span class="tile them">F</span><span class="tile them tint">T</span><span class="tile them tint">Y</span>
+                </div>
+              </div>
+              <div class="prompt-banner">
+                Matthew opened with SHIFTY. Your move — start with its last letters.
+              </div>
+              <div class="fanrow">
+                <span class="tile them tint" style="opacity:.6">T</span><span class="tile them tint" style="opacity:.6">Y</span>
+                <span class="ghost">·</span><span class="ghost">·</span><span class="meta">TY… · 4 pts+</span>
+              </div>
+            </div>
+          </div>
+          <div class="deck">
+            <div class="krow"><span class="key">Q</span><span class="key">W</span><span class="key">E</span><span class="key">R</span><span class="key">T</span><span class="key">Y</span><span class="key">U</span><span class="key">I</span><span class="key">O</span><span class="key">P</span></div>
+            <div class="krow"><span class="key">A</span><span class="key">S</span><span class="key">D</span><span class="key">F</span><span class="key">G</span><span class="key">H</span><span class="key">J</span><span class="key">K</span><span class="key">L</span></div>
+            <div class="krow"><span class="key">Z</span><span class="key">X</span><span class="key">C</span><span class="key">V</span><span class="key">B</span><span class="key">N</span><span class="key">M</span><span class="key wide"><svg class="ic sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H8L3 12l5 7h13a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M12 9l5 6M17 9l-5 6"/></svg></span></div>
+          </div>
+        </div>
+        <p class="caption">This screen already exists — it's the normal "your turn" board. The win is that the friend <b>reaches it directly from the link</b>, with your word waiting, instead of a join form + empty lobby.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footnote">
+    <h3>What changes under the hood</h3>
+    <ul>
+      <li><b>The opener plays before anyone joins.</b> Today <code>applyMove()</code> rejects every move while the match waits for a second player. We start the match in the opener's turn with the second seat empty (tracked by a small <code>awaitingOpponent</code> flag), so creating and opening are one motion.</li>
+      <li><b>Join no longer forces the first move.</b> When the friend joins an already-opened match, they step into <em>their</em> turn to answer your word — not an empty opening turn.</li>
+      <li><b>A real share button.</b> <code>navigator.share()</code> (with a <code>navigator.clipboard</code> + code fallback) — the same machinery already used for the install link and seat link, pointed at <code>/m/7XQ2</code>.</li>
+      <li><b>A public preview endpoint.</b> The landing screen needs the inviter's name and opening word without a token, so a small unauthenticated <code>GET /api/match/:code/preview</code> returns just those non-secret fields.</li>
+      <li><b>The tutorial remembers the invite.</b> "Try the tutorial" stashes the pending code; on completion the exit routes back to the invite landing instead of Home.</li>
+      <li><b>The nudge copy gets honest.</b> The "sat down — the chain starts with you" push contradicts the real turn order; this flow fixes it: the opener is told their friend arrived, and turn nudges follow real play.</li>
+      <li><b>Copy scrub.</b> No player-facing "grip"; no emoji anywhere (Phosphor icons only, matching the shipped app).</li>
+    </ul>
+    <p class="q">Shipped: Option B invite sheet · copy-link + raw code fallbacks · join-with-code its own screen · invite landing (Get started / How to play / tutorial, which returns here) · returning players skip the name step · no player-facing "grip" · no emoji. Internal "grip" identifiers left as-is for a later rename pass.</p>
+  </div>
+</div>

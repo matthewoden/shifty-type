@@ -1,0 +1,49 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shifty-type",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-06-01",
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MATCH_DO",
+        "class_name": "MatchDO"
+      }
+    ]
+  },
+  // Web Push (VAPID). Public key + subject are not secrets; the private key
+  // is a Worker secret (`wrangler secret put VAPID_PRIVATE_KEY` on each
+  // Worker, plus .dev.vars locally) and must never appear here.
+  "vars": {
+    "VAPID_PUBLIC_KEY": "BPXRfsFab_D-xLFifCPHpM5i3qNrZKjjkonBmnofvZGrb2IA_OS0wn21GLu0xZFJaGZPVGxPqYyQS0UWhB_yVSA",
+    "VAPID_SUBJECT": "https://shifty-type.heymatthewoden.workers.dev"
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MatchDO"]
+    }
+  ],
+  "env": {
+    // Staging: deploys as shifty-type-next with its own isolated Durable Objects
+    "next": {
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "MATCH_DO",
+            "class_name": "MatchDO"
+          }
+        ]
+      },
+      // vars don't inherit across environments — keep in sync with top-level
+      "vars": {
+        "VAPID_PUBLIC_KEY": "BPXRfsFab_D-xLFifCPHpM5i3qNrZKjjkonBmnofvZGrb2IA_OS0wn21GLu0xZFJaGZPVGxPqYyQS0UWhB_yVSA",
+        "VAPID_SUBJECT": "https://shifty-type.heymatthewoden.workers.dev"
+      }
+    }
+  }
+}
