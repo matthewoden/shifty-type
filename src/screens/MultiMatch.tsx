@@ -13,7 +13,7 @@ import {
   VerdictStamp,
 } from '../components/overlays'
 import { opponentOf } from '../game'
-import { clearActiveCode } from '../multi/storage'
+import { clearActiveCode, removeMatchAuth } from '../multi/storage'
 import { useMultiMatch, type StampEvent } from '../multi/useMultiMatch'
 import { useClearBadge, useNudge, type NudgeStatus } from '../multi/useNudge'
 import { BellOffSheet, SoftAskSheet } from '../components/NudgeSheets'
@@ -116,7 +116,18 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
         <div className="flex items-center gap-2">
-          <button onClick={onExit} className="h-11 px-2 font-extrabold text-[13px] text-dim">
+          <button
+            onClick={() => {
+              // A duel you opened but never played a word into is nothing yet —
+              // don't leave it lying around as a resumable "trash" game.
+              if (state.chain.length === 0 && state.awaitingOpponent) {
+                removeMatchAuth(code)
+                clearActiveCode()
+              }
+              onExit()
+            }}
+            className="h-11 px-2 font-extrabold text-[13px] text-dim"
+          >
             ← {backLabel}
           </button>
           <span className="font-extrabold text-[13px] text-dim tracking-widest">{code}</span>

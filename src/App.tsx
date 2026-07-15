@@ -131,7 +131,6 @@ export default function App() {
           onOpenMatch={(code) => enterDuel(code, 'lobby')}
           onResumeSolo={(save) => enterSolo(save, 'lobby')}
           onNewDuel={() => setScreen({ name: 'duel-create' })}
-          onJoinCode={() => setScreen({ name: 'join-code' })}
         />
       )
     case 'duel-create':

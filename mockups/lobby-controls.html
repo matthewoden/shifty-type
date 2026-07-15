@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shifty Type — lobby controls</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --board:#F6F3EE; --board-lo:#EAE6DE;
+    --ink:#55606E; --ink-strong:#3E4854; --dim:#A8AEB8;
+    --blue:#8B90F4; --blue-lip:#6A6FDC; --blue-t:#DCDEFB; --blue-t-lip:#BFC2F3; --blue-t-ink:#565CC4;
+    --pink:#F98B57; --pink-lip:#DE6A2E;
+    --red:#E5484D; --red-soft:#FBEAEA; --red-ink:#C8372E;
+    --new:#34C759;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { background:#ECE8E1; color:var(--ink-strong); font-family:'Baloo 2',sans-serif; padding:40px 20px 80px; }
+  .intro { max-width:820px; margin:0 auto 40px; }
+  .intro h1 { font-weight:800; font-size:30px; letter-spacing:-.5px; }
+  .intro h1 .b{color:var(--blue-lip);} .intro h1 .p{color:var(--pink-lip);}
+  .intro p { color:#7A828E; margin-top:8px; line-height:1.6; max-width:72ch; font-weight:600; }
+  .rack { display:flex; flex-wrap:wrap; gap:44px; justify-content:center; align-items:flex-start; }
+  .mock { width:375px; }
+  figure.mock { margin:0; }
+  .mock figcaption { color:#7A828E; font-size:13px; line-height:1.65; margin-top:14px; padding:0 6px; font-weight:600; }
+  .mock figcaption b { color:#3E4854; }
+  .tag { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px; margin-bottom:12px; letter-spacing:.3px; }
+  .tag.old { background:#E7E2D9; color:#8B8578; }
+  .tag.new { background:var(--new); color:#fff; }
+
+  .phone { width:375px; height:660px; border-radius:34px; overflow:hidden; display:flex; flex-direction:column; background:var(--board); box-shadow:0 24px 50px rgba(62,72,84,.28); position:relative; }
+  .mock.new .phone { outline:3px solid var(--new); outline-offset:5px; }
+
+  .hd { padding:22px 20px 6px; }
+  .back { font-weight:800; font-size:13px; color:var(--dim); }
+  .titlerow { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; }
+  h2.title { font-size:24px; font-weight:800; }
+
+  /* text-link controls (shipped) */
+  .link-indigo { font-weight:800; font-size:13px; color:var(--blue-lip); }
+  .link-dim { font-weight:800; font-size:13px; color:var(--dim); }
+  .editrow { display:flex; justify-content:flex-end; margin-top:2px; }
+
+  /* chips */
+  .chips { display:flex; gap:9px; margin-top:12px; }
+  .chip { background:#fff; border-radius:999px; box-shadow:0 3px 0 #E2DDD3; padding:9px 15px; font-weight:800; font-size:13px; color:var(--ink-strong); display:inline-flex; align-items:center; gap:7px; }
+  .chip .ic { font-size:14px; color:var(--dim); }
+  .chip.active { background:var(--blue); color:#fff; box-shadow:0 3px 0 var(--blue-lip); }
+  .chip.active .ic { color:#fff; }
+
+  /* join field (variant B) */
+  .joinfield { width:100%; background:#fff; border-radius:14px; box-shadow:0 3px 0 #E2DDD3; padding:12px 14px; text-align:left; font-weight:800; font-size:14px; color:var(--dim); display:flex; align-items:center; gap:9px; margin-top:12px; }
+  .joinfield .hash { width:24px; height:24px; border-radius:7px; background:var(--board); display:flex; align-items:center; justify-content:center; color:var(--blue-lip); font-size:14px; }
+  .joinfield .chev { margin-left:auto; color:var(--dim); font-size:16px; }
+  .pill-btn { background:#fff; border-radius:999px; box-shadow:0 3px 0 #E2DDD3; padding:9px 15px; font-weight:800; font-size:13px; color:var(--ink-strong); display:inline-flex; align-items:center; gap:7px; }
+  .pill-btn.active { background:var(--blue); color:#fff; box-shadow:0 3px 0 var(--blue-lip); }
+
+  /* icon buttons (variant C) */
+  .iconrow { display:flex; gap:9px; }
+  .iconbtn { width:40px; height:40px; border-radius:12px; background:#fff; box-shadow:0 3px 0 #E2DDD3; display:flex; align-items:center; justify-content:center; font-size:17px; color:var(--ink-strong); }
+  .iconbtn.active { background:var(--blue); color:#fff; box-shadow:0 3px 0 var(--blue-lip); }
+
+  /* body + rows */
+  .body { flex:1; padding:14px 20px; display:flex; flex-direction:column; gap:18px; overflow:hidden; }
+  .sect { display:flex; flex-direction:column; gap:10px; }
+  .shead { font-size:12px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--dim); padding-left:2px; }
+  .row { background:#fff; border-radius:16px; box-shadow:0 4px 0 #E2DDD3; padding:12px 13px; display:flex; align-items:center; gap:12px; }
+  .av { width:42px; height:42px; border-radius:13px; background:var(--pink); color:#fff; font-weight:800; font-size:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 0 var(--pink-lip); flex-shrink:0; }
+  .mid { flex:1; min-width:0; }
+  .nm { font-weight:800; font-size:16px; color:var(--ink-strong); }
+  .sc { font-weight:700; font-size:13px; margin-top:2px; }
+  .sc .y{color:var(--blue-lip);} .sc .o{color:var(--pink-lip);} .sc .d{color:var(--dim);}
+  .turn { font-weight:800; font-size:12px; border-radius:999px; padding:6px 11px; background:var(--blue); color:#fff; box-shadow:0 3px 0 var(--blue-lip); white-space:nowrap; }
+  .ago { font-weight:700; font-size:11px; color:var(--dim); text-align:right; margin-top:4px; }
+  .code { display:flex; gap:3px; flex-shrink:0; }
+  .t { width:22px; height:30px; border-radius:7px; background:var(--blue-t); color:var(--blue-t-ink); box-shadow:0 3px 0 var(--blue-t-lip); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; }
+  .share { background:var(--pink); color:#fff; box-shadow:0 3px 0 var(--pink-lip); border-radius:11px; padding:9px 13px; font-weight:800; font-size:13px; flex-shrink:0; }
+
+  /* delete affordances */
+  .remove-pill { background:var(--red-soft); color:var(--red-ink); border-radius:11px; padding:9px 13px; font-weight:800; font-size:13px; flex-shrink:0; }
+  .minus { width:26px; height:26px; border-radius:50%; background:var(--red); color:#fff; font-weight:800; font-size:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .trash { width:40px; height:40px; border-radius:11px; background:var(--red-soft); color:var(--red-ink); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+  /* swiped-open row */
+  .swipe { position:relative; border-radius:16px; overflow:hidden; box-shadow:0 4px 0 #E2DDD3; }
+  .swipe .del { position:absolute; right:0; top:0; bottom:0; width:92px; background:var(--red); color:#fff; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .swipe .fg { position:relative; background:#fff; padding:12px 13px; display:flex; align-items:center; gap:12px; transform:translateX(-92px); }
+
+  .cta { margin-top:auto; }
+  .duel { width:100%; height:52px; border-radius:16px; background:var(--pink); color:#fff; box-shadow:0 4px 0 var(--pink-lip); font-weight:800; font-size:17px; display:flex; align-items:center; justify-content:center; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Lobby controls — <span class="b">code</span>, <span class="b">edit</span>, <span class="p">delete</span></h1>
+  <p>Shipped today (grey), the <b>Edit</b> and <b>Have a code?</b> controls are bare text links — no visible "I'm a button" affordance, and Edit is easy to miss. These proposals (green) all give them real, tappable button shapes in the app's own lip-shadow language; they differ in <b>placement</b> and in how <b>delete</b> reads. Delete stays local-only + swipe-first in every version; the question is what the tappable fallback looks like.</p>
+</div>
+
+<div class="rack">
+
+  <!-- 0 · SHIPPED -->
+  <figure class="mock">
+    <span class="tag old">● SHIPPED TODAY</span>
+    <div class="phone">
+      <div class="hd">
+        <div class="back">← Back</div>
+        <div class="titlerow">
+          <h2 class="title">Your games</h2>
+          <span class="link-indigo">Have a code? ›</span>
+        </div>
+        <div class="editrow"><span class="link-dim">Edit</span></div>
+      </div>
+      <div class="body">
+        <div class="sect">
+          <div class="shead">Your move&nbsp;&nbsp;1</div>
+          <div class="row">
+            <div class="av">D</div>
+            <div class="mid"><div class="nm">Dana</div><div class="sc"><span class="y">13</span> <span class="d">–</span> <span class="o">4</span></div></div>
+            <div><div class="turn">Your turn</div><div class="ago">2h ago</div></div>
+          </div>
+        </div>
+        <div class="cta"><div class="duel">Duel a friend</div></div>
+      </div>
+    </div>
+    <figcaption><b>Today.</b> "Have a code?" and "Edit" are plain coloured text. Nothing looks pressable, and Edit — the only way to delete without knowing the hidden swipe — reads as a caption.</figcaption>
+  </figure>
+
+  <!-- A · CHIPS -->
+  <figure class="mock new">
+    <span class="tag new">✦ A · PILL CHIPS</span>
+    <div class="phone">
+      <div class="hd">
+        <div class="back">← Back</div>
+        <div class="titlerow"><h2 class="title">Your games</h2></div>
+        <div class="chips">
+          <span class="chip"><span class="ic">＋</span> Have a code</span>
+          <span class="chip"><span class="ic">✎</span> Edit</span>
+        </div>
+      </div>
+      <div class="body">
+        <div class="sect">
+          <div class="shead">Your move&nbsp;&nbsp;1</div>
+          <div class="row">
+            <div class="av">D</div>
+            <div class="mid"><div class="nm">Dana</div><div class="sc"><span class="y">13</span> <span class="d">–</span> <span class="o">4</span></div></div>
+            <div><div class="turn">Your turn</div><div class="ago">2h ago</div></div>
+          </div>
+          <div class="swipe">
+            <div class="del">Delete</div>
+            <div class="fg">
+              <div class="av" style="background:var(--blue);box-shadow:0 3px 0 var(--blue-lip)">L</div>
+              <div class="mid"><div class="nm">Lloyd</div><div class="sc"><span class="y">7</span> <span class="d">–</span> <span class="o">9</span></div></div>
+              <div class="turn">Your turn</div>
+            </div>
+          </div>
+        </div>
+        <div class="cta"><div class="duel">Duel a friend</div></div>
+      </div>
+    </div>
+    <figcaption><b>A — two pill chips.</b> White lip-shadow chips under the title, matching the home buttons. Clearly tappable, room for a word + icon. Edit flips to a filled indigo <b>Done</b> when active. Delete stays swipe (shown on Lloyd); in Edit mode each row gets a red "Remove".</figcaption>
+  </figure>
+
+  <!-- B · JOIN FIELD + EDIT PILL -->
+  <figure class="mock new">
+    <span class="tag new">✦ B · JOIN FIELD + EDIT PILL</span>
+    <div class="phone">
+      <div class="hd">
+        <div class="back">← Back</div>
+        <div class="titlerow">
+          <h2 class="title">Your games</h2>
+          <span class="pill-btn active">✓ Done</span>
+        </div>
+        <div class="joinfield"><span class="hash">#</span> Enter a code to join <span class="chev">›</span></div>
+      </div>
+      <div class="body">
+        <div class="sect">
+          <div class="shead">Your move&nbsp;&nbsp;1</div>
+          <div class="row">
+            <div class="av">D</div>
+            <div class="mid"><div class="nm">Dana</div><div class="sc"><span class="y">13</span> <span class="d">–</span> <span class="o">4</span></div></div>
+            <div class="remove-pill">Remove</div>
+          </div>
+        </div>
+        <div class="sect">
+          <div class="shead">Waiting for a friend&nbsp;&nbsp;1</div>
+          <div class="row">
+            <div class="code"><span class="t">Q</span><span class="t">7</span><span class="t">M</span><span class="t">2</span></div>
+            <div class="mid"><div class="nm" style="font-size:15px">Waiting to join</div><div class="sc" style="color:var(--dim);font-weight:600">Opened with <b style="color:var(--ink)">PLANET</b></div></div>
+            <div class="remove-pill">Remove</div>
+          </div>
+        </div>
+        <div class="cta"><div class="duel">Duel a friend</div></div>
+      </div>
+    </div>
+    <figcaption><b>B — join looks like a field; Edit is a pill.</b> Joining gets an input-shaped affordance (the strongest "type here" signal), Edit sits top-right as a pill → <b>Done</b>. Shown mid-edit: every row (games <i>and</i> pending invites) carries a red "Remove". Costs a header row of height.</figcaption>
+  </figure>
+
+  <!-- C · ICON BUTTONS -->
+  <figure class="mock new">
+    <span class="tag new">✦ C · ICON BUTTONS</span>
+    <div class="phone">
+      <div class="hd">
+        <div class="back">← Back</div>
+        <div class="titlerow">
+          <h2 class="title">Your games</h2>
+          <div class="iconrow">
+            <span class="iconbtn">＋</span>
+            <span class="iconbtn">✎</span>
+          </div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="sect">
+          <div class="shead">Your move&nbsp;&nbsp;1</div>
+          <div class="row">
+            <div class="av">D</div>
+            <div class="mid"><div class="nm">Dana</div><div class="sc"><span class="y">13</span> <span class="d">–</span> <span class="o">4</span></div></div>
+            <div><div class="turn">Your turn</div><div class="ago">2h ago</div></div>
+          </div>
+          <div class="row">
+            <div class="av" style="background:var(--blue);box-shadow:0 3px 0 var(--blue-lip)">L</div>
+            <div class="mid"><div class="nm">Lloyd</div><div class="sc"><span class="y">7</span> <span class="d">–</span> <span class="o">9</span></div></div>
+            <div class="turn">Your turn</div>
+          </div>
+        </div>
+        <div class="cta"><div class="duel">Duel a friend</div></div>
+      </div>
+    </div>
+    <figcaption><b>C — compact icon buttons.</b> Two square lip-shadow buttons top-right (＋ join, ✎ edit): smallest footprint, most "app-chrome" feel. Needs new Phosphor glyphs (plus / pencil / trash) and leans on recognisability — the tradeoff is a code/edit icon isn't as self-evident as a word.</figcaption>
+  </figure>
+
+</div>
+</body>
+</html>

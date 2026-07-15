@@ -21,14 +21,7 @@ import { api } from '../lib/api'
 import type { MatchSummary } from '../lib/protocol'
 import { timeAgo } from '../lib/timeAgo'
 import { duelBucket, soloBucket } from '../multi/lobby'
-import {
-  getSavedName,
-  listSeats,
-  loadLobbyCache,
-  removeMatchAuth,
-  saveLobbyCache,
-  saveMatchAuth,
-} from '../multi/storage'
+import { listSeats, loadLobbyCache, removeMatchAuth, saveLobbyCache } from '../multi/storage'
 import { loadSoloSave, SOLO_SAVE_KEY, type SoloSave } from '../solo/useSoloMatch'
 
 interface LobbyProps {
@@ -36,7 +29,6 @@ interface LobbyProps {
   onOpenMatch: (code: string) => void
   onResumeSolo: (save: SoloSave) => void
   onNewDuel: () => void
-  onJoinCode: () => void
 }
 
 const PILL = 'text-[12px] font-extrabold rounded-full px-2.5 py-1 whitespace-nowrap'
@@ -310,17 +302,12 @@ function Section({ title, count, children }: { title: string; count: number; chi
   )
 }
 
-export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode }: LobbyProps) {
+export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel }: LobbyProps) {
   const [summaries, setSummaries] = useState<MatchSummary[]>(() => loadLobbyCache())
   const [solo, setSolo] = useState<SoloSave | null>(() => loadSoloSave())
   const [showFinished, setShowFinished] = useState(false)
   const [sharing, setSharing] = useState<MatchSummary | null>(null)
   const [editing, setEditing] = useState(false)
-  // Inline "Have a code?" join, sharing the header space with the title.
-  const [joinOpen, setJoinOpen] = useState(false)
-  const [joinCode, setJoinCode] = useState('')
-  const [joinPending, setJoinPending] = useState(false)
-  const [joinError, setJoinError] = useState<string | null>(null)
   // Only surface a spinner on a truly empty first open — otherwise the cached
   // list is already on screen and a refresh happens quietly behind it.
   const [loading, setLoading] = useState(() => loadLobbyCache().length === 0)
@@ -338,9 +325,14 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
       if (!mounted.current) return
       setLoading(false)
       if (!r.ok) return // offline: keep showing the cached list
-      r.gone.forEach(removeMatchAuth) // prune matches deleted after 60 days
-      setSummaries(r.summaries)
-      saveLobbyCache(r.summaries)
+      // A duel opened but never played into (no opening word) is trash — prune
+      // it like a dead seat, so a create-then-back never lingers in the list.
+      const unstarted = (s: MatchSummary) => s.awaitingOpponent && !s.openingWord
+      r.gone.forEach(removeMatchAuth) // matches deleted after 60 days
+      r.summaries.filter(unstarted).forEach((s) => removeMatchAuth(s.code))
+      const live = r.summaries.filter((s) => !unstarted(s))
+      setSummaries(live)
+      saveLobbyCache(live)
     })()
     return () => {
       mounted.current = false
@@ -360,20 +352,6 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
     localStorage.removeItem(SOLO_SAVE_KEY)
     setSolo(null)
     if (summaries.length === 0) setEditing(false)
-  }
-
-  async function submitJoin() {
-    const code = joinCode.trim().toUpperCase()
-    if (code.length !== 4) return setJoinError('A match code is 4 characters.')
-    const name = getSavedName()
-    if (!name) return onJoinCode() // no name saved yet — the full screen collects one
-    setJoinPending(true)
-    setJoinError(null)
-    const r = await api.join(code, name)
-    setJoinPending(false)
-    if (!r.ok) return setJoinError(r.error)
-    saveMatchAuth(code, { token: r.token, you: 'p2' })
-    onOpenMatch(code)
   }
 
   const byRecent = (a: MatchSummary, b: MatchSummary) => (b.lastMoveAt ?? 0) - (a.lastMoveAt ?? 0)
@@ -434,65 +412,23 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
         <button onClick={onBack} className="h-11 -ml-2 px-2 font-extrabold text-[13px] text-dim">
           ← Back
         </button>
-        {/* Top bar: title + "Have a code?" join. Edit sits below it. */}
+        {/* Top bar: title + the Edit pill (→ filled Done while active).
+            Joining by code lives on Home, so it's not duplicated here. */}
         <div className="flex items-center justify-between gap-3 mt-1">
           <h1 className="text-2xl font-extrabold text-ink-strong">Your games</h1>
-          {!joinOpen && (
-            <button
-              onClick={() => setJoinOpen(true)}
-              className="shrink-0 h-9 px-1 font-extrabold text-[13px] text-p1-lip"
-            >
-              Have a code? ›
-            </button>
-          )}
-        </div>
-        {joinOpen && (
-          <div className="mt-2 flex flex-col gap-1.5">
-            <div className="flex gap-2">
-              <input
-                value={joinCode}
-                onChange={(e) =>
-                  setJoinCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4))
-                }
-                onKeyDown={(e) => e.key === 'Enter' && submitJoin()}
-                maxLength={4}
-                autoFocus
-                placeholder="CODE"
-                aria-label="Match code"
-                className="flex-1 min-w-0 h-11 rounded-xl bg-white px-3.5 font-extrabold text-lg tracking-[0.3em] uppercase text-ink-strong shadow-[0_3px_0_#E2DDD3] outline-none placeholder:text-dim placeholder:tracking-normal"
-              />
-              <button
-                onClick={submitJoin}
-                disabled={joinPending}
-                className="shrink-0 h-11 px-4 rounded-xl font-extrabold bg-p2 text-white shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5 disabled:opacity-50"
-              >
-                Join
-              </button>
-              <button
-                onClick={() => {
-                  setJoinOpen(false)
-                  setJoinError(null)
-                  setJoinCode('')
-                }}
-                aria-label="Cancel"
-                className="shrink-0 h-11 px-2 font-extrabold text-dim"
-              >
-                ✕
-              </button>
-            </div>
-            {joinError && <p className="text-[13px] font-bold text-p2-lip px-1">{joinError}</p>}
-          </div>
-        )}
-        {!empty && (
-          <div className="flex justify-end -mt-0.5">
+          {!empty && (
             <button
               onClick={() => setEditing((v) => !v)}
-              className="h-9 px-1 font-extrabold text-[13px] text-dim"
+              className={`shrink-0 h-9 px-4 rounded-full font-extrabold text-[13px] active:translate-y-0.5 ${
+                editing
+                  ? 'bg-p1 text-white shadow-[0_3px_0_var(--color-p1-lip)]'
+                  : 'bg-white text-ink-strong shadow-[0_3px_0_#E2DDD3]'
+              }`}
             >
               {editing ? 'Done' : 'Edit'}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-8 max-w-[430px] w-full mx-auto flex flex-col gap-6 pt-2">
