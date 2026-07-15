@@ -5,7 +5,14 @@
 // flaky-wifi open. The 4-letter code only surfaces on a pending invite, where
 // it's the thing you actually share.
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
 import { InviteSheet } from '../components/InviteSheet'
 import { ShareIcon } from '../components/icons'
 import { tileClass } from '../components/tiles'
@@ -68,6 +75,109 @@ function RemoveButton({ onDelete }: { onDelete: () => void }) {
   )
 }
 
+const REVEAL = 92 // px of red Delete revealed on a full swipe
+
+/**
+ * iOS-style swipe-to-delete. Drag a row left to reveal a red Delete, tap it to
+ * confirm; a short swipe snaps back. The card chrome (rounded corners + lip
+ * shadow) lives on the clipping wrapper, not the sliding card, so the reveal
+ * clips cleanly and the 3D lip never gets cut off. A tap that didn't move
+ * opens the match; touch-action pan-y keeps vertical scrolling native.
+ */
+function SwipeRow({
+  onDelete,
+  onTap,
+  children,
+}: {
+  onDelete: () => void
+  onTap: () => void
+  children: ReactNode
+}) {
+  const [dx, setDx] = useState(0)
+  const [active, setActive] = useState(false) // dragging → drop the snap transition
+  const dxRef = useRef(0)
+  const openRef = useRef(false)
+  const swipedRef = useRef(false)
+  const drag = useRef<{ x: number; y: number; axis: 'x' | 'y' | null } | null>(null)
+
+  const set = (v: number) => {
+    dxRef.current = v
+    setDx(v)
+  }
+  const down = (e: ReactPointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    swipedRef.current = false
+    drag.current = { x: e.clientX, y: e.clientY, axis: null }
+  }
+  const move = (e: ReactPointerEvent) => {
+    const d = drag.current
+    if (!d) return
+    const ddx = e.clientX - d.x
+    const ddy = e.clientY - d.y
+    if (d.axis === null) {
+      if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8) return
+      d.axis = Math.abs(ddx) > Math.abs(ddy) ? 'x' : 'y' // lock to the dominant axis
+      if (d.axis === 'x') {
+        e.currentTarget.setPointerCapture(e.pointerId)
+        setActive(true)
+      }
+    }
+    if (d.axis !== 'x') return // vertical drag → let the list scroll
+    swipedRef.current = true
+    const base = openRef.current ? -REVEAL : 0
+    set(Math.max(-REVEAL, Math.min(0, base + ddx)))
+  }
+  const up = () => {
+    const d = drag.current
+    drag.current = null
+    setActive(false)
+    if (!d || d.axis !== 'x') return
+    const open = dxRef.current <= -REVEAL / 2
+    openRef.current = open
+    set(open ? -REVEAL : 0)
+  }
+  const tap = (e: ReactMouseEvent) => {
+    if (swipedRef.current) {
+      swipedRef.current = false
+      e.preventDefault() // a swipe isn't a tap — don't open the match
+      return
+    }
+    if (openRef.current) {
+      openRef.current = false // an open row taps closed first
+      set(0)
+      return
+    }
+    onTap()
+  }
+  return (
+    <div className="relative rounded-2xl overflow-hidden shadow-[0_4px_0_#E2DDD3]">
+      <button
+        onClick={onDelete}
+        aria-label="Delete game"
+        className="absolute right-0 inset-y-0 w-[92px] bg-[#E5484D] text-white font-extrabold text-[14px] flex items-center justify-center"
+      >
+        Delete
+      </button>
+      <div
+        role="button"
+        tabIndex={0}
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        onClick={tap}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onTap()}
+        style={{ transform: `translateX(${dx}px)`, touchAction: 'pan-y' }}
+        className={`relative bg-white w-full text-left px-3.5 py-3 flex items-center gap-3 select-none ${
+          active ? '' : 'transition-transform duration-200'
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function OpponentRow({
   name,
   live,
@@ -117,16 +227,13 @@ function OpponentRow({
     )
   }
   return (
-    <button
-      onClick={onClick}
-      className="w-full text-left bg-white rounded-2xl shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 px-3.5 py-3 flex items-center gap-3"
-    >
+    <SwipeRow onDelete={onDelete} onTap={onClick}>
       {body}
       <span className="shrink-0 flex flex-col items-end gap-1">
         {pill}
         {ago && <span className="text-[11px] font-bold text-dim">{ago}</span>}
       </span>
-    </button>
+    </SwipeRow>
   )
 }
 
@@ -145,7 +252,7 @@ function PendingRow({
 }) {
   const word = s.openingWord?.toUpperCase() ?? null
   const info = (
-    <>
+    <div className="flex items-center gap-3 flex-1 min-w-0">
       <span className="flex gap-[3px] shrink-0">
         {s.code.split('').map((ch, i) => (
           <span key={i} className={tileClass('you', true, true)}>
@@ -165,31 +272,29 @@ function PendingRow({
           )}
         </span>
       </span>
-    </>
-  )
-  return (
-    <div className="bg-white rounded-2xl shadow-[0_4px_0_#E2DDD3] px-3.5 py-3 flex items-center gap-3">
-      {editing ? (
-        <div className="flex items-center gap-3 flex-1 min-w-0">{info}</div>
-      ) : (
-        <button
-          onClick={onOpen}
-          className="flex items-center gap-3 flex-1 min-w-0 text-left active:translate-y-0.5"
-        >
-          {info}
-        </button>
-      )}
-      {editing ? (
-        <RemoveButton onDelete={onDelete} />
-      ) : (
-        <button
-          onClick={onShare}
-          className="shrink-0 h-10 px-3.5 rounded-xl bg-p2 text-white font-extrabold text-[13px] shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center gap-1.5"
-        >
-          <ShareIcon className="w-4 h-4 text-white" /> Share
-        </button>
-      )}
     </div>
+  )
+  if (editing) {
+    return (
+      <div className="bg-white rounded-2xl shadow-[0_4px_0_#E2DDD3] px-3.5 py-3 flex items-center gap-3">
+        {info}
+        <RemoveButton onDelete={onDelete} />
+      </div>
+    )
+  }
+  return (
+    <SwipeRow onDelete={onDelete} onTap={onOpen}>
+      {info}
+      <button
+        onClick={(e) => {
+          e.stopPropagation() // Share, not open — and not a swipe
+          onShare()
+        }}
+        className="shrink-0 h-10 px-3.5 rounded-xl bg-p2 text-white font-extrabold text-[13px] shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center gap-1.5"
+      >
+        <ShareIcon className="w-4 h-4 text-white" /> Share
+      </button>
+    </SwipeRow>
   )
 }
 
@@ -329,20 +434,20 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
         <button onClick={onBack} className="h-11 -ml-2 px-2 font-extrabold text-[13px] text-dim">
           ← Back
         </button>
+        {/* Top bar: title + "Have a code?" join. Edit sits below it. */}
         <div className="flex items-center justify-between gap-3 mt-1">
           <h1 className="text-2xl font-extrabold text-ink-strong">Your games</h1>
-          {!empty && (
+          {!joinOpen && (
             <button
-              onClick={() => setEditing((v) => !v)}
-              className="h-11 px-2 font-extrabold text-[13px] text-p1-lip"
+              onClick={() => setJoinOpen(true)}
+              className="shrink-0 h-9 px-1 font-extrabold text-[13px] text-p1-lip"
             >
-              {editing ? 'Done' : 'Edit'}
+              Have a code? ›
             </button>
           )}
         </div>
-        {/* Have a code? — the join input shares the header space, no bottom button. */}
-        {joinOpen ? (
-          <div className="mt-1.5 flex flex-col gap-1.5">
+        {joinOpen && (
+          <div className="mt-2 flex flex-col gap-1.5">
             <div className="flex gap-2">
               <input
                 value={joinCode}
@@ -377,13 +482,16 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel, onJoinCode
             </div>
             {joinError && <p className="text-[13px] font-bold text-p2-lip px-1">{joinError}</p>}
           </div>
-        ) : (
-          <button
-            onClick={() => setJoinOpen(true)}
-            className="mt-0.5 h-9 -ml-1 px-1 font-extrabold text-[13px] text-p1-lip"
-          >
-            Have a code? ›
-          </button>
+        )}
+        {!empty && (
+          <div className="flex justify-end -mt-0.5">
+            <button
+              onClick={() => setEditing((v) => !v)}
+              className="h-9 px-1 font-extrabold text-[13px] text-dim"
+            >
+              {editing ? 'Done' : 'Edit'}
+            </button>
+          </div>
         )}
       </div>
 

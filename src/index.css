@@ -25,6 +25,15 @@
   --color-p2-tint-ink: #D0682A;
 }
 
+/* The ledger hides the native scrollbar (it clashes with the flat card look);
+   a custom fading thumb rides on top instead. */
+.no-native-scrollbar {
+  scrollbar-width: none; /* Firefox */
+}
+.no-native-scrollbar::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
 /* Desktop: the game is a phone-shaped column, centered. */
 body {
   background: #ece8e1;

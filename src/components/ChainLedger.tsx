@@ -250,6 +250,16 @@ function RailLedger(props: LedgerViewProps) {
   const firstRef = useRef(true)
   const animatingRef = useRef(false)
   const [atBottom, setAtBottom] = useState(true)
+  // Stricter than atBottom (which carries 40px of snap hysteresis): true only
+  // when the board is essentially pinned to the newest row. The "tap a
+  // starter" nudge keys off this so it fades the instant you scroll back,
+  // instead of hanging fixed while the ghost fan slides underneath it.
+  const [pinned, setPinned] = useState(true)
+  // Custom scrollbar: a thin thumb that fades in while scrolling/hovering and
+  // out on idle. Native scrollbar is hidden (.no-native-scrollbar).
+  const [thumb, setThumb] = useState({ top: 0, height: 0 })
+  const [barShown, setBarShown] = useState(false)
+  const barTimer = useRef(0)
   // The turn the camera is nearest to — glowed while scrolled back so you
   // can see which step of the path you're locked onto. `away` is true only
   // when the *user* holds a scrolled-back position: it stays false during
@@ -275,7 +285,13 @@ function RailLedger(props: LedgerViewProps) {
   const seedTimer = useRef(0)
   const composerTypedRef = useRef(false)
   composerTypedRef.current = !!composer?.typed
-  useEffect(() => () => clearTimeout(seedTimer.current), [])
+  useEffect(
+    () => () => {
+      clearTimeout(seedTimer.current)
+      clearTimeout(barTimer.current)
+    },
+    [],
+  )
   useEffect(() => {
     if (!composer?.typed && seeded) setSeeded(false)
   }, [composer?.typed, seeded])
@@ -351,13 +367,33 @@ function RailLedger(props: LedgerViewProps) {
     setAway((prev) => (prev === isAway ? prev : isAway))
     const at = Math.min(Math.max(0, rowsRef.current.length - 1), Math.max(0, Math.round(t)))
     setStep((prev) => (prev === at ? prev : at))
+    const pin = fromBottom < 4
+    setPinned((prev) => (prev === pin ? prev : pin))
+    // Thumb geometry from the real scroll metrics (scrollRange is the max top).
+    const track = sc.clientHeight
+    if (sc.scrollHeight > track + 1 && scrollRange > 0) {
+      const h = Math.max(28, (track * track) / sc.scrollHeight)
+      const top = (sc.scrollTop / scrollRange) * (track - h)
+      setThumb((prev) => (Math.abs(prev.top - top) < 0.5 && prev.height === h ? prev : { top, height: h }))
+    } else {
+      setThumb((prev) => (prev.height === 0 ? prev : { top: 0, height: 0 }))
+    }
   }
   const applyCameraRef = useRef(applyCamera)
   applyCameraRef.current = applyCamera
 
   // Same-frame, no rAF hop: the horizontal follow must not trail the
   // native vertical motion or the camera wobbles off the diagonal mid-flick.
-  const onScroll = () => applyCameraRef.current()
+  // Wake the scrollbar, then fade it after a beat of stillness.
+  const pokeBar = () => {
+    setBarShown(true)
+    clearTimeout(barTimer.current)
+    barTimer.current = window.setTimeout(() => setBarShown(false), 900)
+  }
+  const onScroll = () => {
+    applyCameraRef.current()
+    pokeBar()
+  }
   // Any touch or wheel means the user owns the scroll again.
   const onTake = () => {
     animatingRef.current = false
@@ -496,8 +532,9 @@ function RailLedger(props: LedgerViewProps) {
         ref={scrollerRef}
         onScroll={onScroll}
         onPointerDown={onTake}
+        onPointerMove={pokeBar}
         onWheel={onTake}
-        className="absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain snap-y snap-mandatory"
+        className="absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain snap-y snap-mandatory no-native-scrollbar"
       >
         {/* One snap marker per row: the scroll can only settle on a turn,
             never between two — and a fling stops at the very next one, so
@@ -526,7 +563,7 @@ function RailLedger(props: LedgerViewProps) {
       </div>
       {/* The nudge is screen furniture, not a board object: centered so a
           long word's far-right fan can't drag it off the edge. */}
-      {fanShowing && atBottom && (
+      {fanShowing && pinned && (
         <p
           className={`absolute inset-x-0 bottom-[28px] text-center text-[10px] font-extrabold text-dim uppercase tracking-wider pointer-events-none transition-opacity duration-150${
             seeding ? ' opacity-0' : ''
@@ -535,6 +572,18 @@ function RailLedger(props: LedgerViewProps) {
           tap a starter, or just type — deeper scores more
         </p>
       )}
+      {/* Custom scrollbar: fades in while scrolling or hovering, out on idle. */}
+      <div
+        aria-hidden
+        className={`absolute inset-y-0 right-0.5 w-1.5 z-10 pointer-events-none transition-opacity duration-300 ${
+          barShown && thumb.height > 0 ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <div
+          className="w-full rounded-full bg-ink-strong/25"
+          style={{ transform: `translateY(${thumb.top}px)`, height: thumb.height }}
+        />
+      </div>
       {composer?.typed && atBottom && <PlayChip composer={composer} onPlay={onPlay} />}
       {away && (
         <button
