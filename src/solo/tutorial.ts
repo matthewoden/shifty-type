@@ -169,7 +169,7 @@ export function bubbleFor(
     case 'firstWord':
       return [
         {
-          text: 'Try entering ANTIC for your turn. It overlaps ANT, three letters deep, for nine points. I lit up your next key.',
+          text: 'Try entering ANTIC for your turn. It overlaps ANT, three letters deep, for eleven points. I lit up your next key.',
         },
       ]
     case 'points':

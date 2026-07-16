@@ -76,8 +76,8 @@ export function HowTo({
 
         <h2 className="font-extrabold text-lg text-ink-strong mb-1.5">2 · Grab more, score more</h2>
         <p className="font-semibold text-[13.5px] text-ink leading-relaxed">
-          Points = <b>overlap × overlap</b>, plus a bonus for long words. The starters show your
-          options:
+          Points = <b>overlap × overlap</b>, plus one point for every letter you add after the
+          join. The starters show your options:
         </p>
         <div className="my-3.5 flex flex-col gap-1.5">
           <div style={{ marginLeft: 52 }}>
