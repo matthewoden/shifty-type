@@ -536,7 +536,10 @@ function RailLedger(props: LedgerViewProps) {
                   onClick={() =>
                     challengeable ? onChallenge() : onDetail({ link: row.link, index: row.index })
                   }
-                  className={`flex items-center gap-2 -m-1.5 p-1.5 rounded-xl active:bg-board-lo ${revealing ? '' : 'row-settle '}transition-shadow duration-150${glow}`}
+                  // pb-2.5 (not 1.5): the tiles' 4px lip shadow hangs below their
+                  // layout box, so the glow panel needs the extra bottom room to
+                  // read as vertically centered around the word.
+                  className={`flex items-center gap-2 -m-1.5 pt-1.5 px-1.5 pb-2.5 rounded-xl active:bg-board-lo ${revealing ? '' : 'row-settle '}transition-shadow duration-150${glow}`}
                   style={common}
                   aria-label={
                     challengeable
