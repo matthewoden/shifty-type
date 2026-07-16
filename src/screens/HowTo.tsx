@@ -102,8 +102,9 @@ export function HowTo({
           chain hits <b>20 words</b>.
         </p>
         <p className="font-semibold text-[13.5px] text-ink leading-relaxed mt-2">
-          Lives go when you get stuck and pass — or in a challenge. Which brings us to the fun
-          part.
+          Lives go when you get stuck and pass — or in a challenge. And if you <i>both</i> pass on
+          the same word, the chain snaps: those words are settled, and whoever's up starts a fresh
+          chain with any word. Which brings us to the fun part.
         </p>
         <Rule />
 

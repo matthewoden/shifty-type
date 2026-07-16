@@ -30,7 +30,9 @@ export function Toast({ message }: { message: string | null }) {
           setLeaving(false)
         }
       }}
-      className={`mx-3.5 mb-2 text-center text-[13px] font-bold text-ink bg-white rounded-xl py-2 shadow-[0_3px_0_#E2DDD3] ${
+      // px-4: two-line messages (the snap) otherwise wrap flush against the
+      // card's edge and read cramped.
+      className={`mx-3.5 mb-2 text-center text-[13px] font-bold text-ink bg-white rounded-xl px-4 py-2.5 shadow-[0_3px_0_#E2DDD3] ${
         leaving ? 'toast-out' : 'toast-in'
       }`}
     >

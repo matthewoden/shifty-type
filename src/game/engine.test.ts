@@ -6,6 +6,8 @@ import {
     pointsFor,
     joinMatch,
     gripOptions,
+    gripTargetOf,
+    isChainBroken,
     nextKeyHints,
     overlapOf,
     provisionalGrip,
@@ -582,5 +584,134 @@ describe("nextKeyHints (guided deck keys)", () => {
     it("returns null once the grip is locked and the word is free-form", () => {
         // otter, typed "ter" → grip locked at 3, any next letter is legal
         expect(nextKeyHints("otter", "ter")).toBeNull();
+    });
+});
+
+describe("the snap (both players pass on the same word)", () => {
+    // vault on the table, then both players pass on it.
+    const snapped = () =>
+        run(fresh(), [
+            ["p1", play("vault")],
+            ["p2", pass],
+            ["p1", pass],
+        ]);
+
+    it("snaps the chain on the second consecutive pass", () => {
+        const s = snapped();
+        expect(s.breaks).toEqual([1]);
+        expect(s.phase).toBe("P2_TURN"); // whoever is on move opens fresh
+        // Both passes still cost their life.
+        expect(s.players.p1.lives).toBe(2);
+        expect(s.players.p2.lives).toBe(2);
+    });
+
+    it("opens the board: any word, no overlap, no points — even one that grips", () => {
+        const s = run(snapped(), [["p2", play("ultra")]]);
+        const opener = s.chain[1];
+        expect(opener).toMatchObject({ word: "ultra", overlap: 0, points: 0 });
+        expect(s.players.p2.points).toBe(0);
+        expect(s.breaks).toEqual([1]); // the break is history, not pending
+        const next = run(s, [["p1", play("radish")]]);
+        expect(next.chain[2].points).toBe(pointsFor(2, 6));
+    });
+
+    it("still refuses words already played this match", () => {
+        expectError(
+            applyMove(snapped(), "p2", play("vault")),
+            "VAULT has already been played this match.",
+        );
+    });
+
+    it("seals the words behind the break against challenges", () => {
+        expectError(
+            applyMove(snapped(), "p2", challenge(false)),
+            "The chain snapped — those words are settled. Open a new one.",
+        );
+    });
+
+    it("a played word between passes keeps the chain whole", () => {
+        const s = run(fresh(), [
+            ["p1", play("vault")],
+            ["p2", pass],
+            ["p1", play("ultra")],
+            ["p2", pass],
+        ]);
+        expect(s.breaks).toBeUndefined();
+        // …and only the NEXT consecutive pass snaps it.
+        const s2 = run(s, [["p1", pass]]);
+        expect(s2.breaks).toEqual([2]);
+    });
+
+    it("a challenge between passes resets the count", () => {
+        // p2's fake is rejected, vault is the tip again (p1's own word);
+        // p1 passes on it, and p2's failed challenge resets the streak.
+        const roomy = fresh();
+        roomy.players.p1.lives = 5;
+        roomy.players.p2.lives = 5; // room for every life this script burns
+        const s = run(roomy, [
+            ["p1", play("vault")],
+            ["p2", play("ltqxy")],
+            ["p1", challenge(false)], // REJECTED — rewinds to vault, p1 on move
+            ["p1", pass],
+            ["p2", challenge(true)], // STANDS — p2 pays, and the streak resets
+        ]);
+        expect(s.passStreak).toBeUndefined();
+        expect(s.breaks).toBeUndefined();
+        const s2 = run(s, [
+            ["p2", pass],
+            ["p1", pass],
+        ]);
+        expect(s2.breaks).toEqual([1]);
+    });
+
+    it("an empty chain never snaps — the opener can already play anything", () => {
+        const s = run(fresh(), [
+            ["p1", pass],
+            ["p2", pass],
+        ]);
+        expect(s.breaks).toBeUndefined();
+        expect(isChainBroken(s)).toBe(false);
+    });
+
+    it("a rejected fresh opener re-opens the break", () => {
+        const s = run(snapped(), [
+            ["p2", play("zzqxy")],
+            ["p1", challenge(false)], // the fresh opener was a fake
+        ]);
+        expect(s.chain).toHaveLength(1);
+        expect(isChainBroken(s)).toBe(true); // breaks=[1] pends again
+        const s2 = run(s, [["p1", play("grape")]]);
+        expect(s2.chain[1]).toMatchObject({ overlap: 0, points: 0 });
+    });
+
+    it("a fresh opener can fill the chain and trigger last call", () => {
+        const short = createMatch("You", "Dana", "p1", 2);
+        const s = run(short, [
+            ["p1", play("vault")],
+            ["p2", pass],
+            ["p1", pass],
+            ["p2", play("grape")], // fresh opener is the final word
+        ]);
+        expect(s.phase).toBe("LAST_CALL");
+    });
+
+    it("the second pass can still end the game on lives", () => {
+        const s = fresh();
+        s.players.p1.lives = 1;
+        const over = run(s, [
+            ["p1", play("vault")],
+            ["p2", pass],
+            ["p1", pass],
+        ]);
+        expect(over.phase).toBe("GAME_OVER");
+        expect(over.winner).toBe("p2");
+    });
+
+    it("gripTargetOf goes null while the snap pends, then follows the fresh chain", () => {
+        const s = snapped();
+        expect(gripTargetOf(s)?.word).toBeUndefined();
+        expect(isChainBroken(s)).toBe(true);
+        const s2 = run(s, [["p2", play("grape")]]);
+        expect(gripTargetOf(s2)?.word).toBe("grape");
     });
 });

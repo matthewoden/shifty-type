@@ -2,7 +2,7 @@
 // thinking delay and any UI staging live in the caller. Randomness and the
 // vocabulary are injectable for tests.
 
-import { overlapOf } from './engine'
+import { gripTargetOf, isChainBroken, overlapOf } from './engine'
 import { WORD_LIST } from './wordlist'
 import { MAX_WORD_LENGTH, type MatchState, type Move, type PlayerId } from './types'
 
@@ -45,6 +45,8 @@ export function wantsChallenge(
   const last = state.chain[state.chain.length - 1]
   return (
     !!last &&
+    // A snapped chain settles everything behind the break — never flag it.
+    !isChainBroken(state) &&
     last.owner !== botId &&
     !last.challengeSurvived &&
     !list.includes(last.word) &&
@@ -64,7 +66,7 @@ export function chooseBotMove(
 ): Move {
   const rng = options.rng ?? Math.random
   const list = options.wordList ?? WORD_LIST
-  const last = state.chain[state.chain.length - 1]
+  const last = gripTargetOf(state)
 
   const word = pickPlayWord(state, difficulty, options)
   if (word) return { type: 'play', word }
@@ -89,7 +91,9 @@ export function pickPlayWord(
 ): string | null {
   const rng = options.rng ?? Math.random
   const list = options.wordList ?? WORD_LIST
-  const last = state.chain[state.chain.length - 1]
+  // Null when the board is open — the match's opener, or a fresh chain
+  // after a snap — so the bot picks freely, exactly like a human opener.
+  const last = gripTargetOf(state)
   const used = new Set(state.usedWords)
   const candidates = list
     .map((word) => ({ word, overlap: last ? overlapOf(last.word, word) : 0 }))

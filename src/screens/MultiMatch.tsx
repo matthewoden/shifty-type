@@ -4,7 +4,7 @@ import { Deck, PassButton } from '../components/Deck'
 import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
 import { useComposer } from '../components/useComposer'
-import { gripOptions, lastCallActorOf } from '../game'
+import { gripOptions, isChainBroken, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { opponentOf } from '../game'
 import {
@@ -36,8 +36,11 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   const [inviteOpen, setInviteOpen] = useState(true)
 
   const view = m.view
+  // Both players passed on the tip: the chain snapped — the next word opens
+  // fresh, so the composer grips nothing and the sealed tip can't be flagged.
+  const broken = !!view && isChainBroken(view.state)
   const newestWord =
-    view && view.state.chain.length > 0
+    view && view.state.chain.length > 0 && !broken
       ? view.state.chain[view.state.chain.length - 1].word
       : null
   const isMyTurn =
@@ -113,9 +116,13 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   const openingNeeded = awaiting && isMyTurn && state.chain.length === 0
 
   const myTurn = isMyTurn
-  const fan = myTurn && !composer.typed && newest ? gripOptions(newest.word) : null
+  const fan = myTurn && !composer.typed && newest && !broken ? gripOptions(newest.word) : null
   const canChallenge =
-    (myTurn || myLastCall) && newest !== undefined && newest.owner !== you && !newest.challengeSurvived
+    (myTurn || myLastCall) &&
+    newest !== undefined &&
+    newest.owner !== you &&
+    !newest.challengeSurvived &&
+    !broken
 
   const active = terminal
     ? null
@@ -159,6 +166,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
         composer={composer.typed ? composer : null}
         fan={fan}
         openerCaret={isMyTurn && state.chain.length === 0}
+        freshStart={broken && !terminal && !lastCall ? (myTurn ? 'mine' : 'theirs') : null}
         revealOnMount={revealRef.current ?? false}
         onSeed={composer.seed}
         onPlay={() => {
@@ -169,7 +177,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
       />
       <Toast message={m.toast} />
       {m.error && (
-        <div className="mx-3.5 mb-2 text-center text-[13px] font-bold text-p2-lip bg-white rounded-xl py-2 shadow-[0_3px_0_#E2DDD3]">
+        <div className="mx-3.5 mb-2 text-center text-[13px] font-bold text-p2-lip bg-white rounded-xl px-4 py-2.5 shadow-[0_3px_0_#E2DDD3]">
           {m.error}
         </div>
       )}
@@ -240,6 +248,8 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
               <>
                 <PresenceDot /> {oppName}'s at the table, mulling it over…
               </>
+            ) : broken ? (
+              <>{oppName} starts a fresh chain — we'll be here.</>
             ) : (
               <>{oppName}'s move — we'll be here.</>
             )}

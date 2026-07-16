@@ -14,7 +14,8 @@ export interface Player {
 export interface ChainLink {
   word: string
   owner: PlayerId
-  /** Letters shared with the previous word (0 for the opener). */
+  /** Letters shared with the previous word (0 for the opener — the match's
+   *  or, after a snap, a fresh chain's). */
   overlap: number
   /** Points earned by this word: overlap² + max(0, length − 6). 0 for the opener. */
   points: number
@@ -60,6 +61,19 @@ export interface MatchState {
   version: number
   /** Words in a full chain. Absent = CHAIN_LIMIT; the tutorial plays short matches. */
   chainLimit?: number
+  /**
+   * Chain indices where a fresh chain starts after a snap (both players
+   * passed on the same word). While an index equals chain.length the snap is
+   * pending: the next word played is a fresh opener — any word, no overlap,
+   * no points — and the words behind the break are settled (unchallengeable).
+   * Absent on matches that never snapped.
+   */
+  breaks?: number[]
+  /**
+   * Consecutive passes since the last word or challenge. At 2 the chain
+   * snaps. Absent (= 0) on states from before the snap rule.
+   */
+  passStreak?: number
   /**
    * True while the second seat is still empty: the opener plays and shares
    * the invite, and the match waits (possibly mid-turn) for a friend to join.

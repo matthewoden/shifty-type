@@ -8,6 +8,7 @@ import {
   applyMove,
   chooseBotMove,
   createMatch,
+  isChainBroken,
   lastCallActorOf,
   type Difficulty,
   type MatchState,
@@ -33,6 +34,8 @@ export interface SoloSave {
 
 export type SoloEvent =
   | { kind: 'bot-passed' }
+  /** The second pass in a row: the chain snapped. `by` is the second passer. */
+  | { kind: 'snapped'; by: PlayerId }
   /** A resolved challenge. `challenger` is whoever flagged (p1 = you, p2 = bot). */
   | { kind: 'verdict'; word: string; real: boolean; challenger: PlayerId }
   /** Your challenge couldn't reach the referee — flag it again in a moment. */
@@ -100,7 +103,12 @@ export function useSoloMatch(initial: SoloSave) {
       const r = applyMove(state, 'p2', move)
       if (!r.ok) return // engine rejected a bot move: a bug, but never strand the UI
       setSave((s) => ({ ...s, state: r.state }))
-      if (move.type === 'pass') setEvent({ kind: 'bot-passed' })
+      if (move.type === 'pass')
+        setEvent(
+          isChainBroken(r.state) && !isChainBroken(state)
+            ? { kind: 'snapped', by: 'p2' }
+            : { kind: 'bot-passed' },
+        )
       else if (move.type === 'challenge')
         setEvent({ kind: 'verdict', word: accused.word, real: move.wordIsReal, challenger: 'p2' })
     }, 1000 + Math.random() * 1000)
@@ -110,9 +118,10 @@ export function useSoloMatch(initial: SoloSave) {
     }
   }, [state, difficulty, botTurn])
 
-  // The transient banners (bot passed, referee unreachable) clear themselves.
+  // The transient banners (passes, snaps, referee unreachable) clear themselves.
   useEffect(() => {
-    if (event?.kind !== 'bot-passed' && event?.kind !== 'referee-error') return
+    if (event?.kind !== 'bot-passed' && event?.kind !== 'referee-error' && event?.kind !== 'snapped')
+      return
     const timer = setTimeout(() => setEvent(null), 3500)
     return () => clearTimeout(timer)
   }, [event])
@@ -161,7 +170,15 @@ export function useSoloMatch(initial: SoloSave) {
     botThinking,
     terminal,
     playWord: (word: string) => apply('p1', { type: 'play', word }),
-    pass: () => apply('p1', { type: 'pass' }),
+    pass: () => {
+      // The player passing second snaps the chain — narrate it (the bot's
+      // snapping pass is caught where bot moves resolve).
+      const snaps =
+        !isChainBroken(state) && (state.passStreak ?? 0) >= 1 && state.chain.length > 0
+      const ok = apply('p1', { type: 'pass' })
+      if (ok && snaps) setEvent({ kind: 'snapped', by: 'p1' })
+      return ok
+    },
     /** Shake on the bot's final word — the player's last-call answer. */
     shake: () => apply('p1', { type: 'accept' }),
     challengeBot,

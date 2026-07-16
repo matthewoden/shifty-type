@@ -54,7 +54,12 @@ export function useMultiMatch(code: string, token: string) {
       } else if (!quiet && ev.by !== next.you) {
         const name = next.state.players[ev.by].name
         if (ev.kind === 'play') setToast(`${name} played ${ev.word.toUpperCase()}`)
-        else if (ev.kind === 'pass') setToast(`${name} passes — a life slips away`)
+        else if (ev.kind === 'pass')
+          setToast(
+            ev.snapped
+              ? `${name} passed too — snap!`
+              : `${name} passes — a life slips away`,
+          )
         else if (ev.kind === 'rematch') setToast('New chain — rematch!')
       }
     }

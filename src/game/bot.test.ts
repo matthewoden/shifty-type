@@ -158,3 +158,36 @@ describe('bot when stuck', () => {
     expect(move).toEqual({ type: 'pass' })
   })
 })
+
+describe('bot after a snap', () => {
+  /** Both players passed on lemon: the snap pends, bot to move. */
+  const snappedState = () => {
+    let state = chainOf('lemon')
+    for (const actor of ['p2', 'p1'] as const) {
+      const r = applyMove(state, actor, { type: 'pass' })
+      if (!r.ok) throw new Error(r.error)
+      state = r.state
+    }
+    return state
+  }
+
+  it('opens a fresh chain instead of passing, even with no grip on the sealed tip', () => {
+    // zebra grips nothing on lemon, but the board is open now.
+    const move = chooseBotMove(snappedState(), 'easy', {
+      rng: never,
+      wordList: ['lemon', 'zebra'],
+    })
+    expect(move).toEqual({ type: 'play', word: 'zebra' })
+  })
+
+  it('never flags the sealed tip', () => {
+    // Out-of-list tip, dice all in — but the snap settled it.
+    let state = chainOf('netqx')
+    for (const actor of ['p2', 'p1'] as const) {
+      const r = applyMove(state, actor, { type: 'pass' })
+      if (!r.ok) throw new Error(r.error)
+      state = r.state
+    }
+    expect(wantsChallenge(state, BOT, 'hard', { rng: always })).toBe(false)
+  })
+})

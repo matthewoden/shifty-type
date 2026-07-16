@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers'
 import {
   applyMove,
   createMatch as newMatchState,
+  isChainBroken,
   joinMatch,
   lastCallActorOf,
   opponentOf,
@@ -73,7 +74,9 @@ function nudgeBody(m: StoredMatch): string {
     case 'play':
       return `${name} played ${word} — your move.`
     case 'pass':
-      return `${name} passed — your move.`
+      return ev.snapped
+        ? `${name} passed too — the chain snapped. Start a fresh chain, any word.`
+        : `${name} passed — your move.`
     case 'real':
       return `Ruling's in — ${word} stands. Your move.`
     case 'fake':
@@ -436,6 +439,7 @@ export class MatchDO extends DurableObject<Env> {
     }
 
     const accusedWord = m.state.chain[m.state.chain.length - 1]?.word ?? ''
+    const wasBroken = isChainBroken(m.state)
     const r = applyMove(m.state, actor, engineMove)
     if (!r.ok) return { ok: false, error: r.error }
     m.state = r.state
@@ -448,7 +452,13 @@ export class MatchDO extends DurableObject<Env> {
         }
         break
       case 'pass':
-        m.lastEvent = { kind: 'pass', by: actor }
+        // The second pass in a row snaps the chain — the event carries it so
+        // clients and nudges can narrate the fresh start.
+        m.lastEvent = {
+          kind: 'pass',
+          by: actor,
+          ...(isChainBroken(r.state) && !wasBroken ? { snapped: true } : {}),
+        }
         break
       case 'accept':
         m.lastEvent = { kind: 'accept', word: accusedWord, by: actor }

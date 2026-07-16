@@ -7,6 +7,7 @@ import {
     MIN_OVERLAP,
     MIN_WORD_LENGTH,
     STARTING_LIVES,
+    type ChainLink,
     type MatchPhase,
     type MatchState,
     type Move,
@@ -31,6 +32,25 @@ function turnPhaseOf(id: PlayerId): MatchPhase {
  *  meaningful while phase is LAST_CALL (the chain is at its limit). */
 export function lastCallActorOf(state: MatchState): PlayerId {
     return opponentOf(state.chain[state.chain.length - 1].owner);
+}
+
+/**
+ * A snap is pending: both players passed on the same word, and the next
+ * word played opens a fresh chain. Derived from `breaks`, so a rejected
+ * challenge that pops a fresh opener re-opens the break by construction.
+ */
+export function isChainBroken(state: MatchState): boolean {
+    return state.breaks?.includes(state.chain.length) ?? false;
+}
+
+/**
+ * The word the next play must grip: the chain tip — or null when the board
+ * is open (empty chain, or a pending snap makes the next word a fresh
+ * opener). The client composer and the bot both key off this.
+ */
+export function gripTargetOf(state: MatchState): ChainLink | null {
+    if (isChainBroken(state)) return null;
+    return state.chain[state.chain.length - 1] ?? null;
 }
 
 /** Points earned by a word: (overlap * overlap) + 1 per non-overlapped letter. */
@@ -234,7 +254,11 @@ function play(state: MatchState, actor: PlayerId, rawWord: string): MoveResult {
     if (state.usedWords.includes(word))
         return err(`${word.toUpperCase()} has already been played this match.`);
 
-    const prev = state.chain[state.chain.length - 1];
+    // A pending snap opens the board: the next word is a fresh opener —
+    // any word, no overlap, no points — just like the match's first word.
+    const prev = isChainBroken(state)
+        ? null
+        : state.chain[state.chain.length - 1];
     let overlap = 0;
     if (prev) {
         overlap = overlapOf(prev.word, word);
@@ -250,6 +274,7 @@ function play(state: MatchState, actor: PlayerId, rawWord: string): MoveResult {
     next.chain.push({ word, owner: actor, overlap, points });
     next.usedWords.push(word);
     next.players[actor].points += points;
+    delete next.passStreak;
     next.version++;
     if (next.chain.length >= chainLimitOf(next)) {
         // The chain is full, but the match isn't over: the other player gets
@@ -273,12 +298,20 @@ function accept(state: MatchState): MoveResult {
 function pass(state: MatchState, actor: PlayerId): MoveResult {
     const next = structuredClone(state);
     next.players[actor].lives--;
+    next.passStreak = (next.passStreak ?? 0) + 1;
+    // Both players passed on the same word: the chain snaps. The words
+    // behind the break are settled; whoever is on move opens a fresh chain.
+    // (An empty chain can't snap — the opener may already play anything.)
+    if (next.passStreak >= 2 && next.chain.length > 0 && !isChainBroken(next)) {
+        next.breaks = [...(next.breaks ?? []), next.chain.length];
+        delete next.passStreak;
+    }
     next.version++;
     if (next.players[actor].lives <= 0) {
         next.phase = "GAME_OVER";
         next.winner = opponentOf(actor);
     } else {
-        // Opponent continues from the same word; no points moves.
+        // Opponent continues — from the same word, or a snapped-open board.
         next.phase = turnPhaseOf(opponentOf(actor));
     }
     return { ok: true, state: next };
@@ -300,6 +333,10 @@ function challenge(
 ): MoveResult {
     const target = state.chain[state.chain.length - 1];
     if (!target) return err("Nothing to challenge yet.");
+    // Both players passed on it: the snap settles everything behind the
+    // break, so the sealed tip is beyond challenge.
+    if (isChainBroken(state))
+        return err("The chain snapped — those words are settled. Open a new one.");
     if (target.owner === actor)
         return err("You can't challenge your own word.");
     if (target.challengeSurvived)
@@ -309,6 +346,7 @@ function challenge(
 
     const defender = opponentOf(actor);
     const next = structuredClone(state);
+    delete next.passStreak;
     next.version++;
     if (wordIsReal) {
         next.chain[next.chain.length - 1].challengeSurvived = true;

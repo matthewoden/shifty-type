@@ -4,7 +4,7 @@ import { Deck, PassButton } from '../components/Deck'
 import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
 import { useComposer } from '../components/useComposer'
-import { gripOptions, lastCallActorOf } from '../game'
+import { gripOptions, gripTargetOf, isChainBroken, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { LastCallBar } from '../components/LastCallBar'
 import { useSoloMatch, type SoloEvent, type SoloSave } from '../solo/useSoloMatch'
@@ -26,13 +26,18 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
   const playerTurn = state.phase === 'P1_TURN'
   // The bot played the final word; the player answers last call.
   const playerLastCall = state.phase === 'LAST_CALL' && lastCallActorOf(state) === 'p1'
-  const composer = useComposer(newest?.word ?? null, playerTurn)
-  const fan = playerTurn && !composer.typed && newest ? gripOptions(newest.word) : null
+  // Both passed on the tip: the chain snapped, and the next word opens fresh —
+  // no grip to compose against, no fan, and the sealed tip is unchallengeable.
+  const broken = isChainBroken(state)
+  const gripTarget = gripTargetOf(state)
+  const composer = useComposer(gripTarget?.word ?? null, playerTurn)
+  const fan = playerTurn && !composer.typed && gripTarget ? gripOptions(gripTarget.word) : null
   const canChallenge =
     (playerTurn || playerLastCall) &&
     newest !== undefined &&
     newest.owner === 'p2' &&
-    !newest.challengeSurvived
+    !newest.challengeSurvived &&
+    !broken
 
   const active = m.terminal
     ? null
@@ -62,6 +67,7 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
         composer={composer.typed ? composer : null}
         fan={fan}
         openerCaret={playerTurn && state.chain.length === 0}
+        freshStart={broken && !m.terminal ? (playerTurn ? 'mine' : 'theirs') : null}
         onSeed={composer.seed}
         onPlay={() => {
           if (m.playWord(composer.typed)) composer.clear()
@@ -71,13 +77,17 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
         message={
           m.event?.kind === 'bot-passed'
             ? `${botName} is stuck and passes — a life slips away.`
-            : m.event?.kind === 'referee-error'
-              ? "Couldn't get a ruling — check your connection and flag it again."
-              : null
+            : m.event?.kind === 'snapped'
+              ? m.event.by === 'p2'
+                ? `${botName} is stuck too — snap!`
+                : `You're both stuck — snap!`
+              : m.event?.kind === 'referee-error'
+                ? "Couldn't get a ruling — check your connection and flag it again."
+                : null
         }
       />
       {m.error && (
-        <div className="mx-3.5 mb-2 text-center text-[13px] font-bold text-p2-lip bg-white rounded-xl py-2 shadow-[0_3px_0_#E2DDD3]">
+        <div className="mx-3.5 mb-2 text-center text-[13px] font-bold text-p2-lip bg-white rounded-xl px-4 py-2.5 shadow-[0_3px_0_#E2DDD3]">
           {m.error}
         </div>
       )}

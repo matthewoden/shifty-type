@@ -9,7 +9,9 @@ import type { MatchPhase, MatchState, PlayerId } from '../game'
  */
 export type LastEvent =
   | { kind: 'play'; word: string; by: PlayerId }
-  | { kind: 'pass'; by: PlayerId }
+  /** `snapped`: this was the second pass in a row — the chain broke, and
+   *  whoever is on move opens a fresh one. */
+  | { kind: 'pass'; by: PlayerId; snapped?: boolean }
   | { kind: 'real'; word: string; by: PlayerId }
   | { kind: 'fake'; word: string; by: PlayerId }
   /** Last call answered with a handshake: the final word stands unchallenged. */

@@ -10,9 +10,9 @@
 // prefers-reduced-motion gets a flat vertical list; tint-joints carry the
 // overlap info either way.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import type { ChainLink, Player, PlayerId } from '../game'
+import { opponentOf, type ChainLink, type Player, type PlayerId } from '../game'
 import { FlagIcon } from './icons'
 import { playerTextClass, sideOf } from './tiles'
 import { WordTiles } from './WordTiles'
@@ -61,6 +61,12 @@ interface ChainLedgerProps {
   fan?: GripOption[] | null
   /** The player's opening turn: show a cursor on the empty board as the cue to type. */
   openerCaret?: boolean
+  /**
+   * A snap is pending — both players passed on the same word, and the next
+   * word opens a fresh chain. 'mine' = the local player starts it (caret +
+   * prompt at the fresh spot); 'theirs' = waiting on the friend to open.
+   */
+  freshStart?: 'mine' | 'theirs' | null
   /** The newest link landed while the player was away (the parent knows):
    *  type it in on mount as if the other player just played it. Words that
    *  arrive while mounted are detected internally. */
@@ -70,12 +76,17 @@ interface ChainLedgerProps {
 }
 
 type DisplayRow =
-  | { kind: 'link'; key: string; link: ChainLink; index: number; x: number; y: number; anchorX: number }
+  | { kind: 'link'; key: string; link: ChainLink; index: number; x: number; y: number; anchorX: number; breakBefore?: boolean }
   | { kind: 'ghost'; key: string; option: GripOption; x: number; y: number; anchorX: number }
-  | { kind: 'draft'; key: string; x: number; y: number; anchorX: number }
+  | { kind: 'draft'; key: string; x: number; y: number; anchorX: number; breakBefore?: boolean }
+  /** The pending fresh start after a snap: caret + prompt where the new chain will land. */
+  | { kind: 'fresh'; key: string; x: number; y: number; anchorX: number; breakBefore: true }
 
 const GHOST_TILE =
   'w-[23px] h-[35px] shrink-0 rounded-[7px] border-2 border-dashed border-[#C9CFD8] text-dim flex items-center justify-center font-extrabold text-lg uppercase select-none'
+
+/** The snap seam's ends dissolve instead of stopping hard. */
+const SEAM_FADE = 'linear-gradient(to right, transparent, #000 18%, #000 82%, transparent)'
 
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(
@@ -92,6 +103,7 @@ function useReducedMotion(): boolean {
 
 function linkMeta(link: ChainLink, index: number): string {
   if (index === 0) return 'opener'
+  if (link.overlap === 0) return 'fresh chain' // opened after a snap
   return `+${link.points}${link.challengeSurvived ? ' · real' : ''}`
 }
 
@@ -99,27 +111,59 @@ function buildRows(
   chain: ChainLink[],
   composer: LedgerComposer | null | undefined,
   fan: GripOption[] | null | undefined,
+  freshStart: 'mine' | 'theirs' | null | undefined,
 ): DisplayRow[] {
   const rows: DisplayRow[] = []
   let x = 0
   chain.forEach((link, index) => {
+    // A fresh opener (overlap 0 after a snap) grips nothing: it steps past
+    // the whole previous word, keeping its place on the diagonal.
     if (index > 0) x += (chain[index - 1].word.length - link.overlap) * STEP
-    rows.push({ kind: 'link', key: `${index}-${link.word}`, link, index, x, y: index * ROW_H, anchorX: x })
+    rows.push({
+      kind: 'link',
+      key: `${index}-${link.word}`,
+      link,
+      index,
+      x,
+      y: index * ROW_H,
+      anchorX: x,
+      breakBefore: index > 0 && link.overlap === 0,
+    })
   })
   const last = chain[chain.length - 1]
   const lastX = x
 
   if (composer && composer.typed) {
     // The draft parks: its own x anchors the camera, pinning the grip head
-    // to the screen edge. With no valid grip yet, park at the shallowest.
+    // to the screen edge. With no valid grip yet, park at the shallowest —
+    // and after a snap there is no grip at all: the fresh word starts just
+    // past the sealed one, still on the diagonal.
     const grip = Math.max(composer.grip, 2)
-    const draftX = last ? lastX + (last.word.length - grip) * STEP : 0
+    const draftX = !last
+      ? 0
+      : freshStart
+        ? lastX + last.word.length * STEP
+        : lastX + (last.word.length - grip) * STEP
     rows.push({
       kind: 'draft',
       key: 'draft',
       x: draftX,
       y: rows.length * ROW_H,
       anchorX: draftX,
+      breakBefore: !!freshStart && !!last,
+    })
+  } else if (freshStart && last) {
+    // The snap is pending and nothing is typed: hold the fresh chain's spot
+    // with a caret + prompt, anchored so the seam stays in view (the sealed
+    // word's tail bleeds in from the left).
+    const freshX = lastX + last.word.length * STEP
+    rows.push({
+      kind: 'fresh',
+      key: 'fresh',
+      x: freshX,
+      y: rows.length * ROW_H,
+      anchorX: Math.max(0, freshX - 3 * STEP),
+      breakBefore: true,
     })
   } else if (fan && fan.length > 0 && last) {
     // Ghost seeds anchor the camera to the word they grip, so the whole
@@ -179,8 +223,8 @@ export function ChainLedger(props: ChainLedgerProps) {
   }, [props.chain, props.you])
 
   const rows = useMemo(
-    () => buildRows(props.chain, props.composer, props.fan),
-    [props.chain, props.composer, props.fan],
+    () => buildRows(props.chain, props.composer, props.fan, props.freshStart),
+    [props.chain, props.composer, props.fan, props.freshStart],
   )
 
   return (
@@ -507,9 +551,58 @@ function RailLedger(props: LedgerViewProps) {
 
   const rowNodes = rows.map((row, rowIndex) => {
             const common = { position: 'absolute' as const, left: row.x, top: row.y }
+            // The snap seam: a dotted rule in the gap above a fresh chain's
+            // first row (or its pending spot), spanning the sealed word it
+            // divides from — its ends fade out rather than stopping hard.
+            // During a reveal it holds until the tiles land.
+            const prevRow = rows[rowIndex - 1]
+            const revealing = row.kind === 'link' && row.key === reveal
+            const seam =
+              'breakBefore' in row && row.breakBefore && prevRow ? (
+                <div
+                  aria-hidden
+                  // z-[1]: the locked-turn glow paints a white panel that
+                  // reaches into the row gap — the seam stays on top of it.
+                  className={`absolute z-[1] border-t-2 border-dashed border-[#C9CFD8]${
+                    revealing && row.kind === 'link' ? ' typein-meta' : ' draft-in'
+                  }`}
+                  style={{
+                    left: prevRow.x,
+                    top: row.y - 8,
+                    width: row.x - prevRow.x + 2 * STEP,
+                    WebkitMaskImage: SEAM_FADE,
+                    maskImage: SEAM_FADE,
+                    ...(revealing && row.kind === 'link'
+                      ? { animationDelay: `${REVEAL_MS + row.link.word.length * 60}ms` }
+                      : undefined),
+                  }}
+                />
+              ) : null
             // The locked-turn glow: only while scrolled back along the path,
             // in the color of whoever played the word.
             const locked = away && rowIndex === step
+            if (row.kind === 'fresh') {
+              const mine = props.freshStart === 'mine'
+              const friend = props.players[opponentOf(props.you)].name
+              return (
+                <Fragment key={row.key}>
+                  {seam}
+                  {/* Caret and prompt side by side: three lines of copy fit
+                      above the deck this way; stacked under the caret they
+                      clipped. */}
+                  <div className="flex items-start gap-2 draft-in" style={common}>
+                    {mine && (
+                      <span className="w-[3px] h-9 shrink-0 bg-p1 rounded motion-safe:animate-pulse" />
+                    )}
+                    <p className="w-60 text-dim font-bold text-sm -mt-0.5">
+                      {mine
+                        ? 'With two passes, the chain is broken. Start a new one. Any word.'
+                        : `With two passes, the chain is broken. ${friend} starts a new one.`}
+                    </p>
+                  </div>
+                </Fragment>
+              )
+            }
             if (row.kind === 'link') {
               const side = sideOf(row.link.owner, you)
               const glow = !locked
@@ -524,14 +617,14 @@ function RailLedger(props: LedgerViewProps) {
               // The unseen-word reveal: tiles type in one by one instead of
               // the row sliding in whole; the meta and flag hold until the
               // last tile has landed.
-              const revealing = row.key === reveal
               const revealDone = REVEAL_MS + row.link.word.length * 60
               const trim = revealing
                 ? { className: ' typein-meta', style: { animationDelay: `${revealDone}ms` } }
                 : { className: '', style: undefined }
               return (
+                <Fragment key={row.key}>
+                {seam}
                 <button
-                  key={row.key}
                   type="button"
                   onClick={() =>
                     challengeable ? onChallenge() : onDetail({ link: row.link, index: row.index })
@@ -560,11 +653,12 @@ function RailLedger(props: LedgerViewProps) {
                   <span className={`text-[10px] font-extrabold text-dim whitespace-nowrap${trim.className}`} style={trim.style}>
                     {locked
                       ? `word ${row.index + 1} of ${props.chain.length} · ${linkMeta(row.link, row.index)}`
-                      : isChainTip && composer?.typed
+                      : isChainTip && composer?.typed && !props.freshStart
                         ? `overlap ${composer.grip}`
                         : linkMeta(row.link, row.index)}
                   </span>
                 </button>
+                </Fragment>
               )
             }
             if (row.kind === 'ghost') {
@@ -600,9 +694,12 @@ function RailLedger(props: LedgerViewProps) {
             }
             // draft
             return (
-              <DraftRow key={row.key} seeded={seeded} style={common}>
-                {composer && <DraftTiles composer={composer} />}
-              </DraftRow>
+              <Fragment key={row.key}>
+                {seam}
+                <DraftRow seeded={seeded} style={common}>
+                  {composer && <DraftTiles composer={composer} />}
+                </DraftRow>
+              </Fragment>
             )
   })
 
@@ -694,11 +791,18 @@ function RailLedger(props: LedgerViewProps) {
   )
 }
 
-/** The dotted thread tracing the chain's diagonal, behind the tiles. */
+/** The dotted thread tracing the chain's diagonal, behind the tiles. A snap
+ *  cuts the thread: each fresh chain gets its own polyline, and the gap
+ *  between them belongs to the seam. */
 function Rail({ rows }: { rows: DisplayRow[] }) {
   const pathRows = rows.filter((r) => r.kind === 'link' || r.kind === 'draft')
   if (pathRows.length < 2) return null
-  const pts = pathRows.map((r) => `${r.x + 12},${r.y + 16}`)
+  const segments: DisplayRow[][] = [[]]
+  for (const r of pathRows) {
+    if ('breakBefore' in r && r.breakBefore && segments[segments.length - 1].length > 0)
+      segments.push([])
+    segments[segments.length - 1].push(r)
+  }
   const maxX = Math.max(...pathRows.map((r) => r.x)) + 400
   return (
     <svg
@@ -706,15 +810,20 @@ function Rail({ rows }: { rows: DisplayRow[] }) {
       width={maxX}
       height={rows.length * ROW_H + 40}
     >
-      <polyline
-        points={pts.join(' ')}
-        fill="none"
-        stroke="#E4DFD5"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeDasharray="1 8"
-      />
+      {segments
+        .filter((seg) => seg.length >= 2)
+        .map((seg) => (
+          <polyline
+            key={seg[0].key}
+            points={seg.map((r) => `${r.x + 12},${r.y + 16}`).join(' ')}
+            fill="none"
+            stroke="#E4DFD5"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="1 8"
+          />
+        ))}
     </svg>
   )
 }
@@ -759,33 +868,54 @@ function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: 
         const liveTint = isChainTip && composer?.typed ? composer.grip : 0
         const challengeable = isChainTip && canChallenge && !composer?.typed
         return (
-          <button
-            key={`${index}-${link.word}`}
-            data-row={index}
-            type="button"
-            onClick={() => (challengeable ? onChallenge() : onDetail({ link, index }))}
-            className="flex items-center gap-2 min-h-11 py-1 text-left"
-            aria-label={
-              challengeable
-                ? `Challenge ${link.word.toUpperCase()}`
-                : `${link.word.toUpperCase()} details`
-            }
-          >
-            <WordTiles
-              word={link.word}
-              side={sideOf(link.owner, you)}
-              headTint={link.overlap}
-              tailTint={next?.overlap ?? liveTint}
-            />
-            {challengeable && (
-              <span className="bg-white text-p2-lip rounded-full w-7 h-7 flex items-center justify-center shadow-[0_3px_0_#E2DDD3]"><FlagIcon className="w-4 h-4" /></span>
-            )}
-            <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
-              {isChainTip && composer?.typed ? `overlap ${composer.grip}` : linkMeta(link, index)}
-            </span>
-          </button>
+          <Fragment key={`${index}-${link.word}`}>
+            {index > 0 && link.overlap === 0 && <FlatSeam />}
+            <button
+              data-row={index}
+              type="button"
+              onClick={() => (challengeable ? onChallenge() : onDetail({ link, index }))}
+              className="flex items-center gap-2 min-h-11 py-1 text-left"
+              aria-label={
+                challengeable
+                  ? `Challenge ${link.word.toUpperCase()}`
+                  : `${link.word.toUpperCase()} details`
+              }
+            >
+              <WordTiles
+                word={link.word}
+                side={sideOf(link.owner, you)}
+                headTint={link.overlap}
+                tailTint={next?.overlap ?? liveTint}
+              />
+              {challengeable && (
+                <span className="bg-white text-p2-lip rounded-full w-7 h-7 flex items-center justify-center shadow-[0_3px_0_#E2DDD3]"><FlagIcon className="w-4 h-4" /></span>
+              )}
+              <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
+                {isChainTip && composer?.typed && !props.freshStart
+                  ? `overlap ${composer.grip}`
+                  : linkMeta(link, index)}
+              </span>
+            </button>
+          </Fragment>
         )
       })}
+      {props.freshStart && props.chain.length > 0 && (
+        <>
+          <FlatSeam />
+          {!composer?.typed && (
+            <div className="flex items-center gap-2 py-1">
+              {props.freshStart === 'mine' && (
+                <span className="h-9 w-[3px] bg-p1 rounded motion-safe:animate-pulse" />
+              )}
+              <p className="text-dim font-bold text-sm">
+                {props.freshStart === 'mine'
+                  ? 'With two passes, the chain is broken. Start a new one. Any word.'
+                  : `With two passes, the chain is broken. ${props.players[opponentOf(props.you)].name} starts a new one.`}
+              </p>
+            </div>
+          )}
+        </>
+      )}
       {ghosts.length > 0 && (
         <div className="flex items-center gap-3 min-h-11 flex-wrap py-1">
           {ghosts.map(
@@ -819,6 +949,18 @@ function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: 
         </div>
       )}
     </div>
+  )
+}
+
+/** The flat list's snap seam: a full-width dotted rule between chains,
+ *  fading out at both ends like the rail's. */
+function FlatSeam() {
+  return (
+    <div
+      aria-hidden
+      className="border-t-2 border-dashed border-[#C9CFD8] my-2"
+      style={{ WebkitMaskImage: SEAM_FADE, maskImage: SEAM_FADE }}
+    />
   )
 }
 
@@ -865,7 +1007,9 @@ function DetailCard({
           · word {index + 1}
           {index === 0
             ? ' · the opener (no points)'
-            : ` · overlapped ${link.overlap} letters for ${link.points} points`}
+            : link.overlap === 0
+              ? ' · started a fresh chain after the snap (no points)'
+              : ` · overlapped ${link.overlap} letters for ${link.points} points`}
         </p>
         {link.challengeSurvived && (
           <p className="font-bold text-ink text-[14px] flex items-center gap-1.5">
