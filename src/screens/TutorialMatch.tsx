@@ -185,9 +185,14 @@ export function TutorialMatch({
           {t.error}
         </div>
       )}
+      {/* Deck guidance eases off as the lesson goes: 'firstWord' glows the
+          one scripted key, 'rep' is deliberately bare (Lloyd says "no hints
+          this time"), and from the bluff on the real-play key hints light up
+          — the tutorial ends on the same deck the real game shows. */}
       <Deck
         disabled={!composerActive}
         glowKey={glowKey}
+        keyHints={beat === 'bluff' || beat === 'done' ? composer.keyHints : null}
         onKey={composer.key}
         onBackspace={composer.backspace}
       />
