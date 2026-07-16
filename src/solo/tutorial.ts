@@ -55,7 +55,7 @@ export type Beat =
   | 'wait2' // Lloyd's fake is coming
   | 'smellIntro' // gated: Lloyd oversells the fake, in character
   | 'smell' // challenge-gated: tap the flagged word
-  | 'bothWays' // gated: fold aftermath + the reverse risk
+  | 'bothWays' // gated: the ruling aftermath + the reverse risk
   | 'bluff' // passive: make one up
   | 'compliment' // gated: Lloyd reacts to the bluff
   | 'handover' // gated: Lloyd goes quiet after this
@@ -110,9 +110,9 @@ export function scriptedLloydMove(state: MatchState, cursor: number): Move | nul
   const tip = state.chain[state.chain.length - 1]
   const fake = tip ? makeTutorialFake(tip.word, state.usedWords) : null
   // Cursor 2 is the bluff the player gets to catch — fake first. Everywhere
-  // else a real word leads: 1 = the deliberately lazy reply, 3 = the deep
-  // real one he owes after folding, 4 = any word (the player's bluff must
-  // stand unchallenged).
+  // else a real word leads: 1 = the deliberately lazy reply, 3–4 = real words
+  // during the free play after the lesson (the player's own bluff stands
+  // unchallenged — Lloyd never accuses).
   const real = pickPlayWord(state, cursor === 1 ? 'easy' : cursor === 4 ? 'easy' : 'hard')
   const word = cursor === 2 ? (fake ?? real) : (real ?? fake)
   return word ? { type: 'play', word } : { type: 'pass' }

@@ -23,36 +23,30 @@ export interface ChainLink {
 }
 
 /** See GAME_DESIGN.md §States. */
-export type MatchPhase =
-  | 'P1_TURN'
-  | 'P2_TURN'
-  | 'CHALLENGE_PENDING'
-  | 'VAULT_CLOSED'
-  | 'GAME_OVER'
+export type MatchPhase = 'P1_TURN' | 'P2_TURN' | 'VAULT_CLOSED' | 'GAME_OVER'
 
 export type Move =
   | { type: 'play'; word: string }
   | { type: 'pass' }
-  | { type: 'challenge' }
-  | { type: 'fold' }
   /**
+   * A challenge resolves on the spot — there is no defender fold/stand step.
    * The engine is pure, so the referee's verdict is an input: the caller
    * (Durable Object in multiplayer, solo controller vs the bot) checks the
-   * embedded list / dictionary API first, then applies stand with the result.
+   * embedded list / dictionary API first, then applies challenge with the
+   * result. Real → STANDS (challenger loses a life); fake → REJECTED (word
+   * removed, its owner loses a life).
    */
-  | { type: 'stand'; wordIsReal: boolean }
+  | { type: 'challenge'; wordIsReal: boolean }
 
 export interface MatchState {
   phase: MatchPhase
   players: Record<PlayerId, Player>
   chain: ChainLink[]
   /**
-   * Every word ever accepted, including words later removed by a fold or a
-   * failed stand — no word may repeat within a match, even a busted fake.
+   * Every word ever accepted, including words later removed by a rejected
+   * challenge — no word may repeat within a match, even a busted fake.
    */
   usedWords: string[]
-  /** Who challenged, while phase is CHALLENGE_PENDING. */
-  challenger: PlayerId | null
   /** Winner, once phase is VAULT_CLOSED or GAME_OVER. Null on gold tie… which tiebreaks prevent. */
   winner: PlayerId | null
   /** Monotonic counter, bumped on every applied move; used for cheap polling. */

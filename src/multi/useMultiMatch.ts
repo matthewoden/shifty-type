@@ -4,12 +4,12 @@
 // fallback for hospital wifi, and both paths dedupe on `revision`.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { opponentOf } from '../game'
 import { api } from '../lib/api'
 import type { ClientMove, LastEvent, MatchView, SocketPush } from '../lib/protocol'
 
-/** Challenge outcomes get a full-screen stamp; the rest get toasts. */
-export type StampEvent = Extract<LastEvent, { kind: 'fold' | 'real' | 'fake' }>
+/** A resolved challenge (STANDS/REJECTED) gets a full-screen stamp; the rest
+ *  get toasts. */
+export type StampEvent = Extract<LastEvent, { kind: 'real' | 'fake' }>
 
 const POLL_MS = 8000
 // Client-side heartbeat: the runtime answers 'ping' without waking the DO,
@@ -18,15 +18,12 @@ const POLL_MS = 8000
 const HEARTBEAT_MS = 25_000
 const RECONNECT_MAX_MS = 30_000
 
-/** Is the local player the one who must act right now? */
+/** Is the local player the one who must act right now? Challenges resolve
+ *  instantly, so it's simply whose turn the phase names. */
 function myMove(view: MatchView): boolean {
-  const { state, you, refereeOffline } = view
+  const { state, you } = view
   if (state.phase === 'P1_TURN') return you === 'p1'
   if (state.phase === 'P2_TURN') return you === 'p2'
-  if (state.phase === 'CHALLENGE_PENDING' && state.challenger)
-    // The defender acts — unless the referee is offline, when either player
-    // may flip the coin and we keep polling for the other's flip.
-    return !refereeOffline && opponentOf(state.challenger) === you
   return false
 }
 
@@ -48,7 +45,7 @@ export function useMultiMatch(code: string, token: string) {
     if (prev && next.revision < prev.revision) return
     const ev = next.lastEvent
     if (prev && next.revision !== prev.revision && ev) {
-      if (ev.kind === 'fold' || ev.kind === 'real' || ev.kind === 'fake') {
+      if (ev.kind === 'real' || ev.kind === 'fake') {
         // Both players see the verdict stamp, whoever triggered it.
         setStamp(ev)
       } else if (!quiet && ev.by !== next.you) {

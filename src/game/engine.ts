@@ -97,7 +97,6 @@ export function createMatch(
     },
     chain: [],
     usedWords: [],
-    challenger: null,
     winner: null,
     version: 0,
     ...(chainLimit !== undefined ? { chainLimit } : {}),
@@ -148,29 +147,12 @@ export function applyMove(state: MatchState, actor: PlayerId, move: Move): MoveR
   if (state.phase === 'VAULT_CLOSED' || state.phase === 'GAME_OVER')
     return err('This match is over.')
 
-  if (state.phase === 'CHALLENGE_PENDING') {
-    const challenger = state.challenger
-    if (!challenger) return err('Challenge state is corrupt.') // unreachable via applyMove
-    const defender = opponentOf(challenger)
-    const accused = state.chain[state.chain.length - 1]
-    if (move.type !== 'fold' && move.type !== 'stand') {
-      return actor === defender
-        ? err(`${accused.word.toUpperCase()} is under challenge — fold or stand.`)
-        : err(`Waiting for ${state.players[defender].name} to fold or stand.`)
-    }
-    if (actor !== defender)
-      return err(`Only ${state.players[defender].name} can fold or stand.`)
-    return move.type === 'fold' ? fold(state) : stand(state, move.wordIsReal)
-  }
-
   // P1_TURN or P2_TURN
-  if (move.type === 'fold' || move.type === 'stand')
-    return err("There's no challenge to answer.")
   const active: PlayerId = state.phase === 'P1_TURN' ? 'p1' : 'p2'
   if (actor !== active) return err('Not your turn yet.')
   if (move.type === 'play') return play(state, actor, move.word)
   if (move.type === 'pass') return pass(state, actor)
-  return challenge(state, actor)
+  return challenge(state, actor, move.wordIsReal)
 }
 
 function err(error: string): MoveResult {
@@ -224,17 +206,44 @@ function pass(state: MatchState, actor: PlayerId): MoveResult {
   return { ok: true, state: next }
 }
 
-function challenge(state: MatchState, actor: PlayerId): MoveResult {
+/**
+ * A challenge resolves immediately against the referee's verdict — no pending
+ * phase, no defender fold/stand. Real → STANDS: the word is marked survived and
+ * the challenger loses a life. Fake → REJECTED: the word is removed, its owner
+ * loses a life, the chain rewinds. Either way the challenger is on move next
+ * (they play on from the survived word, or from the rewound tail).
+ */
+function challenge(state: MatchState, actor: PlayerId, wordIsReal: boolean): MoveResult {
   const target = state.chain[state.chain.length - 1]
   if (!target) return err('Nothing to challenge yet.')
   if (target.owner === actor) return err("You can't challenge your own word.")
   if (target.challengeSurvived)
     return err(`${target.word.toUpperCase()} already survived a challenge.`)
 
+  const defender = opponentOf(actor)
   const next = structuredClone(state)
-  next.phase = 'CHALLENGE_PENDING'
-  next.challenger = actor
   next.version++
+  if (wordIsReal) {
+    next.chain[next.chain.length - 1].challengeSurvived = true
+    next.players[actor].lives--
+    if (next.players[actor].lives <= 0) {
+      next.phase = 'GAME_OVER'
+      next.winner = defender
+    } else {
+      // Challenger still has to make a move, now from the verified word.
+      next.phase = turnPhaseOf(actor)
+    }
+  } else {
+    rewindChain(next)
+    next.players[defender].lives--
+    if (next.players[defender].lives <= 0) {
+      next.phase = 'GAME_OVER'
+      next.winner = actor
+    } else {
+      // Challenger plays from the previous word.
+      next.phase = turnPhaseOf(actor)
+    }
+  }
   return { ok: true, state: next }
 }
 
@@ -243,52 +252,4 @@ function rewindChain(state: MatchState): void {
   const removed = state.chain.pop()
   if (removed) state.players[removed.owner].gold -= removed.gold
   // The word stays in usedWords: busted fakes can't be replayed.
-}
-
-function fold(state: MatchState): MoveResult {
-  const challenger = state.challenger as PlayerId
-  const defender = opponentOf(challenger)
-  const next = structuredClone(state)
-  rewindChain(next)
-  next.players[defender].lives--
-  next.challenger = null
-  next.version++
-  if (next.players[defender].lives <= 0) {
-    next.phase = 'GAME_OVER'
-    next.winner = challenger
-  } else {
-    // Defender plays again from the previous word.
-    next.phase = turnPhaseOf(defender)
-  }
-  return { ok: true, state: next }
-}
-
-function stand(state: MatchState, wordIsReal: boolean): MoveResult {
-  const challenger = state.challenger as PlayerId
-  const defender = opponentOf(challenger)
-  const next = structuredClone(state)
-  next.challenger = null
-  next.version++
-  if (wordIsReal) {
-    next.chain[next.chain.length - 1].challengeSurvived = true
-    next.players[challenger].lives--
-    if (next.players[challenger].lives <= 0) {
-      next.phase = 'GAME_OVER'
-      next.winner = defender
-    } else {
-      // Challenger still has to make a move, now from the verified word.
-      next.phase = turnPhaseOf(challenger)
-    }
-  } else {
-    rewindChain(next)
-    next.players[defender].lives--
-    if (next.players[defender].lives <= 0) {
-      next.phase = 'GAME_OVER'
-      next.winner = challenger
-    } else {
-      // Challenger plays from the previous word.
-      next.phase = turnPhaseOf(challenger)
-    }
-  }
-  return { ok: true, state: next }
 }

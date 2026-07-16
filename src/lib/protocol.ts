@@ -4,15 +4,14 @@ import type { MatchPhase, MatchState, PlayerId } from '../game'
 
 /**
  * What just happened, so clients can narrate it (toasts, verdict stamps)
- * without diffing states. 'fold'/'real'/'fake' carry the defender in `by`.
+ * without diffing states. A challenge resolves instantly into 'real' (STANDS)
+ * or 'fake' (REJECTED); `by` is the challenger.
  */
 export type LastEvent =
   | { kind: 'play'; word: string; by: PlayerId }
   | { kind: 'pass'; by: PlayerId }
-  | { kind: 'challenge'; word: string; by: PlayerId }
-  | { kind: 'fold'; word: string; by: PlayerId }
-  | { kind: 'real'; word: string; by: PlayerId; coinFlip?: boolean }
-  | { kind: 'fake'; word: string; by: PlayerId; coinFlip?: boolean }
+  | { kind: 'real'; word: string; by: PlayerId }
+  | { kind: 'fake'; word: string; by: PlayerId }
   | { kind: 'rematch'; by: PlayerId }
 
 /** Who has a live socket open right now. Ephemeral — never stored, never
@@ -30,8 +29,6 @@ export interface MatchView {
   code: string
   you: PlayerId
   state: MatchState
-  /** True while a stood challenge couldn't reach the dictionary — coin-flip time. */
-  refereeOffline: boolean
   /** DO-level change counter (state + flags); the `since` for cheap polls. */
   revision: number
   lastEvent: LastEvent | null
@@ -39,17 +36,15 @@ export interface MatchView {
 }
 
 /**
- * Moves as clients send them. 'stand' carries no verdict — the DO is the
- * referee and resolves it (embedded list → dictionary API). 'coinflip' is
- * the shared fallback when the referee is offline; either player may tap it.
+ * Moves as clients send them. 'challenge' carries no verdict — the DO is the
+ * referee and resolves it on the spot (embedded list → dictionary API), then
+ * applies the instant STANDS/REJECTED outcome. If the referee can't be reached
+ * the DO returns an error and nothing changes; the challenger can retry.
  */
 export type ClientMove =
   | { type: 'play'; word: string }
   | { type: 'pass' }
   | { type: 'challenge' }
-  | { type: 'fold' }
-  | { type: 'stand' }
-  | { type: 'coinflip' }
 
 export type ApiError = { ok: false; error: string }
 export type CreateResponse = { ok: true; code: string; token: string; view: MatchView } | ApiError
@@ -79,9 +74,7 @@ export interface NudgePayload {
   code: string
   tag?: string
 }
-export type MoveResponse =
-  | { ok: true; view: MatchView; refereeOffline?: boolean }
-  | ApiError
+export type MoveResponse = { ok: true; view: MatchView } | ApiError
 
 /**
  * Public, tokenless facts for the invite landing screen: who's inviting, the

@@ -77,15 +77,18 @@ describe('bot challenges', () => {
     // 'netqx' opened by p1 is not in the default list → suspect
     expect(chooseBotMove(chainOf('netqx'), BOT, 'easy', { rng: () => 0.1 })).toEqual({
       type: 'challenge',
+      wordIsReal: false,
     })
     expect(chooseBotMove(chainOf('netqx'), BOT, 'easy', { rng: () => 0.2 })).not.toEqual({
       type: 'challenge',
     })
     expect(chooseBotMove(chainOf('netqx'), BOT, 'medium', { rng: () => 0.39 })).toEqual({
       type: 'challenge',
+      wordIsReal: false,
     })
     expect(chooseBotMove(chainOf('netqx'), BOT, 'hard', { rng: () => 0.74 })).toEqual({
       type: 'challenge',
+      wordIsReal: false,
     })
   })
 
@@ -111,29 +114,6 @@ describe('bot challenges', () => {
     state = r.state
     const move = chooseBotMove(state, BOT, 'hard', { rng: always })
     expect(move.type).not.toBe('challenge')
-  })
-})
-
-describe('bot defending', () => {
-  function challenged(botWord: string): MatchState {
-    let state = chainOf('planet', botWord)
-    const r = applyMove(state, 'p1', { type: 'challenge' })
-    if (!r.ok) throw new Error(r.error)
-    return r.state
-  }
-
-  it('stands on a real word, verdict included', () => {
-    const move = chooseBotMove(challenged('nettle'), BOT, 'easy', {
-      wordList: ['nettle'],
-    })
-    expect(move).toEqual({ type: 'stand', wordIsReal: true })
-  })
-
-  it('folds when caught bluffing', () => {
-    const move = chooseBotMove(challenged('netqx'), BOT, 'hard', {
-      wordList: ['nettle'],
-    })
-    expect(move).toEqual({ type: 'fold' })
   })
 })
 

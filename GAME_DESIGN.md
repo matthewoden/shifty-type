@@ -1,6 +1,6 @@
 # Shifty Type — Game Design
 
-> Renamed from "Word Chain" and fully de-heisted, 2026-07 (Matt's call). Voice: silly, warm, card-table — bluff/busted/accuse/fold/stand are game words; vault/heist/thieves/stash/accomplice/hideout are banned. Scores show as **points ("pts")** in the UI (code and this doc historically say gold). The bot is a llama — one per mood: **Lloyd** (Mellow/easy), **Llois** (Curious/medium), **Llarry** (Unhinged/hard). Name updated again 2026-07-12: **Shifty Type** (SHIFTY → TYPE, grip TY, fused SHIFTYPE — see mockups/name-board.html); logo remains "the stair" with the new words.
+> Renamed from "Word Chain" and fully de-heisted, 2026-07 (Matt's call). Voice: silly, warm, card-table — bluff/busted/accuse/ruling/stands/rejected are game words; vault/heist/thieves/stash/accomplice/hideout are banned. Scores show as **points ("pts")** in the UI (code and this doc historically say gold). The bot is a llama — one per mood: **Lloyd** (Mellow/easy), **Llois** (Curious/medium), **Llarry** (Unhinged/hard). Name updated again 2026-07-12: **Shifty Type** (SHIFTY → TYPE, grip TY, fused SHIFTYPE — see mockups/name-board.html); logo remains "the stair" with the new words.
 
 Two players build one chain of overlapping words. Shared letters are the joints — riskier overlaps earn more gold. Bluffing is legal; getting caught is not.
 
@@ -23,22 +23,21 @@ Players alternate turns. On your turn you either **play a word** or **challenge*
 
 ### Lives
 Each player starts with **3 lives** (rendered as pips in the player's color). You lose a life when:
-1. You **fold** under a challenge (your word is removed from the chain).
-2. Your **challenge fails** (the word you accused was real).
+1. A word of yours is **REJECTED** under a challenge — the challenger proved it fake, and it's removed from the chain.
+2. Your **challenge fails** — the word you accused **STANDS** (it was real).
 3. You **pass** because you're stuck. (Passing also skips your gold for the turn; opponent continues from the same word.)
 
 ### The challenge (signature mechanic)
-Instead of playing, you may challenge the word your opponent just played (only the most recent word is challengeable).
+Instead of playing, you may challenge the word your opponent just played (only the most recent word is challengeable). It resolves **on the spot** — there is no defender fold/stand step (removed 2026-07: folding and a failed stand had identical outcomes, so the defender's "choice" was pure async delay).
 
-**Interaction (FINAL):** the challenge does NOT live in the input bar — the input bar's only job is playing your word. The opponent's newest word carries a small ⚖ tag on its row; tapping the word opens a confirm sheet ("Challenge this word? Incorrect answers lose a life." — tightened 2026-07-14). Confirm to challenge. This keeps a rare, dramatic action off the primary path and prevents mis-taps.
+**Interaction (FINAL):** the challenge does NOT live in the deck — the deck's only job is playing your word. The opponent's newest word carries a small flag tag on its row; tapping the word opens a confirm sheet ("Challenge this word? Incorrect answers lose a life."). Confirm, and the referee rules immediately:
+- Word is in the embedded common-word list → **real**, instantly (offline-safe).
+- Otherwise → Free Dictionary API lookup.
+- API unreachable → **error** ("Couldn't get a ruling just now — check your connection and flag it again."). Nothing changes, no life lost; the challenger can flag it again. (Solo: a *bot*-initiated challenge instead falls back to the embedded list so solo stays fully playable offline.)
 
-1. Challenger taps the accused word and confirms.
-2. Defender chooses: **Fold** (lose a life, word removed, gold refunded, chain rewinds one link, defender plays again from the previous word) or **Stand** (defend it).
-3. If defender stands, the app consults the referee:
-   - Word is in the embedded common-word list → **real**, instantly.
-   - Otherwise → Free Dictionary API lookup.
-   - API unreachable → fall back to prompting both players: "Referee offline — you two get to flip for it" with a shared coin-flip button (rare edge case; keep it playful).
-4. **Real** → challenger loses a life. **Fake** → defender loses a life, word removed, gold refunded, challenger plays from the previous word.
+The verdict is a state stamped on the word; either way the challenger is on move next:
+- **STANDS** (real) — the word keeps its place and its gold; the **challenger** loses a life for the bad call. Blue-grey stamp (`p1-lip`).
+- **REJECTED** (fake) — the word is removed, its gold refunded, the chain rewinds one link, and the **word's owner** loses a life; the challenger plays from the previous word. Red stamp (always red — a word died, whoever played it).
 
 ### Match end
 A match ends when either player is out of lives (**opponent wins outright, gold irrelevant**), or when the chain reaches **20 words** ("the chain is complete") — then **highest gold wins**. Ties broken by remaining lives, then by longest single word played.
@@ -50,7 +49,7 @@ Player 1's first word can be anything (3+ letters). Show a "pick your entry poin
 Same rules vs a bot. Bot behavior:
 - Plays only from the embedded word list; picks by searching words starting with each possible overlap suffix of the current word (longest overlap first).
 - **Difficulty via greed**: Easy bot takes the first valid 2-overlap word. Hard bot maximizes overlap² and prefers long words.
-- Bot challenge logic: challenges the player's word with probability that scales when the word is NOT in the embedded list — Easy: 15%, Medium: 40%, Hard: 75%. Never challenges words in the list.
+- Bot challenge logic: challenges the player's word with probability that scales when the word is NOT in the embedded list — Easy: 15%, Medium: 40%, Hard: 75%. Never challenges words in the list. The bot never *defends* — challenges resolve instantly, and a bot challenge is ruled against the embedded list only (offline-safe, and the bot only ever flags out-of-list words → REJECTED).
 - Bot never bluffs on Easy/Medium. On Hard, 10% of the time when stuck it plays a plausible fake (list word + common suffix like "-ry", "-ish") instead of passing. This is the fun part — don't cut it.
 - Bot moves resolve after a 1–2s "thinking" delay with a little animation.
 
@@ -59,7 +58,7 @@ Same rules vs a bot. Bot behavior:
 - One Cloudflare **Durable Object per match**, addressed by `idFromName(code)`. It holds the full `MatchState` in its SQLite storage and is the single authority: every move is a `POST /api/match/:code/move`, the DO runs `applyMove()`, persists, and returns the new state. No client-side writes, no optimistic-lock dance — the DO serializes turns by construction.
 - Join flow: `POST /api/match/:code/join` claims a player slot and returns a secret `playerToken`; the client stores it in localStorage keyed by match code. All subsequent moves require it. A full match state sent to a client is **redacted** — the opponent's secret token never leaves the DO, and (nothing else is secret in this game; the chain is public).
 - Updates: client polls `GET /api/match/:code?since=<version>` every 8s while waiting, only when the tab is visible (Page Visibility API). The DO tracks a version counter so unchanged polls are cheap 304-style responses. WebSockets via the DO are a v2 nicety, not v1.
-- Challenge resolution: the **Worker** calls dictionaryapi.dev (server-side fetch avoids CORS and keeps one canonical verdict). Embedded list checked first; API second; if the API errors, the coin-flip fallback from §Challenge applies.
+- Challenge resolution: the client sends a bare `challenge`; the **Worker/DO** is the referee — it calls dictionaryapi.dev (server-side fetch avoids CORS and keeps one canonical verdict), embedded list first, API second, then applies the instant STANDS/REJECTED outcome via `applyMove`. If the API errors, the DO returns an error and the challenger retries (see §Challenge) — no state changes.
 - Rejoining: `/m/CODE` deep link + stored token resumes directly, mid-challenge included.
 - Match cleanup: DO sets a 60-day alarm on last activity, then deletes itself. (Storage is tiny; this is hygiene, not cost.)
 - Push-adjacent nudge (v2, optional): "your turn" via Web Push. Not in v1.
@@ -67,22 +66,25 @@ Same rules vs a bot. Bot behavior:
 ## States
 ```
 (create) → P1_TURN ⇄ P2_TURN → VAULT_CLOSED
-                ↘ CHALLENGE_PENDING (defender must fold/stand) ↗
                 → GAME_OVER (lives exhausted)
 ```
-A fresh match starts in the opener's turn with the second seat empty and the
-transient flag `awaitingOpponent: true` on the state. The opener plays their
-opening word and shares the invite *before* anyone joins; `joinMatch()` just
-fills the seat and clears the flag, leaving the phase as the opener left it —
-so the friend steps straight into their own turn to answer. (There is no
-separate LOBBY phase; the old "join before anyone can move" deadlock is gone.)
-`applyMove(state, move) -> newState | error`. Moves: `play(word)`, `pass()`, `challenge()`, `fold()`, `stand()`.
+A challenge resolves inside a single turn — no `CHALLENGE_PENDING` phase (removed
+2026-07 with the fold/stand step). A fresh match starts in the opener's turn with
+the second seat empty and the transient flag `awaitingOpponent: true` on the
+state. The opener plays their opening word and shares the invite *before* anyone
+joins; `joinMatch()` just fills the seat and clears the flag, leaving the phase as
+the opener left it — so the friend steps straight into their own turn to answer.
+(There is no separate LOBBY phase; the old "join before anyone can move" deadlock
+is gone.)
+`applyMove(state, actor, move) -> newState | error`. Moves: `play(word)`,
+`pass()`, `challenge(wordIsReal)` — the referee's verdict is injected by the
+caller (DO / solo controller), keeping the engine pure.
 
 ## Screens (mobile-first, 375px)
 1. **Home** — Duel a friend (create) / Play a local llama / Join with a code / Resume match (if one is live).
 2. **Open + invite** — creating drops the opener straight onto the board in their own turn; they play an opening word, then an invite sheet (native share + copy-link + raw code) hands the match to a friend. A friend who taps the invite link lands on an **invite screen** ("{name} invited you…", the opening word, and Get started / How to play / Try the tutorial — the tutorial returns them to the invite). There is no waiting lobby.
 3. **Match** — the staircase ledger with the camera rail (see §The ledger camera) over a custom key deck (see §Inline play & the deck — this supersedes the earlier input-bar spec). Challenge is initiated by tapping the opponent's newest word (⚖ tag + confirm sheet). Player HUD cards (color, gold, life pips) pinned top; the active player's card wears its own color as the chiclet lip (soft pulse while the bot thinks) — there is no turn pill.
-4. **Challenge interstitial** — full-screen dramatic beat: "ROSY-FINGERED… is that even a word?" with Fold / Stand. This should feel like the poker moment it is.
+4. **Challenge verdict** — full-screen dramatic beat: the **STANDS** / **REJECTED** stamp on the word, the ruling, and who lost a life. It fires instantly on the challenger's tap — no defender prompt, no waiting.
 5. **Chain complete / Game over** — gold count-up animation, full chain replay, Rematch button (rematch swaps who opens).
 
 ## Visual direction (FINAL — see mockups/threes-v2-rail.html for the reference)
@@ -119,10 +121,10 @@ Supersedes the input-bar + system-keyboard spec (2026-07, Matt's call).
 - **How to play**: one scrollable page behind a small home-screen link — four beats (chain words / grab more, score more / nobody checks your spelling / winning), every diagram in real tiles, ends "That's it. Go make up a word." (See mockups/tagline-howto.html; the playable-onboarding concept there shipped 2026-07-13 as the tutorial, below.)
 
 ## Lloyd's tutorial (FINAL, 2026-07-13 — see mockups/tutorial-flow.html)
-A scripted first match vs **Lloyd, "the Tutorial Llama"** that teaches by playing: a real 10-word match (`chainLimit` on MatchState) on the real match screen, Lloyd's early moves scripted, the player set up to win. Fifteen beats: welcome → the table-setting (two tap-through Lloyd cards over the empty board: trading words that overlap / the two ways to win; his PLANT lands the instant they're tapped away — no thinking pause on the opening) → the opener (Lloyd claims PLANT: first word can be anything, every word after has to connect) → the grip (fan + bubble) → guided first word (ghost-finish tile + glowing key, suggestion ANTIC — the only two tutorial-only affordances, used once) → points by contrast (Lloyd's deliberately lazy 2-grip) → unguided rep → the smell test (Lloyd plays a fake, OTTERLY on the happy path) → the ruling (shipped confirm sheet + Lloyd's whisper) → the fold (shipped FOLDED stamp) → rulings-cut-both-ways → the bluff invitation (Lloyd never challenges it) → handover (coach chrome retires; last 4 words vs the real easy bot) → the win (shipped game-over panel + Lloyd's sendoff + **"Duel a friend" as the coral primary** — the bridge to the invite flow).
+A scripted first match vs **Lloyd, "the Tutorial Llama"** that teaches by playing: a real 10-word match (`chainLimit` on MatchState) on the real match screen, Lloyd's early moves scripted, the player set up to win. Fifteen beats: welcome → the table-setting (two tap-through Lloyd cards over the empty board: trading words that overlap / the two ways to win; his PLANT lands the instant they're tapped away — no thinking pause on the opening) → the opener (Lloyd claims PLANT: first word can be anything, every word after has to connect) → the grip (fan + bubble) → guided first word (ghost-finish tile + glowing key, suggestion ANTIC — the only two tutorial-only affordances, used once) → points by contrast (Lloyd's deliberately lazy 2-grip) → unguided rep → the smell test (Lloyd plays a fake, OTTERLY on the happy path) → the ruling (shipped confirm sheet + Lloyd's whisper) → REJECTED (shipped stamp; Lloyd's fake is struck instantly and he loses a life — the player is then on move) → rulings-cut-both-ways → the bluff invitation (Lloyd never challenges it) → handover (coach chrome retires; last 4 words vs the real easy bot) → the win (shipped game-over panel + Lloyd's sendoff + **"Duel a friend" as the coral primary** — the bridge to the invite flow).
 - Coach chrome: on-board bubbles with Lloyd's LL-tile avatar; two eyebrows — LLOYD (lies in character) vs THE LESSON (the trustworthy instruction). Gated beats advance on a tap anywhere; guidance fades deliberately (ghost word → fan only → nothing).
 - Entry: a Home card ("New here? Try the tutorial!") until first completion (localStorage `wordchain.tutorial.v1`), then a quiet "Tutorial" link; the how-to page cross-links it. Exit is the shipped ← Home; not resumable (it's two minutes).
-- Script robustness: player words can leave tails no list word grips — every scripted slot falls back to a generated fake (grip + llama-flavored ending) rather than pass, Lloyd's copy hedges when his "real one" isn't in the list, and his scripted defense folds any non-list word.
+- Script robustness: player words can leave tails no list word grips — every scripted slot falls back to a generated fake (grip + llama-flavored ending) rather than pass, and the player's challenge is ruled against the embedded list (deterministic and offline), so Lloyd's planted fake is always REJECTED.
 - Code: `src/solo/tutorial.ts` (pure script + copy, unit-tested), `src/solo/useTutorial.ts` (beat machine), `src/screens/TutorialWelcome.tsx` + `TutorialMatch.tsx`. Shipped components gained tutorial-only optional props: composer `hintTail`, deck `glowKey`, sheet `whisper`, game-over `sendoff`/`onDuel`.
 
 ## Copy voice

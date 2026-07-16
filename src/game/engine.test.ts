@@ -15,9 +15,8 @@ import { CHAIN_LIMIT, type MatchState, type Move, type PlayerId } from './types'
 
 const play = (word: string): Move => ({ type: 'play', word })
 const pass: Move = { type: 'pass' }
-const challenge: Move = { type: 'challenge' }
-const fold: Move = { type: 'fold' }
-const stand = (wordIsReal: boolean): Move => ({ type: 'stand', wordIsReal })
+// The referee's verdict is injected: true → STANDS, false → REJECTED.
+const challenge = (wordIsReal: boolean): Move => ({ type: 'challenge', wordIsReal })
 
 /** Apply a scripted move list, throwing on any rejection. */
 function run(state: MatchState, steps: Array<[PlayerId, Move]>): MatchState {
@@ -186,11 +185,6 @@ describe('turn and actor guards', () => {
     expectError(applyMove(fresh(), 'p2', play('vault')), 'Not your turn yet.')
     expectError(applyMove(fresh(), 'p2', pass), 'Not your turn yet.')
   })
-
-  it('rejects fold/stand when no challenge is pending', () => {
-    expectError(applyMove(fresh(), 'p1', fold), "There's no challenge to answer.")
-    expectError(applyMove(fresh(), 'p1', stand(true)), "There's no challenge to answer.")
-  })
 })
 
 describe('passing', () => {
@@ -227,7 +221,7 @@ describe('challenges', () => {
     ])
 
   it('cannot target an empty chain', () => {
-    expectError(applyMove(fresh(), 'p1', challenge), 'Nothing to challenge yet.')
+    expectError(applyMove(fresh(), 'p1', challenge(false)), 'Nothing to challenge yet.')
   })
 
   it('cannot target your own word (e.g. after the opponent passes)', () => {
@@ -235,60 +229,40 @@ describe('challenges', () => {
       ['p1', play('vault')],
       ['p2', pass],
     ])
-    expectError(applyMove(state, 'p1', challenge), "You can't challenge your own word.")
+    expectError(applyMove(state, 'p1', challenge(false)), "You can't challenge your own word.")
   })
 
-  it('enters CHALLENGE_PENDING and blocks everything except fold/stand', () => {
-    const state = run(midMatch(), [['p1', challenge]])
-    expect(state.phase).toBe('CHALLENGE_PENDING')
-    expect(state.challenger).toBe('p1')
-    expectError(applyMove(state, 'p2', play('radish')), 'ULTRA is under challenge — fold or stand.')
-    expectError(applyMove(state, 'p1', play('radish')), 'Waiting for Dana to fold or stand.')
-    expectError(applyMove(state, 'p1', fold), 'Only Dana can fold or stand.')
-  })
-
-  it('fold: word removed, gold refunded, life lost, defender replays from the previous word', () => {
-    const state = run(midMatch(), [
-      ['p1', challenge],
-      ['p2', fold],
-    ])
+  it('REJECTED (fake): word removed, gold refunded, owner loses a life, challenger plays on', () => {
+    const state = run(midMatch(), [['p1', challenge(false)]])
     expect(state.chain.map((l) => l.word)).toEqual(['vault'])
     expect(state.players.p2.gold).toBe(0) // the 9g refunded
     expect(state.players.p2.lives).toBe(2)
-    expect(state.phase).toBe('P2_TURN') // defender plays again
+    expect(state.phase).toBe('P1_TURN') // the challenger plays from the previous word
 
     // …and must play from VAULT, not from the removed ULTRA
-    expectError(applyMove(state, 'p2', play('radish')), 'Your word needs to start with LT or ULT.')
-    const next = applyMove(state, 'p2', play('ultimatum'))
-    expect(next.ok).toBe(true)
+    expectError(applyMove(state, 'p1', play('radish')), 'Your word needs to start with LT or ULT.')
+    expect(applyMove(state, 'p1', play('ultimatum')).ok).toBe(true)
   })
 
   it('a removed word can never be replayed', () => {
-    const state = run(midMatch(), [
-      ['p1', challenge],
-      ['p2', fold],
-    ])
-    expectError(applyMove(state, 'p2', play('ultra')), 'ULTRA has already been played this match.')
+    const state = run(midMatch(), [['p1', challenge(false)]])
+    expectError(applyMove(state, 'p1', play('ultra')), 'ULTRA has already been played this match.')
   })
 
-  it('folding the opener leaves an empty chain and a fresh opening move', () => {
+  it('rejecting the opener leaves an empty chain and a fresh opening move', () => {
     const state = run(fresh(), [
       ['p1', play('xqzzle')],
-      ['p2', challenge],
-      ['p1', fold],
+      ['p2', challenge(false)],
     ])
     expect(state.chain).toHaveLength(0)
-    expect(state.phase).toBe('P1_TURN')
-    const next = applyMove(state, 'p1', play('vault'))
+    expect(state.phase).toBe('P2_TURN') // the challenger (p2) opens next
+    const next = applyMove(state, 'p2', play('vault'))
     expect(next.ok).toBe(true)
     if (next.ok) expect(next.state.chain[0].gold).toBe(0)
   })
 
-  it('stand + real word: challenger loses a life and plays on from the verified word', () => {
-    const state = run(midMatch(), [
-      ['p1', challenge],
-      ['p2', stand(true)],
-    ])
+  it('STANDS (real): challenger loses a life and plays on from the verified word', () => {
+    const state = run(midMatch(), [['p1', challenge(true)]])
     expect(state.players.p1.lives).toBe(2)
     expect(state.players.p2.lives).toBe(3)
     expect(state.players.p2.gold).toBe(9) // keeps the gold
@@ -297,25 +271,11 @@ describe('challenges', () => {
   })
 
   it('a survived word cannot be challenged again', () => {
-    const state = run(midMatch(), [
-      ['p1', challenge],
-      ['p2', stand(true)],
-    ])
-    expectError(applyMove(state, 'p1', challenge), 'ULTRA already survived a challenge.')
+    const state = run(midMatch(), [['p1', challenge(true)]])
+    expectError(applyMove(state, 'p1', challenge(true)), 'ULTRA already survived a challenge.')
   })
 
-  it('stand + fake word: defender loses a life, word removed, gold refunded, challenger plays', () => {
-    const state = run(midMatch(), [
-      ['p1', challenge],
-      ['p2', stand(false)],
-    ])
-    expect(state.players.p2.lives).toBe(2)
-    expect(state.players.p2.gold).toBe(0)
-    expect(state.chain.map((l) => l.word)).toEqual(['vault'])
-    expect(state.phase).toBe('P1_TURN') // challenger plays from the previous word
-  })
-
-  it('a lost challenge on the last life ends the game for the challenger', () => {
+  it('a failed challenge (STANDS) on the last life ends the game for the challenger', () => {
     const worn = run(midMatch(), [
       ['p1', pass],
       ['p2', play('radish')],
@@ -323,15 +283,12 @@ describe('challenges', () => {
       ['p2', play('shovel')],
     ])
     expect(worn.players.p1.lives).toBe(1)
-    const state = run(worn, [
-      ['p1', challenge],
-      ['p2', stand(true)],
-    ])
+    const state = run(worn, [['p1', challenge(true)]])
     expect(state.phase).toBe('GAME_OVER')
     expect(state.winner).toBe('p2')
   })
 
-  it('a busted bluff on the last life ends the game for the defender', () => {
+  it('a busted bluff (REJECTED) on the last life ends the game for the word owner', () => {
     const worn = run(fresh(), [
       ['p1', play('vault')],
       ['p2', pass],
@@ -341,10 +298,7 @@ describe('challenges', () => {
       ['p2', play('shqux')], // bluff on the last life
     ])
     expect(worn.players.p2.lives).toBe(1)
-    const state = run(worn, [
-      ['p1', challenge],
-      ['p2', stand(false)],
-    ])
+    const state = run(worn, [['p1', challenge(false)]])
     expect(state.phase).toBe('GAME_OVER')
     expect(state.winner).toBe('p1')
   })
@@ -411,21 +365,19 @@ describe('scripted match replay', () => {
       ['p2', play('ultra')], // +9g
       ['p1', play('ultramarine')], // +30g
       ['p2', play('nectar')], // +4g
-      ['p1', challenge], // accuses NECTAR
-      ['p2', stand(true)], // real — p1 loses a life
+      ['p1', challenge(true)], // accuses NECTAR — real, STANDS: p1 loses a life, plays on
       ['p1', play('arrow')], // +4g, from the verified word
       ['p2', play('owly')], // +4g — a bluff
-      ['p1', challenge],
-      ['p2', fold], // p2 loses a life, owly removed, 4g refunded
-      ['p2', pass], // stuck — lives 1
-      ['p1', pass], // lives 1
-      ['p2', pass], // lives 0 — game over
+      ['p1', challenge(false)], // OWLY fake, REJECTED: p2 loses a life, owly removed, 4g refunded
+      ['p1', pass], // p1 lives 1
+      ['p2', pass], // p2 lives 1
+      ['p1', pass], // p1 lives 0 — game over
     ]
     const state = run(fresh(), script)
     expect(state.phase).toBe('GAME_OVER')
-    expect(state.winner).toBe('p1')
-    expect(state.players.p1).toMatchObject({ gold: 34, lives: 1 })
-    expect(state.players.p2).toMatchObject({ gold: 13, lives: 0 })
+    expect(state.winner).toBe('p2')
+    expect(state.players.p1).toMatchObject({ gold: 34, lives: 0 })
+    expect(state.players.p2).toMatchObject({ gold: 13, lives: 1 })
     expect(state.chain.map((l) => l.word)).toEqual([
       'vault',
       'ultra',
@@ -434,7 +386,7 @@ describe('scripted match replay', () => {
       'arrow',
     ])
     expect(state.usedWords).toContain('owly')
-    expect(state.version).toBe(13)
+    expect(state.version).toBe(11)
   })
 })
 

@@ -41,7 +41,6 @@ interface StoredMatch {
   tokens: { p1: string; p2: string | null }
   /** Who opened this game; rematches swap it. */
   opener: PlayerId
-  refereeOffline: boolean
   revision: number
   lastEvent?: LastEvent | null
   /** ms-epoch of the last activity (create/join/move). Stamped by persist();
@@ -71,12 +70,8 @@ function nudgeBody(m: StoredMatch): string {
       return `${name} played ${word} — your move.`
     case 'pass':
       return `${name} passed — your move.`
-    case 'challenge':
-      return `${name} challenges ${word} — stand or fold?`
-    case 'fold':
-      return `${name} folded! ${word} is struck — your move.`
     case 'real':
-      return `Ruling's in: ${word} is real — your move.`
+      return `Ruling's in — ${word} stands. Your move.`
     case 'fake':
       return `Busted — ${word} was a fake. Your move.`
     case 'rematch':
@@ -98,7 +93,17 @@ export class MatchDO extends DurableObject<Env> {
   }
 
   private async load(): Promise<StoredMatch | undefined> {
-    return this.ctx.storage.get<StoredMatch>('match')
+    const m = await this.ctx.storage.get<StoredMatch>('match')
+    // Migration: a match mid-challenge when the fold/stand flow was removed.
+    // The pending phase no longer exists, so hand the turn to the challenger
+    // (they play on from the tail) and drop the stale field. Persisted lazily
+    // by the next move; a bare read stays correct because we re-migrate.
+    if (m && (m.state.phase as string) === 'CHALLENGE_PENDING') {
+      const stale = m.state as unknown as { phase: string; challenger?: PlayerId | null }
+      m.state.phase = stale.challenger === 'p2' ? 'P2_TURN' : 'P1_TURN'
+      delete stale.challenger
+    }
+    return m
   }
 
   private remindAfterMs(): number {
@@ -139,7 +144,6 @@ export class MatchDO extends DurableObject<Env> {
       code: m.code,
       you,
       state: m.state,
-      refereeOffline: m.refereeOffline,
       revision: m.revision,
       lastEvent: m.lastEvent ?? null,
       presence: this.presence(),
@@ -267,7 +271,6 @@ export class MatchDO extends DurableObject<Env> {
     const s = m.state
     if (s.phase === 'P1_TURN') return 'p1'
     if (s.phase === 'P2_TURN') return 'p2'
-    if (s.phase === 'CHALLENGE_PENDING' && s.challenger) return opponentOf(s.challenger)
     return null
   }
 
@@ -322,7 +325,6 @@ export class MatchDO extends DurableObject<Env> {
       state: newMatchState(name),
       tokens: { p1: token, p2: null },
       opener: 'p1',
-      refereeOffline: false,
       revision: 0,
     }
     await this.persist(m)
@@ -399,48 +401,23 @@ export class MatchDO extends DurableObject<Env> {
         engineMove = { type: 'play', word: String(clientMove.word ?? '') }
         break
       case 'pass':
-      case 'challenge':
-      case 'fold':
-        engineMove = { type: clientMove.type }
+        engineMove = { type: 'pass' }
         break
-      case 'stand': {
-        if (m.state.phase !== 'CHALLENGE_PENDING')
-          return { ok: false, error: "There's no challenge to answer." }
-        const word = m.state.chain[m.state.chain.length - 1].word
+      case 'challenge': {
+        // The DO is the referee: resolve the verdict now (embedded list →
+        // dictionary API) and apply the instant STANDS/REJECTED outcome. If
+        // the referee can't be reached, nothing changes and the challenger
+        // can flag it again once they're back online.
+        const word = m.state.chain[m.state.chain.length - 1]?.word
+        if (!word) return { ok: false, error: 'Nothing to challenge yet.' }
         const verdict = await lookupWord(word)
-        if (verdict === 'unknown') {
-          // Both players will see the shared coin-flip prompt via the view.
-          if (!m.refereeOffline) {
-            m.refereeOffline = true
-            await this.persist(m)
-            this.broadcast(m)
+        if (verdict === 'unknown')
+          return {
+            ok: false,
+            error: "Couldn't get a ruling just now — check your connection and flag it again.",
           }
-          return { ok: true, refereeOffline: true, view: this.viewFor(m, actor) }
-        }
-        engineMove = { type: 'stand', wordIsReal: verdict === 'real' }
+        engineMove = { type: 'challenge', wordIsReal: verdict === 'real' }
         break
-      }
-      case 'coinflip': {
-        if (m.state.phase !== 'CHALLENGE_PENDING' || !m.refereeOffline || !m.state.challenger)
-          return { ok: false, error: 'No coin to flip here.' }
-        // Either player may tap; the DO stands in for the defender.
-        const defender = opponentOf(m.state.challenger)
-        const accused = m.state.chain[m.state.chain.length - 1].word
-        const wordIsReal = Math.random() < 0.5
-        const flip = applyMove(m.state, defender, { type: 'stand', wordIsReal })
-        if (!flip.ok) return { ok: false, error: flip.error }
-        m.state = flip.state
-        m.refereeOffline = false
-        m.lastEvent = {
-          kind: wordIsReal ? 'real' : 'fake',
-          word: accused,
-          by: defender,
-          coinFlip: true,
-        }
-        await this.persist(m)
-        this.broadcast(m)
-        this.nudge(m, actor)
-        return { ok: true, view: this.viewFor(m, actor) }
       }
       default:
         return { ok: false, error: 'Unknown move.' }
@@ -450,7 +427,6 @@ export class MatchDO extends DurableObject<Env> {
     const r = applyMove(m.state, actor, engineMove)
     if (!r.ok) return { ok: false, error: r.error }
     m.state = r.state
-    m.refereeOffline = false
     switch (engineMove.type) {
       case 'play':
         m.lastEvent = {
@@ -463,12 +439,6 @@ export class MatchDO extends DurableObject<Env> {
         m.lastEvent = { kind: 'pass', by: actor }
         break
       case 'challenge':
-        m.lastEvent = { kind: 'challenge', word: accusedWord, by: actor }
-        break
-      case 'fold':
-        m.lastEvent = { kind: 'fold', word: accusedWord, by: actor }
-        break
-      case 'stand':
         m.lastEvent = {
           kind: engineMove.wordIsReal ? 'real' : 'fake',
           word: accusedWord,
@@ -491,7 +461,6 @@ export class MatchDO extends DurableObject<Env> {
       return { ok: false, error: "The match isn't over yet." }
     m.opener = opponentOf(m.opener)
     m.state = newMatchState(m.state.players.p1.name, m.state.players.p2.name, m.opener)
-    m.refereeOffline = false
     m.lastEvent = { kind: 'rematch', by: actor }
     await this.persist(m)
     this.broadcast(m)

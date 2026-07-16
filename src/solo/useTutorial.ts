@@ -5,7 +5,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { applyMove, chooseBotMove, type MatchState, type Move, type PlayerId } from '../game'
-import { lookupWord } from '../lib/referee'
 import type { SoloEvent } from './useSoloMatch'
 import {
   GATED_BEATS,
@@ -24,7 +23,6 @@ export function useTutorial() {
   const [error, setError] = useState<string | null>(null)
   const [event, setEvent] = useState<SoloEvent | null>(null)
   const [botThinking, setBotThinking] = useState(false)
-  const [resolving, setResolving] = useState(false)
 
   // Lloyd's play count — drives the script.
   const cursorRef = useRef(0)
@@ -45,9 +43,8 @@ export function useTutorial() {
   const playerTurn = state.phase === 'P1_TURN'
   const gated = (GATED_BEATS as readonly string[]).includes(beat)
   const passive = (PASSIVE_BEATS as readonly string[]).includes(beat)
-  const botTurn =
-    state.phase === 'P2_TURN' ||
-    (state.phase === 'CHALLENGE_PENDING' && state.challenger === 'p1')
+  // Challenges resolve instantly, so Lloyd only ever acts on his own turn.
+  const botTurn = state.phase === 'P2_TURN'
 
   // Completing the tutorial (either ending) retires the Home card.
   useEffect(() => {
@@ -70,29 +67,6 @@ export function useTutorial() {
     const timer = setTimeout(() => {
       setBotThinking(false)
 
-      if (state.phase === 'CHALLENGE_PENDING') {
-        const accused = state.chain[state.chain.length - 1]
-        // Scripted defense: fakes always fold (the planted one included —
-        // a strange tail can force any scripted slot onto a fake), list
-        // words always stand. After handover, the real bot judges the same.
-        const move: Move =
-          beat === 'done'
-            ? chooseBotMove(state, 'p2', 'easy')
-            : isInWordList(accused.word)
-              ? { type: 'stand', wordIsReal: true }
-              : { type: 'fold' }
-        const r = applyMove(state, 'p2', move)
-        if (!r.ok) return
-        setState(r.state)
-        if (move.type === 'fold') {
-          setEvent({ kind: 'bot-folded', word: accused.word })
-        } else if (move.type === 'stand') {
-          setEvent({ kind: 'verdict', word: accused.word, real: true, defender: 'p2' })
-          if (beat === 'bluff') setCtx((c) => ({ ...c, toldYou: true }))
-        }
-        return
-      }
-
       // P2_TURN: scripted while the script lasts, the real easy bot after.
       const cursor = cursorRef.current
       const move = scriptedLloydMove(state, cursor) ?? chooseBotMove(state, 'p2', 'easy')
@@ -114,10 +88,8 @@ export function useTutorial() {
         } else if (cursor === 2) {
           setCtx((c) => ({ ...c, fakeWord: played.word }))
           setBeat('smellIntro')
-        } else if (cursor === 3) {
-          setCtx((c) => ({ ...c, realWord: played.word }))
-          setBeat('bothWays')
         }
+        // cursor ≥ 3 lands during free play ('done'); no beat change.
       } else if (beat !== 'done' && move.type === 'pass') {
         // The script could not find its word (vanishingly unlikely) — drop
         // the remaining lessons rather than strand the match.
@@ -170,29 +142,17 @@ export function useTutorial() {
     return true
   }
 
-  async function defend(choice: 'fold' | 'stand') {
-    if (choice === 'fold') {
-      apply('p1', { type: 'fold' })
-      return
+  // The player flags Lloyd's newest word. It resolves on the spot against the
+  // embedded list — deterministic and offline, so the scripted fake (never a
+  // list word) is always REJECTED. Then the player is on move for the bluff.
+  function challenge() {
+    const word = state.chain[state.chain.length - 1]?.word
+    if (!word) return
+    const real = isInWordList(word)
+    if (apply('p1', { type: 'challenge', wordIsReal: real })) {
+      setEvent({ kind: 'verdict', word, real, challenger: 'p1' })
+      if (beat === 'smell') setBeat('bothWays')
     }
-    const word = state.chain[state.chain.length - 1].word
-    setResolving(true)
-    const verdict = await lookupWord(word)
-    setResolving(false)
-    if (verdict === 'unknown') {
-      setEvent({ kind: 'referee-offline', word })
-      return
-    }
-    const real = verdict === 'real'
-    if (apply('p1', { type: 'stand', wordIsReal: real }))
-      setEvent({ kind: 'verdict', word, real, defender: 'p1' })
-  }
-
-  function coinFlip() {
-    const word = state.chain[state.chain.length - 1].word
-    const real = Math.random() < 0.5
-    if (apply('p1', { type: 'stand', wordIsReal: real }))
-      setEvent({ kind: 'verdict', word, real, defender: 'p1', coinFlip: true })
   }
 
   return {
@@ -204,16 +164,13 @@ export function useTutorial() {
     error,
     event,
     botThinking,
-    resolving,
     terminal,
     playerTurn,
     advance,
     playWord,
     pass,
-    challenge: () => apply('p1', { type: 'challenge' }),
+    challenge,
     neverMind: () => setCtx((c) => ({ ...c, needled: true })),
-    defend,
-    coinFlip,
     clearEvent: () => setEvent(null),
   }
 }

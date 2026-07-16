@@ -4,14 +4,8 @@ import { Deck, PassButton } from '../components/Deck'
 import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
 import { useComposer } from '../components/useComposer'
-import { gripOptions, opponentOf } from '../game'
-import {
-  AccusePending,
-  ConfirmChallengeSheet,
-  DefendInterstitial,
-  GameOverPanel,
-  VerdictStamp,
-} from '../components/overlays'
+import { gripOptions } from '../game'
+import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { useSoloMatch, type SoloEvent, type SoloSave } from '../solo/useSoloMatch'
 
 interface SoloMatchProps {
@@ -34,19 +28,13 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
   const canChallenge =
     playerTurn && newest !== undefined && newest.owner === 'p2' && !newest.challengeSurvived
 
-  const defending = state.phase === 'CHALLENGE_PENDING' && state.challenger === 'p2'
-  const accusing = state.phase === 'CHALLENGE_PENDING' && state.challenger === 'p1'
-
-  const active =
-    m.terminal
-      ? null
-      : state.phase === 'P1_TURN'
-        ? ('p1' as const)
-        : state.phase === 'P2_TURN'
-          ? ('p2' as const)
-          : state.challenger
-            ? opponentOf(state.challenger)
-            : null
+  const active = m.terminal
+    ? null
+    : state.phase === 'P1_TURN'
+      ? ('p1' as const)
+      : state.phase === 'P2_TURN'
+        ? ('p2' as const)
+        : null
 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
@@ -74,7 +62,9 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
         message={
           m.event?.kind === 'bot-passed'
             ? `${botName} is stuck and passes — a life slips away.`
-            : null
+            : m.event?.kind === 'referee-error'
+              ? "Couldn't get a ruling — check your connection and flag it again."
+              : null
         }
       />
       {m.error && (
@@ -88,31 +78,12 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
         <ConfirmChallengeSheet
           onConfirm={() => {
             setConfirmingChallenge(false)
-            m.challengeBot()
+            void m.challengeBot()
           }}
           onCancel={() => setConfirmingChallenge(false)}
         />
       )}
-      {defending && newest && (
-        <DefendInterstitial
-          word={newest.word}
-          oppName={botName}
-          resolving={m.resolving}
-          offline={m.event?.kind === 'referee-offline'}
-          onStand={() => void m.defend('stand')}
-          onFold={() => void m.defend('fold')}
-          onCoinFlip={m.coinFlip}
-        />
-      )}
-      {accusing && newest && (
-        <AccusePending
-          word={newest.word}
-          waitingCopy={`${botName} is deciding whether to fold…`}
-          offline={false}
-          onCoinFlip={() => undefined}
-        />
-      )}
-      {(m.event?.kind === 'verdict' || m.event?.kind === 'bot-folded') && (
+      {m.event?.kind === 'verdict' && (
         <SoloVerdict event={m.event} botName={botName} onDismiss={m.clearEvent} />
       )}
       {m.terminal && (
@@ -134,43 +105,35 @@ export function SoloVerdict({
   botName,
   onDismiss,
 }: {
-  event: Extract<SoloEvent, { kind: 'verdict' | 'bot-folded' }>
+  event: Extract<SoloEvent, { kind: 'verdict' }>
   botName: string
   onDismiss: () => void
 }) {
-  if (event.kind === 'bot-folded') {
+  const word = event.word.toUpperCase()
+  const iChallenged = event.challenger === 'p1'
+  if (event.real) {
+    // STANDS — the challenger loses a life for the bad call.
     return (
       <VerdictStamp
-        stamp="FOLDED"
-        good
-        copy={`${botName} folds! ${event.word.toUpperCase()} is struck from the chain and ${botName} loses a life.`}
+        stamp="STANDS"
+        copy={
+          iChallenged
+            ? `The ruling: ${word} holds up. You lose a life for the call.`
+            : `${botName} flagged ${word}, but it holds up. ${botName} loses a life.`
+        }
         onDismiss={onDismiss}
       />
     )
   }
-  const flip = event.coinFlip ? ' The coin decided.' : ''
-  if (event.defender === 'p1') {
-    return event.real ? (
-      <VerdictStamp
-        stamp="REAL"
-        good
-        copy={`${event.word.toUpperCase()} stands.${flip} ${botName} loses a life for doubting you.`}
-        onDismiss={onDismiss}
-      />
-    ) : (
-      <VerdictStamp
-        stamp="FAKE"
-        good={false}
-        copy={`Busted.${flip} ${event.word.toUpperCase()} is struck from the chain and you lose a life.`}
-        onDismiss={onDismiss}
-      />
-    )
-  }
+  // REJECTED — the word is struck and its owner loses a life.
   return (
     <VerdictStamp
-      stamp="REAL"
-      good={false}
-      copy={`${botName} stands, and the ruling is in: ${event.word.toUpperCase()} is real — you lose a life.`}
+      stamp="REJECTED"
+      copy={
+        iChallenged
+          ? `The ruling: ${word} isn't a word. It's struck and ${botName} loses a life.`
+          : `${botName} flagged ${word} — busted. It's struck and you lose a life.`
+      }
       onDismiss={onDismiss}
     />
   )

@@ -1,12 +1,12 @@
-// Full-screen match moments shared by solo and multiplayer: the dramatic
-// challenge beats, REAL/FAKE/FOLDED stamps, and the game-over panel with
-// its gold count-up.
+// Full-screen match moments shared by solo and multiplayer: the challenge
+// confirm sheet, the STANDS/REJECTED verdict stamp, and the game-over panel
+// with its gold count-up.
 
 import { useEffect, useRef, useState } from 'react'
 import { opponentOf, type MatchState, type PlayerId } from '../game'
 import { playerTextClass, sideOf, tileClass, type Side } from './tiles'
 import { WordTiles } from './WordTiles'
-import { CoinIcon, FlagIcon } from './icons'
+import { FlagIcon } from './icons'
 
 export function Overlay({ children }: { children: React.ReactNode }) {
   return (
@@ -28,24 +28,26 @@ export function BigWord({ word, side }: { word: string; side: Side }) {
   )
 }
 
+/**
+ * The ruling, stamped on the word. Color is the verdict, not the viewer:
+ * REJECTED is always red (a word died), STANDS always the blue-grey p1-lip
+ * (a word held). The copy — who lost a life — is supplied by the caller.
+ */
 export function VerdictStamp({
   stamp,
-  good,
   copy,
   onDismiss,
 }: {
-  stamp: 'REAL' | 'FAKE' | 'FOLDED'
-  /** Good news for the viewer → blue stamp; bad news → red. */
-  good: boolean
+  stamp: 'STANDS' | 'REJECTED'
   copy: string
   onDismiss: () => void
 }) {
+  const color =
+    stamp === 'REJECTED' ? 'text-verdict-no border-verdict-no' : 'text-p1-lip border-p1-lip'
   return (
     <Overlay>
       <div
-        className={`font-extrabold text-5xl tracking-widest border-4 rounded-xl px-6 py-2 -rotate-6 stamp-in ${
-          good ? 'text-p1-lip border-p1-lip' : 'text-p2-lip border-p2-lip'
-        }`}
+        className={`font-extrabold text-4xl tracking-widest border-4 rounded-xl px-6 py-2 -rotate-6 stamp-in ${color}`}
       >
         {stamp}
       </div>
@@ -93,94 +95,6 @@ export function ConfirmChallengeSheet({
         )}
       </div>
     </div>
-  )
-}
-
-export function CoinFlipPrompt({ onFlip }: { onFlip: () => void }) {
-  return (
-    <>
-      <p className="text-ink font-bold">Referee offline — you two get to flip for it.</p>
-      <button
-        onClick={onFlip}
-        className="h-13 px-6 rounded-2xl font-extrabold bg-ink-strong text-white shadow-[0_4px_0_#262E38] active:translate-y-0.5 flex items-center justify-center gap-2"
-      >
-        <CoinIcon className="w-5 h-5" /> Flip for it
-      </button>
-    </>
-  )
-}
-
-/** The poker moment: your word is accused — fold or stand. */
-export function DefendInterstitial({
-  word,
-  oppName,
-  resolving,
-  offline,
-  onStand,
-  onFold,
-  onCoinFlip,
-}: {
-  word: string
-  oppName: string
-  resolving: boolean
-  offline: boolean
-  onStand: () => void
-  onFold: () => void
-  onCoinFlip: () => void
-}) {
-  return (
-    <Overlay>
-      <p className="text-dim font-bold text-sm uppercase tracking-widest">{oppName} challenges!</p>
-      <BigWord word={word} side="you" />
-      <p className="text-ink-strong font-extrabold text-xl">…is that even a word?</p>
-      {resolving ? (
-        <p className="text-ink font-bold animate-pulse motion-reduce:animate-none">
-          Getting a ruling…
-        </p>
-      ) : offline ? (
-        <CoinFlipPrompt onFlip={onCoinFlip} />
-      ) : (
-        <div className="flex flex-col gap-3 w-full max-w-xs">
-          <button
-            onClick={onStand}
-            className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5"
-          >
-            Stand — it's real
-          </button>
-          <button
-            onClick={onFold}
-            className="h-13 rounded-2xl font-extrabold bg-white text-p2-lip shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5"
-          >
-            Fold — take it back (−1 life)
-          </button>
-        </div>
-      )}
-    </Overlay>
-  )
-}
-
-/** You've accused; the defender (or the coin) decides. */
-export function AccusePending({
-  word,
-  waitingCopy,
-  offline,
-  onCoinFlip,
-}: {
-  word: string
-  waitingCopy: string
-  offline: boolean
-  onCoinFlip: () => void
-}) {
-  return (
-    <Overlay>
-      <p className="text-dim font-bold text-sm uppercase tracking-widest">You accuse</p>
-      <BigWord word={word} side="them" />
-      {offline ? (
-        <CoinFlipPrompt onFlip={onCoinFlip} />
-      ) : (
-        <p className="text-ink font-bold animate-pulse motion-reduce:animate-none">{waitingCopy}</p>
-      )}
-    </Overlay>
   )
 }
 
@@ -249,7 +163,7 @@ export function GameOverPanel({
   rematchLabel,
   busy = false,
   sendoff,
-  onDuel,
+  primary,
   onRematch,
   onExit,
   backLabel = 'home',
@@ -260,8 +174,10 @@ export function GameOverPanel({
   busy?: boolean
   /** Tutorial-only: Lloyd's one-line sendoff under the heading. */
   sendoff?: string
-  /** Tutorial-only: makes "Duel a friend" the coral primary action. */
-  onDuel?: () => void
+  /** Tutorial-only: the coral primary action above Rematch — "Duel a friend"
+   *  for a cold-open player, or "Play your turn against {inviter}" when they
+   *  came in from an invite. */
+  primary?: { label: string; onClick: () => void }
   onRematch: () => void
   onExit: () => void
   /** Where the exit button returns to, for its label ("home" or "Games"). */
@@ -310,12 +226,12 @@ export function GameOverPanel({
         ))}
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        {onDuel && (
+        {primary && (
           <button
-            onClick={onDuel}
+            onClick={primary.onClick}
             className="h-13 rounded-2xl font-extrabold bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5"
           >
-            Duel a friend
+            {primary.label}
           </button>
         )}
         <button

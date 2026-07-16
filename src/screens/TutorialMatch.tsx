@@ -2,19 +2,15 @@
 // and coach bubbles pinned to the board (mockups/tutorial-flow.html). All
 // game physics are the shipped ones — the tutorial only paces them.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChainLedger } from '../components/ChainLedger'
 import { Deck, PassButton } from '../components/Deck'
 import { Hud } from '../components/Hud'
 import { Toast } from '../components/Toast'
 import { useComposer } from '../components/useComposer'
-import {
-  AccusePending,
-  ConfirmChallengeSheet,
-  DefendInterstitial,
-  GameOverPanel,
-} from '../components/overlays'
+import { ConfirmChallengeSheet, GameOverPanel } from '../components/overlays'
 import { gripOptions } from '../game'
+import { api } from '../lib/api'
 import { SENDOFF_LOSS, SENDOFF_WIN, SUGGESTED_WORD, WHISPER, type BubbleCopy } from '../solo/tutorial'
 import { useTutorial } from '../solo/useTutorial'
 import { SoloVerdict } from './SoloMatch'
@@ -23,6 +19,10 @@ interface TutorialMatchProps {
   onExit: () => void
   onDuel: () => void
   onRematchLloyd: () => void
+  /** Set when the player reached the tutorial from an invite: the ending sends
+   *  them back into that match instead of offering a fresh duel. */
+  resumeInvite?: string | null
+  onResumeInvite?: (code: string) => void
 }
 
 /** `**bold**` spans in Lloyd's lines render emphasized. */
@@ -71,9 +71,27 @@ function Bubble({ copy, tapnext }: { copy: BubbleCopy; tapnext: boolean }) {
   )
 }
 
-export function TutorialMatch({ onExit, onDuel, onRematchLloyd }: TutorialMatchProps) {
+export function TutorialMatch({
+  onExit,
+  onDuel,
+  onRematchLloyd,
+  resumeInvite,
+  onResumeInvite,
+}: TutorialMatchProps) {
   const t = useTutorial()
   const [confirmingChallenge, setConfirmingChallenge] = useState(false)
+  // When we came from an invite, name the inviter on the ending's coral CTA.
+  const [inviterName, setInviterName] = useState<string | null>(null)
+  useEffect(() => {
+    if (!resumeInvite) return
+    let alive = true
+    void api.preview(resumeInvite).then((r) => {
+      if (alive && r.ok) setInviterName(r.creatorName)
+    })
+    return () => {
+      alive = false
+    }
+  }, [resumeInvite])
 
   const { state, beat } = t
   const newest = state.chain[state.chain.length - 1]
@@ -99,8 +117,6 @@ export function TutorialMatch({ onExit, onDuel, onRematchLloyd }: TutorialMatchP
       ? SUGGESTED_WORD[composer.typed.length]
       : undefined
 
-  const defending = state.phase === 'CHALLENGE_PENDING' && state.challenger === 'p2'
-  const accusing = state.phase === 'CHALLENGE_PENDING' && state.challenger === 'p1'
   const active = t.terminal
     ? null
     : state.phase === 'P1_TURN'
@@ -179,26 +195,7 @@ export function TutorialMatch({ onExit, onDuel, onRematchLloyd }: TutorialMatchP
           }}
         />
       )}
-      {defending && newest && (
-        <DefendInterstitial
-          word={newest.word}
-          oppName="Lloyd"
-          resolving={t.resolving}
-          offline={t.event?.kind === 'referee-offline'}
-          onStand={() => void t.defend('stand')}
-          onFold={() => void t.defend('fold')}
-          onCoinFlip={t.coinFlip}
-        />
-      )}
-      {accusing && newest && (
-        <AccusePending
-          word={newest.word}
-          waitingCopy="Lloyd is deciding whether to fold…"
-          offline={false}
-          onCoinFlip={() => undefined}
-        />
-      )}
-      {(t.event?.kind === 'verdict' || t.event?.kind === 'bot-folded') && (
+      {t.event?.kind === 'verdict' && (
         <SoloVerdict event={t.event} botName="Lloyd" onDismiss={t.clearEvent} />
       )}
       {t.terminal && (
@@ -207,7 +204,14 @@ export function TutorialMatch({ onExit, onDuel, onRematchLloyd }: TutorialMatchP
           you="p1"
           rematchLabel="Rematch (Lloyd opens)"
           sendoff={state.winner === 'p1' ? SENDOFF_WIN : SENDOFF_LOSS}
-          onDuel={onDuel}
+          primary={
+            resumeInvite && onResumeInvite
+              ? {
+                  label: `Play your turn against ${inviterName ?? 'your friend'}`,
+                  onClick: () => onResumeInvite(resumeInvite),
+                }
+              : { label: 'Duel a friend', onClick: onDuel }
+          }
           onRematch={onRematchLloyd}
           onExit={onExit}
         />

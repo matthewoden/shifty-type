@@ -21,10 +21,8 @@ export function duelBucket(s: MatchSummary): Bucket {
 
 /** In solo the player is always p1; the bot is p2. */
 export function soloYourTurn(state: MatchState): boolean {
-  if (state.phase === 'P1_TURN') return true
-  // The bot challenged you — you're the defender who must stand or fold.
-  if (state.phase === 'CHALLENGE_PENDING') return state.challenger === 'p2'
-  return false
+  // Challenges resolve instantly, so the player only ever waits on P2_TURN.
+  return state.phase === 'P1_TURN'
 }
 
 export function soloBucket(save: SoloSave): Bucket {

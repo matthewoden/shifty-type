@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Difficulty } from './game'
-import { loadMatchAuth } from './multi/storage'
+import { api } from './lib/api'
+import { getSavedName, loadMatchAuth, saveMatchAuth } from './multi/storage'
 import { DuelCreate } from './screens/DuelCreate'
 import { JoinByCode } from './screens/JoinByCode'
 import { InviteLanding } from './screens/InviteLanding'
@@ -79,6 +80,23 @@ export default function App() {
   const backFromDetour = () =>
     pendingInvite ? showInvite(pendingInvite) : goHome()
 
+  // The tutorial ending, for a player who arrived from an invite: drop them
+  // straight into that match. A returning device (name saved) joins and enters
+  // directly; a first-timer routes to the invite landing to pick a name (one
+  // tap from the board). A failed join (seat taken) also falls back there.
+  const resumeInvite = (code: string) => {
+    const name = getSavedName()
+    if (!name) return showInvite(code)
+    void api.join(code, name).then((r) => {
+      if (r.ok) {
+        saveMatchAuth(code, { token: r.token, you: 'p2' })
+        enterDuel(code)
+      } else {
+        showInvite(code)
+      }
+    })
+  }
+
   switch (screen.name) {
     case 'solo-setup':
       return (
@@ -122,6 +140,8 @@ export default function App() {
           onExit={backFromDetour}
           onDuel={() => setScreen({ name: 'duel-create' })}
           onRematchLloyd={() => enterSolo(newSoloSave('easy', 'p2'))}
+          resumeInvite={pendingInvite}
+          onResumeInvite={resumeInvite}
         />
       )
     case 'lobby':

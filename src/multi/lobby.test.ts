@@ -23,9 +23,9 @@ function summary(over: Partial<MatchSummary>): MatchSummary {
   }
 }
 
-function solo(phase: MatchState['phase'], challenger: MatchState['challenger'] = null): SoloSave {
+function solo(phase: MatchState['phase']): SoloSave {
   return {
-    state: { phase, challenger } as MatchState,
+    state: { phase } as MatchState,
     difficulty: 'easy',
     opener: 'p1',
   }
@@ -49,10 +49,8 @@ describe('duelBucket', () => {
 })
 
 describe('soloYourTurn / soloBucket', () => {
-  it('is your turn on P1_TURN and when the bot challenges you', () => {
+  it('is your turn on P1_TURN, not on the bot turn', () => {
     expect(soloYourTurn(solo('P1_TURN').state)).toBe(true)
-    expect(soloYourTurn(solo('CHALLENGE_PENDING', 'p2').state)).toBe(true)
-    expect(soloYourTurn(solo('CHALLENGE_PENDING', 'p1').state)).toBe(false)
     expect(soloYourTurn(solo('P2_TURN').state)).toBe(false)
   })
 

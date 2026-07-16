@@ -1,7 +1,7 @@
 import { useReducer } from 'react'
 import { InstallBadge } from '../components/InstallBadge'
+import { Logo } from '../components/Logo'
 import { PasteBadge } from '../components/PasteBadge'
-import { tileClass } from '../components/tiles'
 import { needsYouCount } from '../multi/lobby'
 import { listSeats, loadLobbyCache } from '../multi/storage'
 import { isTutorialDone } from '../solo/tutorial'
@@ -16,40 +16,6 @@ interface HomeProps {
   onOpenGames: () => void
   /** PasteBadge restores seats then opens the match it just recovered. */
   onResumeDuel: (code: string) => void
-}
-
-/**
- * The name plays itself in, as a real move: SHIFTY pops in solid, TYPE
- * types itself in tile by tile — the same fill-pop the ghost seeds use —
- * and SHIFTY's tail TY spends to tint as the grip lands.
- */
-function Logo() {
-  return (
-    <div className="flex flex-col items-start gap-2" aria-label="Shifty Type">
-      <span className="flex gap-[3px]">
-        {['s', 'h', 'i', 'f', 't', 'y'].map((ch, i) => (
-          <span
-            key={i}
-            className={`${tileClass('you', i >= 4)} logo-pop ${i >= 4 ? 'logo-spend' : ''}`}
-            style={{ animationDelay: i >= 4 ? `${i * 80}ms, 1050ms` : `${i * 80}ms` }}
-          >
-            {ch}
-          </span>
-        ))}
-      </span>
-      <span className="flex gap-[3px]" style={{ marginLeft: 4 * 26 }}>
-        {['t', 'y', 'p', 'e'].map((ch, i) => (
-          <span
-            key={i}
-            className={`${tileClass('them', i < 2)} logo-typein`}
-            style={{ animationDelay: `${950 + i * 80}ms` }}
-          >
-            {ch}
-          </span>
-        ))}
-      </span>
-    </div>
-  )
 }
 
 export function Home({

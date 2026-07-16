@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import type { PreviewResponse } from '../lib/protocol'
 import { getSavedName, saveMatchAuth, saveName } from '../multi/storage'
 import { WordTiles } from '../components/WordTiles'
+import { Logo } from '../components/Logo'
 
 interface InviteLandingProps {
   code: string
@@ -10,18 +11,6 @@ interface InviteLandingProps {
   onHowTo: () => void
   onTutorial: () => void
   onBack: () => void
-}
-
-/** A quiet wordmark — the logo's move without the animation. */
-function Wordmark() {
-  return (
-    <div className="flex flex-col items-start gap-1.5" aria-label="Shifty Type">
-      <WordTiles word="shifty" side="you" tailTint={2} small />
-      <span className="ml-[68px]">
-        <WordTiles word="type" side="them" headTint={2} small />
-      </span>
-    </div>
-  )
 }
 
 /**
@@ -93,20 +82,28 @@ export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack 
 
   return (
     <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-6 p-6 text-center">
-      <Wordmark />
-
-      <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-extrabold text-ink-strong text-balance max-w-[17rem]">
-          <span className="text-p2-lip">{inviter}</span> invited you to Shifty&nbsp;Type
-        </h1>
-        <p className="text-[13.5px] font-semibold text-ink max-w-[16rem]">
-          An async word duel — you and a friend trade words that overlap.{' '}
-          {preview.openingWord ? `${inviter} already opened. You're up.` : `${inviter} is waiting for you.`}
+      {/* The headline holds while the logo plays its own move; the blurb,
+          opening word, and buttons fade up in sequence once it lands. */}
+      <div className="flex flex-col items-center gap-3">
+        <p className="invite-in text-[15px] font-bold text-ink text-balance max-w-[15rem]">
+          <span className="text-p2-lip font-extrabold">{inviter}</span> invited you to
         </p>
+        <Logo />
       </div>
 
+      <p
+        className="invite-in text-[13.5px] font-semibold text-ink max-w-[16rem]"
+        style={{ animationDelay: '1500ms' }}
+      >
+        An async word duel — you and a friend trade words that overlap.{' '}
+        {preview.openingWord ? `${inviter} already opened. You're up.` : `${inviter} is waiting for you.`}
+      </p>
+
       {preview.openingWord && (
-        <div className="bg-white rounded-2xl px-4 py-3 flex flex-col items-center gap-2 shadow-[0_3px_0_#E2DDD3]">
+        <div
+          className="invite-in bg-white rounded-2xl px-4 py-3 flex flex-col items-center gap-2 shadow-[0_3px_0_#E2DDD3]"
+          style={{ animationDelay: '1650ms' }}
+        >
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-p2-lip">
             {inviter} opened with
           </span>
@@ -114,7 +111,7 @@ export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack 
         </div>
       )}
 
-      <div className="flex flex-col gap-3 w-full max-w-xs">
+      <div className="invite-in flex flex-col gap-3 w-full max-w-xs" style={{ animationDelay: '1800ms' }}>
         {askName && (
           <input
             value={name}

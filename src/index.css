@@ -23,6 +23,10 @@
   --color-p2-tint: #FDE2D3;
   --color-p2-tint-lip: #F5C4A6;
   --color-p2-tint-ink: #D0682A;
+
+  /* A challenge verdict: REJECTED always stamps this red (a word died);
+     STANDS uses p1-lip. Not part of the indigo/coral player palette. */
+  --color-verdict-no: #D8503A;
 }
 
 /* The ledger hides the native scrollbar (it clashes with the flat card look);
@@ -80,6 +84,23 @@ body {
   .logo-pop,
   .logo-pop.logo-spend,
   .logo-typein {
+    animation: none;
+  }
+}
+
+/* The invite landing: the headline holds and the logo plays its move, then the
+   blurb, opening word, and buttons fade up (staggered by per-element delay). */
+.invite-in {
+  animation: invite-in 0.5s ease both;
+}
+@keyframes invite-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .invite-in {
     animation: none;
   }
 }

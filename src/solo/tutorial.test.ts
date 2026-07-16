@@ -68,7 +68,7 @@ describe('tutorial match setup', () => {
 })
 
 describe('the scripted beats', () => {
-  it('plays the happy path: lazy reply, catchable fake, real replacement', () => {
+  it('plays the happy path: lazy reply, catchable fake, the ruling', () => {
     let state = newTutorialState()
     state = lloydPlays(state, 0) // PLANT
     state = playerPlays(state) // any legal word
@@ -84,27 +84,21 @@ describe('the scripted beats', () => {
     expect(listSet.has(fake.word)).toBe(false)
     expect(fake.overlap).toBeGreaterThanOrEqual(2)
 
-    // The player calls it out; Lloyd folds (the useTutorial hook's scripted
-    // defense) — here we just verify the engine path the script relies on.
-    let r = applyMove(state, 'p1', { type: 'challenge' })
-    expect(r.ok).toBe(true)
-    state = (r as { ok: true; state: MatchState }).state
-    r = applyMove(state, 'p2', { type: 'fold' })
+    // The player calls it out — a fake resolves to REJECTED on the spot (the
+    // hook rules against the embedded list; a fake isn't in it). The word is
+    // struck, Lloyd loses a life, and the challenger is on move.
+    const r = applyMove(state, 'p1', { type: 'challenge', wordIsReal: false })
     expect(r.ok).toBe(true)
     state = (r as { ok: true; state: MatchState }).state
     expect(state.chain.find((l) => l.word === fake.word)).toBeUndefined()
     expect(state.players.p2.lives).toBe(2)
-    expect(state.phase).toBe('P2_TURN') // Lloyd owes a real one
+    expect(state.phase).toBe('P1_TURN') // the challenger plays on
 
-    state = lloydPlays(state, 3)
-    const real = state.chain[state.chain.length - 1]
-    expect(listSet.has(real.word)).toBe(true)
+    state = playerPlays(state) // the bluff slot, from the rewound tail
 
-    state = playerPlays(state) // the bluff slot
-    // Lloyd's next scripted move never challenges — it is always a play.
-    const move = scriptedLloydMove(state, 4)
-    expect(move?.type).toBe('play')
-
+    // Lloyd's remaining scripted moves are always plays, never challenges.
+    expect(scriptedLloydMove(state, 3)?.type).toBe('play')
+    expect(scriptedLloydMove(state, 4)?.type).toBe('play')
     // Script spent after five plays.
     expect(scriptedLloydMove(state, 5)).toBeNull()
   })

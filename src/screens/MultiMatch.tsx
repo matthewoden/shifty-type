@@ -5,13 +5,7 @@ import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
 import { useComposer } from '../components/useComposer'
 import { gripOptions } from '../game'
-import {
-  AccusePending,
-  ConfirmChallengeSheet,
-  DefendInterstitial,
-  GameOverPanel,
-  VerdictStamp,
-} from '../components/overlays'
+import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { opponentOf } from '../game'
 import { clearActiveCode, removeMatchAuth } from '../multi/storage'
 import { useMultiMatch, type StampEvent } from '../multi/useMultiMatch'
@@ -83,7 +77,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
     return <CenteredNote text="Opening your match…" pulse backLabel={backLabel} onExit={onExit} />
   }
 
-  const { state, you, refereeOffline, presence } = m.view
+  const { state, you, presence } = m.view
   const oppName = state.players[opponentOf(you)].name
   const oppHere = presence?.[opponentOf(you)] ?? false
   const newest = state.chain[state.chain.length - 1]
@@ -95,22 +89,16 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
 
   const myTurn = isMyTurn
   const fan = myTurn && !composer.typed && newest ? gripOptions(newest.word) : null
-  const defending =
-    state.phase === 'CHALLENGE_PENDING' && state.challenger !== null && state.challenger !== you
-  const accusing = state.phase === 'CHALLENGE_PENDING' && state.challenger === you
   const canChallenge =
     myTurn && newest !== undefined && newest.owner !== you && !newest.challengeSurvived
 
-  const active =
-    terminal
-      ? null
-      : state.phase === 'P1_TURN'
-        ? ('p1' as const)
-        : state.phase === 'P2_TURN'
-          ? ('p2' as const)
-          : state.challenger
-            ? opponentOf(state.challenger)
-            : null
+  const active = terminal
+    ? null
+    : state.phase === 'P1_TURN'
+      ? ('p1' as const)
+      : state.phase === 'P2_TURN'
+        ? ('p2' as const)
+        : null
 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
@@ -218,25 +206,6 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           onCancel={() => setConfirmingChallenge(false)}
         />
       )}
-      {defending && newest && !m.stamp && (
-        <DefendInterstitial
-          word={newest.word}
-          oppName={oppName}
-          resolving={m.busy}
-          offline={refereeOffline}
-          onStand={() => void m.send({ type: 'stand' })}
-          onFold={() => void m.send({ type: 'fold' })}
-          onCoinFlip={() => void m.send({ type: 'coinflip' })}
-        />
-      )}
-      {accusing && newest && !m.stamp && (
-        <AccusePending
-          word={newest.word}
-          waitingCopy={`${oppName} must fold or stand…`}
-          offline={refereeOffline}
-          onCoinFlip={() => void m.send({ type: 'coinflip' })}
-        />
-      )}
       {awaiting && !myTurn && inviteOpen && (
         <InviteSheet
           code={code}
@@ -324,54 +293,30 @@ function MultiVerdict({
   onDismiss: () => void
 }) {
   const word = stamp.word.toUpperCase()
-  const mine = stamp.by === you // the local player was the defender
-  const flip = 'coinFlip' in stamp && stamp.coinFlip ? ' The coin decided.' : ''
-  if (stamp.kind === 'fold') {
-    return mine ? (
-      <VerdictStamp
-        stamp="FOLDED"
-        good={false}
-        copy={`You fold. ${word} is struck from the chain and you lose a life.`}
-        onDismiss={onDismiss}
-      />
-    ) : (
-      <VerdictStamp
-        stamp="FOLDED"
-        good
-        copy={`${oppName} folds! ${word} is struck from the chain and ${oppName} loses a life.`}
-        onDismiss={onDismiss}
-      />
-    )
-  }
+  const iChallenged = stamp.by === you // the local player flagged the word
   if (stamp.kind === 'real') {
-    return mine ? (
+    // STANDS — the challenger loses a life for the bad call.
+    return (
       <VerdictStamp
-        stamp="REAL"
-        good
-        copy={`${word} stands.${flip} ${oppName} loses a life for doubting you.`}
-        onDismiss={onDismiss}
-      />
-    ) : (
-      <VerdictStamp
-        stamp="REAL"
-        good={false}
-        copy={`${oppName} stands, and the ruling is in.${flip} ${word} is real — you lose a life.`}
+        stamp="STANDS"
+        copy={
+          iChallenged
+            ? `The ruling: ${word} holds up. You lose a life for the call.`
+            : `${oppName} flagged ${word}, but it holds up. ${oppName} loses a life.`
+        }
         onDismiss={onDismiss}
       />
     )
   }
-  return mine ? (
+  // REJECTED — the word is struck and its owner loses a life.
+  return (
     <VerdictStamp
-      stamp="FAKE"
-      good={false}
-      copy={`Busted.${flip} ${word} is struck from the chain and you lose a life.`}
-      onDismiss={onDismiss}
-    />
-  ) : (
-    <VerdictStamp
-      stamp="FAKE"
-      good
-      copy={`Busted!${flip} ${word} was a fake — ${oppName} loses a life.`}
+      stamp="REJECTED"
+      copy={
+        iChallenged
+          ? `The ruling: ${word} isn't a word. It's struck and ${oppName} loses a life.`
+          : `${oppName} flagged ${word} — busted. It's struck and you lose a life.`
+      }
       onDismiss={onDismiss}
     />
   )

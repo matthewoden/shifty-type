@@ -37,16 +37,11 @@ export function chooseBotMove(
   const listSet = new Set(list)
   const last = state.chain[state.chain.length - 1]
 
-  // Defending a challenge: bluffs get folded (folding keeps the next move;
-  // standing on a fake just hands the turn away), real words always stand.
-  if (state.phase === 'CHALLENGE_PENDING') {
-    if (!last) return { type: 'fold' } // unreachable: a challenge implies a chain
-    return listSet.has(last.word) ? { type: 'stand', wordIsReal: true } : { type: 'fold' }
-  }
-
   // Maybe challenge the player's newest word. Words in the bot's own list
   // are never challenged; anything else is suspect with difficulty-scaled
-  // probability.
+  // probability. The challenge resolves instantly against the referee — the
+  // bot never has to defend one of its own words. `wordIsReal` is resolved by
+  // the caller (list-only in solo, keeping the bot playable offline).
   if (
     last &&
     last.owner !== botId &&
@@ -54,7 +49,7 @@ export function chooseBotMove(
     !listSet.has(last.word) &&
     rng() < CHALLENGE_PROBABILITY[difficulty]
   ) {
-    return { type: 'challenge' }
+    return { type: 'challenge', wordIsReal: listSet.has(last.word) }
   }
 
   const word = pickPlayWord(state, difficulty, options)

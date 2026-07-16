@@ -30,10 +30,11 @@ export interface SoloSave {
 }
 
 export type SoloEvent =
-  | { kind: 'bot-folded'; word: string }
   | { kind: 'bot-passed' }
-  | { kind: 'verdict'; word: string; real: boolean; defender: PlayerId; coinFlip?: boolean }
-  | { kind: 'referee-offline'; word: string }
+  /** A resolved challenge. `challenger` is whoever flagged (p1 = you, p2 = bot). */
+  | { kind: 'verdict'; word: string; real: boolean; challenger: PlayerId }
+  /** Your challenge couldn't reach the referee — flag it again in a moment. */
+  | { kind: 'referee-error'; word: string }
 
 export function newSoloSave(difficulty: Difficulty, opener: PlayerId = 'p1'): SoloSave {
   return { state: createMatch('You', LLAMAS[difficulty], opener), difficulty, opener }
@@ -57,12 +58,10 @@ export function useSoloMatch(initial: SoloSave) {
   const [error, setError] = useState<string | null>(null)
   const [event, setEvent] = useState<SoloEvent | null>(null)
   const [botThinking, setBotThinking] = useState(false)
-  const [resolving, setResolving] = useState(false)
 
   const terminal = state.phase === 'GAME_OVER' || state.phase === 'VAULT_CLOSED'
-  const botTurn =
-    state.phase === 'P2_TURN' ||
-    (state.phase === 'CHALLENGE_PENDING' && state.challenger === 'p1')
+  // Challenges resolve instantly, so the bot only ever acts on its own turn.
+  const botTurn = state.phase === 'P2_TURN'
 
   // Persist after every change; a finished match clears the slot.
   useEffect(() => {
@@ -77,21 +76,22 @@ export function useSoloMatch(initial: SoloSave) {
     const timer = setTimeout(() => {
       setBotThinking(false)
       const move = chooseBotMove(state, 'p2', difficulty)
+      // The word under a bot challenge is the player's newest — capture it
+      // before applyMove, since a rejected word is popped off the chain.
+      const accused = state.chain[state.chain.length - 1]
       const r = applyMove(state, 'p2', move)
       if (!r.ok) return // engine rejected a bot move: a bug, but never strand the UI
       setSave((s) => ({ ...s, state: r.state }))
-      const accused = state.chain[state.chain.length - 1]
-      if (move.type === 'fold') setEvent({ kind: 'bot-folded', word: accused.word })
-      else if (move.type === 'pass') setEvent({ kind: 'bot-passed' })
-      else if (move.type === 'stand')
-        setEvent({ kind: 'verdict', word: accused.word, real: true, defender: 'p2' })
+      if (move.type === 'pass') setEvent({ kind: 'bot-passed' })
+      else if (move.type === 'challenge')
+        setEvent({ kind: 'verdict', word: accused.word, real: move.wordIsReal, challenger: 'p2' })
     }, 1000 + Math.random() * 1000)
     return () => clearTimeout(timer)
   }, [state, difficulty, botTurn])
 
-  // The "Rook passes" banner clears itself.
+  // The transient banners (bot passed, referee unreachable) clear themselves.
   useEffect(() => {
-    if (event?.kind !== 'bot-passed') return
+    if (event?.kind !== 'bot-passed' && event?.kind !== 'referee-error') return
     const timer = setTimeout(() => setEvent(null), 3500)
     return () => clearTimeout(timer)
   }, [event])
@@ -107,29 +107,21 @@ export function useSoloMatch(initial: SoloSave) {
     return true
   }
 
-  async function defend(choice: 'fold' | 'stand') {
-    if (choice === 'fold') {
-      apply('p1', { type: 'fold' })
-      return
-    }
-    const word = state.chain[state.chain.length - 1].word
-    setResolving(true)
+  // The player flags the bot's newest word. The referee rules on the spot —
+  // embedded list first (offline-safe), then the dictionary API. If the API
+  // can't be reached for an out-of-list word, nothing changes and the player
+  // can flag it again once they're back online.
+  async function challengeBot() {
+    const word = state.chain[state.chain.length - 1]?.word
+    if (!word) return
     const verdict = await lookupWord(word)
-    setResolving(false)
     if (verdict === 'unknown') {
-      setEvent({ kind: 'referee-offline', word })
+      setEvent({ kind: 'referee-error', word })
       return
     }
     const real = verdict === 'real'
-    if (apply('p1', { type: 'stand', wordIsReal: real }))
-      setEvent({ kind: 'verdict', word, real, defender: 'p1' })
-  }
-
-  function coinFlip() {
-    const word = state.chain[state.chain.length - 1].word
-    const real = Math.random() < 0.5
-    if (apply('p1', { type: 'stand', wordIsReal: real }))
-      setEvent({ kind: 'verdict', word, real, defender: 'p1', coinFlip: true })
+    if (apply('p1', { type: 'challenge', wordIsReal: real }))
+      setEvent({ kind: 'verdict', word, real, challenger: 'p1' })
   }
 
   function rematch() {
@@ -146,13 +138,10 @@ export function useSoloMatch(initial: SoloSave) {
     error,
     event,
     botThinking,
-    resolving,
     terminal,
     playWord: (word: string) => apply('p1', { type: 'play', word }),
     pass: () => apply('p1', { type: 'pass' }),
-    challengeBot: () => apply('p1', { type: 'challenge' }),
-    defend,
-    coinFlip,
+    challengeBot,
     clearEvent: () => setEvent(null),
     clearError: () => setError(null),
     rematch,
