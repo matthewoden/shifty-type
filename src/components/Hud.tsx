@@ -69,9 +69,20 @@ export function Hud({ state, you, active, pulse = false }: HudProps) {
     <div className="flex gap-2.5 px-3.5 pt-1 pb-2">
       <Card state={state} id={you} side="you" active={active === you} pulse={pulse} />
       <div className="self-center text-center text-[9px] font-extrabold tracking-widest text-dim uppercase leading-snug">
-        ENDS IN
-        <span className="block text-xl text-ink-strong tracking-normal">{wordsLeft}</span>
-        {wordsLeft === 1 ? 'WORD' : 'WORDS'}
+        {state.phase === 'LAST_CALL' ? (
+          <>
+            LAST
+            <span className="block text-[15px] text-ink-strong tracking-widest leading-relaxed">
+              CALL
+            </span>
+          </>
+        ) : (
+          <>
+            ENDS IN
+            <span className="block text-xl text-ink-strong tracking-normal">{wordsLeft}</span>
+            {wordsLeft === 1 ? 'WORD' : 'WORDS'}
+          </>
+        )}
       </div>
       <Card state={state} id={opp} side="them" active={active === opp} pulse={pulse} />
     </div>

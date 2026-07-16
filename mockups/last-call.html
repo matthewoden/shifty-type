@@ -1,0 +1,385 @@
+<title>Shifty Type — last call</title>
+<style>
+  :root {
+    /* App tokens (from src/index.css) — the phones always render in these,
+       regardless of the reviewer's theme. */
+    --board: #f6f3ee;
+    --board-lo: #eae6de;
+    --ink: #55606e;
+    --ink-strong: #3e4854;
+    --dim: #a8aeb8;
+    --p1: #8B90F4;      --p1-lip: #6A6FDC;
+    --p1-tint: #DCDEFB; --p1-tint-lip: #BFC2F3; --p1-tint-ink: #565CC4;
+    --p2: #F98B57;      --p2-lip: #DE6A2E;
+    --p2-tint: #FDE2D3; --p2-tint-lip: #F5C4A6; --p2-tint-ink: #D0682A;
+    --key-lip: #DDD8CE;
+    --new: #16a34a;
+
+    /* Page chrome — adapts to the reviewer's theme. */
+    --page: #eceae4;
+    --panel: #ffffff;
+    --page-ink: #2f3742;
+    --page-dim: #6b7480;
+    --hair: #ddd8ce;
+    --font: 'Baloo 2', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #1a1d21; --panel: #23272c; --page-ink: #e7e4dd;
+      --page-dim: #9aa1ab; --hair: #33383e;
+    }
+  }
+  :root[data-theme="light"] {
+    --page: #eceae4; --panel: #ffffff; --page-ink: #2f3742;
+    --page-dim: #6b7480; --hair: #ddd8ce;
+  }
+  :root[data-theme="dark"] {
+    --page: #1a1d21; --panel: #23272c; --page-ink: #e7e4dd;
+    --page-dim: #9aa1ab; --hair: #33383e;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--page-ink);
+    font-family: var(--font); -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  header.top { margin-bottom: 8px; }
+  .eyebrow {
+    font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--p2-lip);
+  }
+  h1 { font-size: 27px; font-weight: 800; margin: 6px 0 8px; letter-spacing: -.3px; text-wrap: balance; }
+  .lede { font-size: 15px; color: var(--page-dim); max-width: 56ch; font-weight: 600; }
+  .lede b { color: var(--page-ink); }
+
+  .legend {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;
+    font-size: 12px; font-weight: 700; color: var(--page-dim);
+    padding: 6px 12px; border: 1px dashed var(--new); border-radius: 999px;
+  }
+  .legend b { color: var(--new); }
+
+  section.item { margin-top: 44px; }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 8px; background: var(--p1);
+    color: #fff; font-weight: 800; font-size: 14px; box-shadow: 0 3px 0 var(--p1-lip);
+  }
+  .head { display: flex; align-items: center; gap: 11px; margin-bottom: 4px; }
+  .head h2 { font-size: 19px; font-weight: 800; margin: 0; }
+  .desc { font-size: 14.5px; font-weight: 600; color: var(--page-dim); max-width: 60ch; margin: 0 0 18px 37px; }
+  .desc b { color: var(--page-ink); font-weight: 800; }
+
+  .stage {
+    display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;
+    margin-left: 37px;
+  }
+  @media (max-width: 620px) { .desc, .stage { margin-left: 0; } }
+
+  /* ---- phone frame ---- */
+  .phone {
+    width: 320px; max-width: 100%; background: var(--board);
+    border-radius: 30px; padding: 10px; flex: 0 0 auto;
+    box-shadow: 0 0 0 8px #d9d4cb, 0 18px 40px rgba(40,44,52,.28);
+    position: relative; overflow: hidden;
+  }
+  @media (prefers-color-scheme: dark) { .phone { box-shadow: 0 0 0 8px #3a3d43, 0 18px 40px rgba(0,0,0,.5); } }
+  .screen { border-radius: 22px; overflow: hidden; background: var(--board); display: flex; flex-direction: column; min-height: 520px; }
+
+  .capt { flex: 1 1 220px; min-width: 200px; font-size: 13.5px; color: var(--page-dim); font-weight: 600; }
+  .capt h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--page-ink); margin: 0 0 6px; }
+  .capt p { margin: 0 0 10px; }
+  .capt b { color: var(--page-ink); }
+  .capt code { background: var(--board-lo); color: var(--ink-strong); padding: 1px 6px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 12px; }
+
+  /* NEW ring + badge */
+  .new-ring { position: relative; outline: 2px dashed var(--new); outline-offset: 4px; border-radius: 16px; }
+  .badge {
+    position: absolute; top: -10px; right: -8px; z-index: 5;
+    background: var(--new); color: #fff; font-size: 9.5px; font-weight: 800;
+    letter-spacing: .8px; text-transform: uppercase; padding: 3px 7px; border-radius: 999px;
+    box-shadow: 0 2px 0 #0f7a37;
+  }
+
+  /* ---- app chrome (shipped, redrawn verbatim) ---- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 10px; }
+  .backlink { font-size: 13px; font-weight: 800; color: var(--dim); }
+  .code { font-size: 13px; font-weight: 800; letter-spacing: 2px; color: var(--dim); margin-left: 8px; }
+  .passbtn {
+    background: #fff; color: var(--dim); font-weight: 800; font-size: 13px;
+    border-radius: 999px; padding: 8px 14px; box-shadow: 0 3px 0 #E2DDD3; opacity: .55;
+  }
+
+  .hud { display: flex; gap: 10px; padding: 2px 14px 8px; align-items: stretch; }
+  .pcard {
+    flex: 1; background: #fff; border-radius: 16px; padding: 8px 12px;
+    box-shadow: 0 4px 0 #E2DDD3;
+  }
+  .pcard.active-you { box-shadow: 0 4px 0 var(--p1); }
+  .pcard.active-them { box-shadow: 0 4px 0 var(--p2); }
+  .pcard.them { text-align: right; }
+  .pname { font-size: 12px; font-weight: 800; }
+  .pname.you { color: var(--p1-lip); }
+  .pname.them { color: var(--p2-lip); }
+  .pts { font-size: 22px; font-weight: 800; color: var(--ink-strong); }
+  .pts small { font-size: 10px; color: var(--dim); }
+  .pips { display: inline-flex; gap: 4px; margin-top: 3px; }
+  .pip { width: 9px; height: 9px; border-radius: 999px; }
+  .pip.you { background: var(--p1); box-shadow: 0 2px 0 var(--p1-lip); }
+  .pip.them { background: var(--p2); box-shadow: 0 2px 0 var(--p2-lip); }
+  .pip.spent { background: var(--board-lo); box-shadow: 0 2px 0 #DDD8CE; }
+
+  .midchip {
+    align-self: center; text-align: center; font-size: 8.5px; font-weight: 800;
+    letter-spacing: 1.6px; color: var(--dim); text-transform: uppercase; line-height: 1.35;
+    padding: 2px 4px;
+  }
+  .midchip .big { display: block; font-size: 14px; letter-spacing: 1.6px; color: var(--ink-strong); }
+  .midchip.count .big { font-size: 19px; letter-spacing: 0; }
+  .ring-chip { outline: 2px dashed var(--new); outline-offset: 3px; border-radius: 8px; }
+
+  /* ---- the ledger (rail camera clips old rows off the left edge) ---- */
+  .boardarea { flex: 1; position: relative; overflow: hidden; min-height: 190px; }
+  .thread {
+    position: absolute; left: -40px; top: 30px; width: 420px; height: 160px;
+    border-left: 0; pointer-events: none;
+  }
+  .row { position: absolute; display: flex; gap: 2px; }
+  .tile {
+    width: 19px; height: 27px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13.5px; text-transform: uppercase; color: #fff; flex: 0 0 auto;
+  }
+  .tile.you { background: var(--p1); box-shadow: 0 3px 0 var(--p1-lip); }
+  .tile.you.tint { background: var(--p1-tint); color: var(--p1-tint-ink); box-shadow: 0 3px 0 var(--p1-tint-lip); }
+  .tile.them { background: var(--p2); box-shadow: 0 3px 0 var(--p2-lip); }
+  .tile.them.tint { background: var(--p2-tint); color: var(--p2-tint-ink); box-shadow: 0 3px 0 var(--p2-tint-lip); }
+
+  .flagtag {
+    position: absolute; display: inline-flex; align-items: center; gap: 4px;
+    background: #fff; border-radius: 999px; padding: 3px 9px 3px 7px;
+    font-size: 10px; font-weight: 800; color: var(--ink); box-shadow: 0 2px 0 #E2DDD3;
+  }
+  .flagtag svg { width: 11px; height: 11px; color: var(--p2-lip); }
+
+  /* ---- the new last-call bar ---- */
+  .lastcall { padding: 8px 18px 30px; text-align: center; }
+  .lastcall .h { font-size: 15px; font-weight: 800; color: var(--ink-strong); margin: 0; }
+  .lastcall .s { font-size: 12px; font-weight: 600; color: var(--dim); margin: 4px 0 0; }
+  .shake {
+    margin-top: 12px; height: 46px; padding: 0 22px; border: 0; border-radius: 999px;
+    background: var(--p2); color: #fff; font-family: var(--font); font-weight: 800; font-size: 14px;
+    box-shadow: 0 4px 0 var(--p2-lip); display: inline-flex; align-items: center; gap: 8px;
+  }
+  .shake svg { width: 19px; height: 19px; }
+  .bellpill {
+    margin-top: 12px; height: 42px; padding: 0 16px; border: 0; border-radius: 999px;
+    background: #fff; color: var(--ink); font-family: var(--font); font-weight: 800; font-size: 13px;
+    box-shadow: 0 3px 0 #E2DDD3; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .bellpill svg { width: 15px; height: 15px; color: var(--p1-lip); }
+
+  /* ---- lock-screen nudge card ---- */
+  .notif {
+    width: 340px; max-width: 100%; background: var(--panel); border-radius: 18px;
+    padding: 12px 14px; box-shadow: 0 10px 26px rgba(40,44,52,.18);
+    display: flex; gap: 11px; align-items: flex-start;
+  }
+  .notif .appicon {
+    width: 38px; height: 38px; border-radius: 9px; background: var(--p1);
+    box-shadow: inset 0 -3px 0 var(--p1-lip); color: #fff; font-weight: 800; font-size: 18px;
+    display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .notif .t { font-size: 13px; font-weight: 800; color: var(--page-ink); }
+  .notif .b { font-size: 13px; font-weight: 600; color: var(--page-dim); line-height: 1.35; }
+
+  /* outcomes card */
+  .outcomes {
+    background: var(--panel); border: 1px solid var(--hair); border-radius: 16px;
+    padding: 16px 18px; max-width: 560px; margin-left: 37px;
+  }
+  @media (max-width: 620px) { .outcomes { margin-left: 0; } }
+  .outcomes h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+  .outcomes ul { margin: 0; padding-left: 18px; font-size: 13.5px; font-weight: 600; color: var(--page-dim); }
+  .outcomes li { margin-bottom: 6px; }
+  .outcomes b { color: var(--page-ink); }
+  .stamp { font-weight: 800; letter-spacing: 1px; }
+  .stamp.ok { color: var(--p1-lip); }
+  .stamp.no { color: #D8503A; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Shifty Type · design mock</div>
+    <h1>Last call — the final-word beat</h1>
+    <p class="lede">
+      Today the 20th word ends the match on the spot, so the final word is a free,
+      unchallengeable bluff — and you never even see it land. <b>Last call</b> fixes both:
+      the chain filling hands one closing move to the other player — <b>shake on it</b>,
+      or challenge it. The challenge itself is the shipped one: same flag, same confirm
+      sheet, same STANDS / REJECTED stamps.
+    </p>
+    <div class="legend">Dashed <b>green</b> marks the new pieces — everything else is the shipped UI, redrawn.</div>
+  </header>
+
+  <!-- ===== 1. the accepter ===== -->
+  <section class="item">
+    <div class="head"><span class="num">1</span><h2>Your last call (Dana played the final word)</h2></div>
+    <p class="desc">
+      The deck doesn't rise — there's no word to type. In its place, the <b>last-call bar</b>:
+      one coral handshake to end the match, and a pointer to the challenge that already lives
+      on the word's flag tag. The HUD's countdown chip flips from <b>ENDS IN · 0 · WORDS</b> to
+      <b>LAST CALL</b>.
+    </p>
+    <div class="stage">
+      <div class="phone"><div class="screen">
+        <div class="topbar">
+          <span><span class="backlink">← Games</span><span class="code">AB12</span></span>
+          <span class="passbtn">Pass?</span>
+        </div>
+        <div class="hud">
+          <div class="pcard active-you">
+            <div class="pname you">MATT</div>
+            <div class="pts">54<small> pts</small></div>
+            <div class="pips"><span class="pip you"></span><span class="pip you"></span><span class="pip you"></span></div>
+          </div>
+          <div class="midchip ring-chip">LAST<span class="big">CALL</span></div>
+          <div class="pcard them">
+            <div class="pname them">DANA</div>
+            <div class="pts">60<small> pts</small></div>
+            <div class="pips"><span class="pip spent"></span><span class="pip them"></span><span class="pip them"></span></div>
+          </div>
+        </div>
+        <div class="boardarea">
+          <!-- the rail camera holds the newest word; older rows clip off the left edge -->
+          <div class="row" style="left:-115px; top:18px;">
+            <span class="tile them">J</span><span class="tile them">U</span><span class="tile them">N</span><span class="tile them">I</span><span class="tile them tint">P</span><span class="tile them tint">E</span><span class="tile them tint">R</span>
+          </div>
+          <div class="row" style="left:-31px; top:60px;">
+            <span class="tile you tint">P</span><span class="tile you tint">E</span><span class="tile you tint">R</span><span class="tile you">S</span><span class="tile you">I</span><span class="tile you">M</span><span class="tile you">M</span><span class="tile you tint">O</span><span class="tile you tint">N</span>
+          </div>
+          <div class="row" style="left:116px; top:102px;">
+            <span class="tile them tint">O</span><span class="tile them tint">N</span><span class="tile them">W</span><span class="tile them">A</span><span class="tile them">R</span><span class="tile them">D</span><span class="tile them">L</span><span class="tile them">Y</span>
+          </div>
+          <span class="flagtag" style="left:170px; top:140px;">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M42.76 50.24A8 8 0 0 0 40 56v168a8 8 0 0 0 16 0v-44.23c26.79-21.16 49.87-9.75 76.45 3.41c16.4 8.11 34.06 16.85 53 16.85c13.93 0 28.54-4.75 43.82-18a8 8 0 0 0 2.76-6V56a8 8 0 0 0-13.27-6c-28 24.54-51.16 13.08-78 -.22c-25.84-12.79-55.07-27.27-87.93.43Z"/></svg>
+            tap to challenge
+          </span>
+        </div>
+        <div class="lastcall new-ring"><span class="badge">New</span>
+          <p class="h">Last call — Dana played the final word.</p>
+          <p class="s">Shake on it to end the match, or tap ONWARDLY to challenge it.</p>
+          <button class="shake">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="m254.3 107.91l-25.52-51.06a16 16 0 0 0-21.47-7.15l-24.87 12.43l-52.39-13.86a8.14 8.14 0 0 0-4.1 0L73.56 62.13L48.69 49.7a16 16 0 0 0-21.47 7.15L1.7 107.9a16 16 0 0 0 7.15 21.47l27 13.51l55.49 39.63a8.1 8.1 0 0 0 2.71 1.25l64 16a8 8 0 0 0 7.6-2.1l40-40l15.08-15.08l26.42-13.21a16 16 0 0 0 7.15-21.46m-54.89 33.37L165 113.72a8 8 0 0 0-10.68.61C136.51 132.27 116.66 130 104 122l43.24-42h31.81l27.21 54.41Zm-41.87 41.86l-58.12-14.53l-49.2-35.14l28-56L128 64.28l9.8 2.59l-45 43.68l-.08.09a16 16 0 0 0 2.72 24.81c20.56 13.13 45.37 11 64.91-5L188 152.66Zm-25.72 34.8a8 8 0 0 1-7.75 6.06a8 8 0 0 1-1.95-.24l-41.71-10.43a7.9 7.9 0 0 1-2.71-1.25l-26.35-18.82a8 8 0 0 1 9.3-13l25.11 17.94L126 208.24a8 8 0 0 1 5.82 9.7"/></svg>
+            Shake on it
+          </button>
+        </div>
+      </div></div>
+      <div class="capt">
+        <h3>What's new here</h3>
+        <p>The <b>bar</b> replaces the deck (you're not playing a word), and the HUD chip
+           reads <b>LAST CALL</b> instead of counting down to 0.</p>
+        <p>Everything else is shipped behavior: your card wears the active lip because
+           the closing move is yours; ONWARDLY carries the usual flag tag; tapping it opens
+           the same confirm sheet (<i>"Challenge this word? Incorrect answers lose a life."</i>)
+           and the same full-screen stamp.</p>
+        <p>The handshake is Phosphor <code>handshake-fill</code>, coral like every
+           primary pill.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2. the finisher ===== -->
+  <section class="item">
+    <div class="head"><span class="num">2</span><h2>Dana's side — the wait with a word on the line</h2></div>
+    <p class="desc">
+      The finisher gets the shipped waiting layout with new copy: their word is on the table
+      and the friend ends the match. The bell pill works exactly as everywhere else.
+      (Colors flip with the seat, as always — on Dana's phone her words are indigo.)
+    </p>
+    <div class="stage">
+      <div class="phone"><div class="screen" style="min-height:420px;">
+        <div class="topbar">
+          <span><span class="backlink">← Games</span><span class="code">AB12</span></span>
+          <span class="passbtn">Pass?</span>
+        </div>
+        <div class="hud">
+          <div class="pcard">
+            <div class="pname you">DANA</div>
+            <div class="pts">60<small> pts</small></div>
+            <div class="pips"><span class="pip spent"></span><span class="pip you"></span><span class="pip you"></span></div>
+          </div>
+          <div class="midchip">LAST<span class="big">CALL</span></div>
+          <div class="pcard them active-them">
+            <div class="pname them">MATT</div>
+            <div class="pts">54<small> pts</small></div>
+            <div class="pips"><span class="pip them"></span><span class="pip them"></span><span class="pip them"></span></div>
+          </div>
+        </div>
+        <div class="boardarea" style="min-height:110px;">
+          <div class="row" style="left:-31px; top:14px;">
+            <span class="tile them tint">P</span><span class="tile them tint">E</span><span class="tile them tint">R</span><span class="tile them">S</span><span class="tile them">I</span><span class="tile them">M</span><span class="tile them">M</span><span class="tile them tint">O</span><span class="tile them tint">N</span>
+          </div>
+          <div class="row" style="left:116px; top:56px;">
+            <span class="tile you tint">O</span><span class="tile you tint">N</span><span class="tile you">W</span><span class="tile you">A</span><span class="tile you">R</span><span class="tile you">D</span><span class="tile you">L</span><span class="tile you">Y</span>
+          </div>
+        </div>
+        <div class="lastcall new-ring"><span class="badge">New copy</span>
+          <p class="h">Your last word is on the table.</p>
+          <p class="s">Matt ends the match by shaking on it — or challenging it</p>
+          <button class="bellpill">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M16 176a8 8 0 0 1 8-8h8v-16a96.12 96.12 0 0 1 88-95.66V40h-16a8 8 0 0 1 0-16h48a8 8 0 0 1 0 16h-16v16.34A96.12 96.12 0 0 1 224 152v16h8a8 8 0 0 1 0 16H24a8 8 0 0 1-8-8m216 24H24a8 8 0 0 0 0 16h208a8 8 0 0 0 0-16"/></svg>
+            Ring me when they answer
+          </button>
+        </div>
+      </div></div>
+      <div class="capt">
+        <h3>Why show it at all</h3>
+        <p>The finisher knows whether their word was real — this wait is the bluff's
+           last squirm. Presence swaps the headline for
+           <b>"Matt's eyeing your last word…"</b> with the usual pulse dot.</p>
+        <p>If they close the app, the shipped quiet-match reminder already covers a
+           stalled last call, because "whose move is it" now knows the answer.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3. the bell ===== -->
+  <section class="item">
+    <div class="head"><span class="num">3</span><h2>The bell, when the final word lands</h2></div>
+    <p class="desc">
+      The turn nudge gets a last-call line so the lock screen says what kind of move is owed.
+    </p>
+    <div class="stage">
+      <div class="notif new-ring"><span class="badge">New copy</span>
+        <div class="appicon">S</div>
+        <div>
+          <div class="t">Shifty Type</div>
+          <div class="b">Dana played their last word, ONWARDLY — shake on it or challenge.</div>
+        </div>
+      </div>
+      <div class="capt">
+        <h3>Also downstream</h3>
+        <p>The lobby buckets a last call as <b>Your move</b> / <b>Their move</b> like any turn,
+           and it counts toward Home's coral badge.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4. outcomes ===== -->
+  <section class="item">
+    <div class="head"><span class="num">4</span><h2>How last call can end</h2></div>
+    <p class="desc">All three roads use rules that already exist — no new mechanics past the beat itself.</p>
+    <div class="outcomes">
+      <ul>
+        <li><b>Shake on it</b> → the chain is complete; highest points wins, ties broken by lives, then longest word.</li>
+        <li><b>Challenge, <span class="stamp ok">STANDS</span></b> → the caller pays the usual life, and the match completes
+            (the spent life can swing a points tie).</li>
+        <li><b>Challenge, <span class="stamp no">REJECTED</span></b> → the fake is struck, its owner pays the life,
+            the chain rewinds to 19 — and the challenger plays on, until someone's 20th word earns the handshake.</li>
+      </ul>
+    </div>
+  </section>
+</div>

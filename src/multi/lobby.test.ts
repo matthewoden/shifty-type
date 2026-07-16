@@ -23,9 +23,13 @@ function summary(over: Partial<MatchSummary>): MatchSummary {
   }
 }
 
-function solo(phase: MatchState['phase']): SoloSave {
+function solo(phase: MatchState['phase'], finisher: 'p1' | 'p2' = 'p1'): SoloSave {
   return {
-    state: { phase } as MatchState,
+    // A one-word chain is enough for lastCallActorOf to name the answerer.
+    state: {
+      phase,
+      chain: [{ word: 'vault', owner: finisher, overlap: 0, points: 0 }],
+    } as MatchState,
     difficulty: 'easy',
     opener: 'p1',
   }
@@ -46,6 +50,11 @@ describe('duelBucket', () => {
     expect(duelBucket(summary({ yourTurn: true }))).toBe('yourMove')
     expect(duelBucket(summary({ yourTurn: false }))).toBe('theirMove')
   })
+
+  it('last call is still an active game, split by whose answer it is', () => {
+    expect(duelBucket(summary({ phase: 'LAST_CALL', yourTurn: true }))).toBe('yourMove')
+    expect(duelBucket(summary({ phase: 'LAST_CALL', yourTurn: false }))).toBe('theirMove')
+  })
 })
 
 describe('soloYourTurn / soloBucket', () => {
@@ -54,9 +63,16 @@ describe('soloYourTurn / soloBucket', () => {
     expect(soloYourTurn(solo('P2_TURN').state)).toBe(false)
   })
 
+  it('last call is the player’s move only when the bot played the final word', () => {
+    expect(soloYourTurn(solo('LAST_CALL', 'p2').state)).toBe(true)
+    expect(soloYourTurn(solo('LAST_CALL', 'p1').state)).toBe(false)
+  })
+
   it('buckets solo games', () => {
     expect(soloBucket(solo('P1_TURN'))).toBe('yourMove')
     expect(soloBucket(solo('P2_TURN'))).toBe('theirMove')
+    expect(soloBucket(solo('LAST_CALL', 'p2'))).toBe('yourMove')
+    expect(soloBucket(solo('LAST_CALL', 'p1'))).toBe('theirMove')
     expect(soloBucket(solo('GAME_OVER'))).toBe('finished')
   })
 })

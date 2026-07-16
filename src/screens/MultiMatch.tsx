@@ -4,7 +4,7 @@ import { Deck, PassButton } from '../components/Deck'
 import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
 import { useComposer } from '../components/useComposer'
-import { gripOptions } from '../game'
+import { gripOptions, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { opponentOf } from '../game'
 import {
@@ -18,6 +18,7 @@ import { useClearBadge, useNudge, type NudgeStatus } from '../multi/useNudge'
 import { BellOffSheet, SoftAskSheet } from '../components/NudgeSheets'
 import { InviteSheet } from '../components/InviteSheet'
 import { CallBellIcon, ShareIcon } from '../components/icons'
+import { LastCallBar } from '../components/LastCallBar'
 
 interface MultiMatchProps {
   code: string
@@ -103,6 +104,9 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   const oppHere = presence?.[opponentOf(you)] ?? false
   const newest = state.chain[state.chain.length - 1]
   const terminal = state.phase === 'GAME_OVER' || state.phase === 'CHAIN_COMPLETE'
+  // The chain is full; whoever didn't play the final word answers last call.
+  const lastCall = state.phase === 'LAST_CALL'
+  const myLastCall = lastCall && lastCallActorOf(state) === you
   // The friend hasn't taken their seat yet — the opener plays their word, then
   // hands off the invite. Only ever true for the opener (the joiner clears it).
   const awaiting = !!state.awaitingOpponent
@@ -111,15 +115,17 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   const myTurn = isMyTurn
   const fan = myTurn && !composer.typed && newest ? gripOptions(newest.word) : null
   const canChallenge =
-    myTurn && newest !== undefined && newest.owner !== you && !newest.challengeSurvived
+    (myTurn || myLastCall) && newest !== undefined && newest.owner !== you && !newest.challengeSurvived
 
   const active = terminal
     ? null
-    : state.phase === 'P1_TURN'
-      ? ('p1' as const)
-      : state.phase === 'P2_TURN'
-        ? ('p2' as const)
-        : null
+    : lastCall
+      ? lastCallActorOf(state)
+      : state.phase === 'P1_TURN'
+        ? ('p1' as const)
+        : state.phase === 'P2_TURN'
+          ? ('p2' as const)
+          : null
 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
@@ -181,6 +187,13 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           onKey={composer.key}
           onBackspace={composer.backspace}
         />
+      ) : myLastCall && newest ? (
+        <LastCallBar
+          finisherName={oppName}
+          word={newest.word}
+          busy={m.busy}
+          onShake={() => void m.send({ type: 'accept' })}
+        />
       ) : awaiting ? (
         <div className="px-5 pb-10 pt-2 text-center">
           <p className="font-extrabold text-[15px] text-ink-strong">
@@ -197,6 +210,28 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           >
             <ShareIcon className="w-4 h-4 text-white" /> Invite a friend
           </button>
+        </div>
+      ) : lastCall ? (
+        <div className="px-5 pb-10 pt-2 text-center">
+          <p className="font-extrabold text-[15px] text-ink-strong">
+            {oppHere ? (
+              <>
+                <PresenceDot /> {oppName}'s eyeing your last word…
+              </>
+            ) : (
+              <>Your last word is on the table.</>
+            )}
+          </p>
+          <p className="font-semibold text-xs text-dim mt-1">
+            {oppName} ends the match by shaking on it — or challenging it
+          </p>
+          <BellButton
+            status={nudge.status}
+            label="Ring me when they answer"
+            className="mt-3"
+            onAsk={() => setBellSheet('ask')}
+            onFix={() => setBellSheet('fix')}
+          />
         </div>
       ) : (
         <div className="px-5 pb-10 pt-2 text-center">

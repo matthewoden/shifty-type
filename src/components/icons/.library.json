@@ -2,12 +2,13 @@
   "library": "ph",
   "prefix": "ph",
   "source": "iconify",
-  "installedAt": "2026-07-13T21:21:21.953Z",
+  "installedAt": "2026-07-16T21:26:08.680Z",
   "icons": [
     "call-bell-fill",
     "clipboard-text-fill",
     "coin",
     "gear-fill",
+    "handshake-fill",
     "scales"
   ]
 }

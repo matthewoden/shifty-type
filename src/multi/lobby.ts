@@ -2,7 +2,7 @@
 // waiting on the player right now. Shared by the Lobby screen and Home's
 // badge (which reads the cached summaries), so it lives apart from React.
 
-import type { MatchState } from '../game'
+import { lastCallActorOf, type MatchState } from '../game'
 import type { MatchSummary } from '../lib/protocol'
 import type { SoloSave } from '../solo/useSoloMatch'
 
@@ -21,7 +21,9 @@ export function duelBucket(s: MatchSummary): Bucket {
 
 /** In solo the player is always p1; the bot is p2. */
 export function soloYourTurn(state: MatchState): boolean {
-  // Challenges resolve instantly, so the player only ever waits on P2_TURN.
+  // Challenges resolve instantly, so the player only ever waits on P2_TURN —
+  // or on the bot's last-call answer, after the player played the final word.
+  if (state.phase === 'LAST_CALL') return lastCallActorOf(state) === 'p1'
   return state.phase === 'P1_TURN'
 }
 

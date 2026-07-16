@@ -27,6 +27,12 @@ function turnPhaseOf(id: PlayerId): MatchPhase {
     return id === "p1" ? "P1_TURN" : "P2_TURN";
 }
 
+/** Who answers last call: whoever didn't play the final word. Only
+ *  meaningful while phase is LAST_CALL (the chain is at its limit). */
+export function lastCallActorOf(state: MatchState): PlayerId {
+    return opponentOf(state.chain[state.chain.length - 1].owner);
+}
+
 /** Points earned by a word: (overlap * overlap) + 1 per non-overlapped letter. */
 export function pointsFor(overlap: number, wordLength: number): number {
     return overlap * overlap + Math.max(0, wordLength - overlap);
@@ -197,9 +203,19 @@ export function applyMove(
     if (state.phase === "CHAIN_COMPLETE" || state.phase === "GAME_OVER")
         return err("This match is over.");
 
+    if (state.phase === "LAST_CALL") {
+        if (actor !== lastCallActorOf(state)) return err("Not your turn yet.");
+        if (move.type === "accept") return accept(state);
+        if (move.type === "challenge")
+            return challenge(state, actor, move.wordIsReal);
+        return err("The chain is full — shake on the last word, or challenge it.");
+    }
+
     // P1_TURN or P2_TURN
     const active: PlayerId = state.phase === "P1_TURN" ? "p1" : "p2";
     if (actor !== active) return err("Not your turn yet.");
+    if (move.type === "accept")
+        return err("Nothing to shake on yet — the chain isn't full.");
     if (move.type === "play") return play(state, actor, move.word);
     if (move.type === "pass") return pass(state, actor);
     return challenge(state, actor, move.wordIsReal);
@@ -236,11 +252,21 @@ function play(state: MatchState, actor: PlayerId, rawWord: string): MoveResult {
     next.players[actor].points += points;
     next.version++;
     if (next.chain.length >= chainLimitOf(next)) {
-        next.phase = "CHAIN_COMPLETE";
-        next.winner = decideChainWinner(next);
+        // The chain is full, but the match isn't over: the other player gets
+        // last call — shake on the final word, or challenge it.
+        next.phase = "LAST_CALL";
     } else {
         next.phase = turnPhaseOf(opponentOf(actor));
     }
+    return { ok: true, state: next };
+}
+
+/** Shake on the final word: the chain stands as played, the match completes. */
+function accept(state: MatchState): MoveResult {
+    const next = structuredClone(state);
+    next.version++;
+    next.phase = "CHAIN_COMPLETE";
+    next.winner = decideChainWinner(next);
     return { ok: true, state: next };
 }
 
@@ -263,7 +289,9 @@ function pass(state: MatchState, actor: PlayerId): MoveResult {
  * phase, no defender fold/stand. Real → STANDS: the word is marked survived and
  * the challenger loses a life. Fake → REJECTED: the word is removed, its owner
  * loses a life, the chain rewinds. Either way the challenger is on move next
- * (they play on from the survived word, or from the rewound tail).
+ * (they play on from the survived word, or from the rewound tail) — except when
+ * a last-call challenge STANDS: the chain is full and verified, so the match
+ * completes on the spot.
  */
 function challenge(
     state: MatchState,
@@ -288,6 +316,10 @@ function challenge(
         if (next.players[actor].lives <= 0) {
             next.phase = "GAME_OVER";
             next.winner = defender;
+        } else if (next.chain.length >= chainLimitOf(next)) {
+            // Last call: the final word stands, so the chain is complete.
+            next.phase = "CHAIN_COMPLETE";
+            next.winner = decideChainWinner(next);
         } else {
             // Challenger still has to make a move, now from the verified word.
             next.phase = turnPhaseOf(actor);

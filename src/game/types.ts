@@ -22,8 +22,13 @@ export interface ChainLink {
   challengeSurvived?: boolean
 }
 
-/** See GAME_DESIGN.md §States. */
-export type MatchPhase = 'P1_TURN' | 'P2_TURN' | 'CHAIN_COMPLETE' | 'GAME_OVER'
+/**
+ * See GAME_DESIGN.md §States. LAST_CALL is the beat after the chain fills:
+ * the player who didn't play the final word gets exactly one move — accept
+ * ("shake on it" → CHAIN_COMPLETE) or challenge it. Without it the final
+ * word would be a free, unchallengeable bluff aimed at the points win.
+ */
+export type MatchPhase = 'P1_TURN' | 'P2_TURN' | 'LAST_CALL' | 'CHAIN_COMPLETE' | 'GAME_OVER'
 
 export type Move =
   | { type: 'play'; word: string }
@@ -37,6 +42,8 @@ export type Move =
    * removed, its owner loses a life).
    */
   | { type: 'challenge'; wordIsReal: boolean }
+  /** Shake on the final word (LAST_CALL only): the chain stands as played. */
+  | { type: 'accept' }
 
 export interface MatchState {
   phase: MatchPhase

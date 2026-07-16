@@ -50,6 +50,8 @@ The verdict is a state stamped on the word; either way the challenger is on move
 
 A match ends when either player is out of lives (**opponent wins outright, points irrelevant**), or when the chain reaches **20 words** ("the chain is complete") — then **highest points wins**. Ties broken by remaining lives, then by longest single word played.
 
+**Last call (added 2026-07-16, see mockups/last-call.html):** the 20th word does NOT end the match on the spot — that made the final word a free, unchallengeable bluff aimed straight at the points win (and the other player never even saw it land). Instead the chain filling opens `LAST_CALL`: the player who didn't play the final word gets exactly one closing move — **accept** ("shake on it" → chain complete) or **challenge** it, under the normal challenge rules. STANDS → the caller pays the usual life and the chain completes (the spent life can swing a points tie); REJECTED → the fake is struck, its owner pays the life, the chain rewinds to 19, and the challenger plays on until someone's 20th word survives or gets the handshake. In the UI the deck gives way to a last-call bar (coral "Shake on it" pill, Phosphor handshake), the HUD's countdown chip reads LAST CALL, and the turn nudge says "shake on it or challenge."
+
 ### Opening move
 
 Player 1's first word can be anything (3+ letters). Show a "pick your entry point" framing.
@@ -60,7 +62,7 @@ Same rules vs a bot. Bot behavior:
 
 - Plays only from the embedded word list; picks by searching words starting with each possible overlap suffix of the current word (longest overlap first).
 - **Difficulty via greed**: Easy bot takes the first valid 2-overlap word. Hard bot maximizes overlap² and prefers long words.
-- Bot challenge logic: challenges the player's word with probability that scales when the word is NOT in the embedded list — Easy: 15%, Medium: 40%, Hard: 75%. Never challenges words in the list. The bot never _defends_ — challenges resolve instantly, and a bot challenge is ruled by the **same referee as a player's** (embedded list, then dictionary API), so the bot loses a life when it flags a real word it doesn't know. If the referee is unreachable, the bot drops the flag and plays a normal turn (offline-safe; changed 2026-07 — it previously ruled list-only, which meant every bot challenge auto-won and real words like "convoluted" got struck).
+- Bot challenge logic: challenges the player's word with probability that scales when the word is NOT in the embedded list — Easy: 15%, Medium: 40%, Hard: 75%. Never challenges words in the list. The bot never _defends_ — challenges resolve instantly, and a bot challenge is ruled by the **same referee as a player's** (embedded list, then dictionary API), so the bot loses a life when it flags a real word it doesn't know. If the referee is unreachable, the bot drops the flag and plays a normal turn (offline-safe; changed 2026-07 — it previously ruled list-only, which meant every bot challenge auto-won and real words like "convoluted" got struck). At last call the same logic answers for the bot: its usual challenge roll on the player's final word, otherwise (including a dropped flag) it shakes. Tutorial Lloyd never challenges, so he always shakes.
 - Bot never bluffs on Easy/Medium. On Hard, 10% of the time when stuck it plays a plausible fake (list word + common suffix like "-ry", "-ish") instead of passing. This is the fun part — don't cut it.
 - Bot moves resolve after a 1–2s "thinking" delay with a little animation.
 
@@ -78,9 +80,13 @@ Same rules vs a bot. Bot behavior:
 ## States
 
 ```
-(create) → P1_TURN ⇄ P2_TURN → CHAIN_COMPLETE
+(create) → P1_TURN ⇄ P2_TURN → LAST_CALL → CHAIN_COMPLETE
                 → GAME_OVER (lives exhausted)
 ```
+
+`LAST_CALL` belongs to whoever didn't play the final word (`lastCallActorOf`);
+accept completes the chain, a REJECTED challenge rewinds it below the limit and
+play re-enters the turn loop.
 
 A challenge resolves inside a single turn — no `CHALLENGE_PENDING` phase (removed
 2026-07 with the fold/stand step). A fresh match starts in the opener's turn with
@@ -92,7 +98,8 @@ the opener left it — so the friend steps straight into their own turn to answe
 is gone.)
 `applyMove(state, actor, move) -> newState | error`. Moves: `play(word)`,
 `pass()`, `challenge(wordIsReal)` — the referee's verdict is injected by the
-caller (DO / solo controller), keeping the engine pure.
+caller (DO / solo controller), keeping the engine pure — and `accept()`, legal
+only during `LAST_CALL` (the handshake needs no referee).
 
 ## Screens (mobile-first, 375px)
 
@@ -100,7 +107,8 @@ caller (DO / solo controller), keeping the engine pure.
 2. **Open + invite** — creating drops the opener straight onto the board in their own turn; they play an opening word, then an invite sheet (native share + copy-link + raw code) hands the match to a friend. A friend who taps the invite link lands on an **invite screen** ("{name} invited you…", the opening word, and Get started / How to play / Try the tutorial — the tutorial returns them to the invite). There is no waiting lobby.
 3. **Match** — the staircase ledger with the camera rail (see §The ledger camera) over a custom key deck (see §Inline play & the deck — this supersedes the earlier input-bar spec). Challenge is initiated by tapping the opponent's newest word (⚖ tag + confirm sheet). Player HUD cards (color, points, life pips) pinned top; the active player's card wears its own color as the chiclet lip (soft pulse while the bot thinks) — there is no turn pill.
 4. **Challenge verdict** — full-screen dramatic beat: the **STANDS** / **REJECTED** stamp on the word, the ruling, and who lost a life. It fires instantly on the challenger's tap — no defender prompt, no waiting.
-5. **Chain complete / Game over** — points count-up animation, full chain replay, Rematch button (rematch swaps who opens).
+5. **Last call** — the chain just filled; the non-finisher's deck is replaced by the last-call bar ("Shake on it" / tap the word to challenge), the finisher waits ("Your last word is on the table."). See §Match end and mockups/last-call.html.
+6. **Chain complete / Game over** — points count-up animation, full chain replay, Rematch button (rematch swaps who opens).
 
 ## Visual direction (FINAL — see mockups/threes-v2-rail.html for the reference)
 

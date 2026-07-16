@@ -4,8 +4,9 @@ import { Deck, PassButton } from '../components/Deck'
 import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
 import { useComposer } from '../components/useComposer'
-import { gripOptions } from '../game'
+import { gripOptions, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
+import { LastCallBar } from '../components/LastCallBar'
 import { useSoloMatch, type SoloEvent, type SoloSave } from '../solo/useSoloMatch'
 
 interface SoloMatchProps {
@@ -23,18 +24,25 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
   const botName = state.players.p2.name
   const newest = state.chain[state.chain.length - 1]
   const playerTurn = state.phase === 'P1_TURN'
+  // The bot played the final word; the player answers last call.
+  const playerLastCall = state.phase === 'LAST_CALL' && lastCallActorOf(state) === 'p1'
   const composer = useComposer(newest?.word ?? null, playerTurn)
   const fan = playerTurn && !composer.typed && newest ? gripOptions(newest.word) : null
   const canChallenge =
-    playerTurn && newest !== undefined && newest.owner === 'p2' && !newest.challengeSurvived
+    (playerTurn || playerLastCall) &&
+    newest !== undefined &&
+    newest.owner === 'p2' &&
+    !newest.challengeSurvived
 
   const active = m.terminal
     ? null
-    : state.phase === 'P1_TURN'
-      ? ('p1' as const)
-      : state.phase === 'P2_TURN'
-        ? ('p2' as const)
-        : null
+    : state.phase === 'LAST_CALL'
+      ? lastCallActorOf(state)
+      : state.phase === 'P1_TURN'
+        ? ('p1' as const)
+        : state.phase === 'P2_TURN'
+          ? ('p2' as const)
+          : null
 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
@@ -73,12 +81,16 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
           {m.error}
         </div>
       )}
-      <Deck
-        disabled={!playerTurn}
-        keyHints={playerTurn ? composer.keyHints : null}
-        onKey={composer.key}
-        onBackspace={composer.backspace}
-      />
+      {playerLastCall && newest ? (
+        <LastCallBar finisherName={botName} word={newest.word} onShake={m.shake} />
+      ) : (
+        <Deck
+          disabled={!playerTurn}
+          keyHints={playerTurn ? composer.keyHints : null}
+          onKey={composer.key}
+          onBackspace={composer.backspace}
+        />
+      )}
 
       {confirmingChallenge && newest && (
         <ConfirmChallengeSheet

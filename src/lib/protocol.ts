@@ -12,6 +12,8 @@ export type LastEvent =
   | { kind: 'pass'; by: PlayerId }
   | { kind: 'real'; word: string; by: PlayerId }
   | { kind: 'fake'; word: string; by: PlayerId }
+  /** Last call answered with a handshake: the final word stands unchallenged. */
+  | { kind: 'accept'; word: string; by: PlayerId }
   | { kind: 'rematch'; by: PlayerId }
 
 /** Who has a live socket open right now. Ephemeral — never stored, never
@@ -45,6 +47,8 @@ export type ClientMove =
   | { type: 'play'; word: string }
   | { type: 'pass' }
   | { type: 'challenge' }
+  /** Shake on the final word during last call — no referee involved. */
+  | { type: 'accept' }
 
 export type ApiError = { ok: false; error: string }
 export type CreateResponse = { ok: true; code: string; token: string; view: MatchView } | ApiError

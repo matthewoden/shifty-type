@@ -8,6 +8,7 @@ import {
   applyMove,
   chooseBotMove,
   createMatch,
+  lastCallActorOf,
   type Difficulty,
   type MatchState,
   type Move,
@@ -61,8 +62,10 @@ export function useSoloMatch(initial: SoloSave) {
   const [botThinking, setBotThinking] = useState(false)
 
   const terminal = state.phase === 'GAME_OVER' || state.phase === 'CHAIN_COMPLETE'
-  // Challenges resolve instantly, so the bot only ever acts on its own turn.
-  const botTurn = state.phase === 'P2_TURN'
+  // Challenges resolve instantly, so the bot only ever acts on its own turn —
+  // which includes answering last call when the player played the final word.
+  const botTurn =
+    state.phase === 'P2_TURN' || (state.phase === 'LAST_CALL' && lastCallActorOf(state) === 'p2')
 
   // Persist after every change; a finished match clears the slot.
   useEffect(() => {
@@ -89,6 +92,9 @@ export function useSoloMatch(initial: SoloSave) {
         if (cancelled) return
         if (verdict !== 'unknown') move = { type: 'challenge', wordIsReal: verdict === 'real' }
       }
+      // Last call: not flagging the final word means shaking on it. (An
+      // unreachable referee drops the flag here too — the bot never stalls.)
+      if (!move && state.phase === 'LAST_CALL') move = { type: 'accept' }
       move ??= chooseBotMove(state, difficulty)
       setBotThinking(false)
       const r = applyMove(state, 'p2', move)
@@ -156,6 +162,8 @@ export function useSoloMatch(initial: SoloSave) {
     terminal,
     playWord: (word: string) => apply('p1', { type: 'play', word }),
     pass: () => apply('p1', { type: 'pass' }),
+    /** Shake on the bot's final word — the player's last-call answer. */
+    shake: () => apply('p1', { type: 'accept' }),
     challengeBot,
     clearEvent: () => setEvent(null),
     clearError: () => setError(null),

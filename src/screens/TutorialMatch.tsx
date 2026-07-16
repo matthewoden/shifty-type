@@ -9,7 +9,8 @@ import { Hud } from '../components/Hud'
 import { Toast } from '../components/Toast'
 import { useComposer } from '../components/useComposer'
 import { ConfirmChallengeSheet, GameOverPanel } from '../components/overlays'
-import { gripOptions } from '../game'
+import { LastCallBar } from '../components/LastCallBar'
+import { gripOptions, lastCallActorOf } from '../game'
 import { api } from '../lib/api'
 import { SENDOFF_LOSS, SENDOFF_WIN, SUGGESTED_WORD, WHISPER, type BubbleCopy } from '../solo/tutorial'
 import { useTutorial } from '../solo/useTutorial'
@@ -105,7 +106,7 @@ export function TutorialMatch({
   const fan =
     t.playerTurn && t.passive && !composer.typed && newest ? gripOptions(newest.word) : null
   const canChallenge =
-    t.playerTurn &&
+    (t.playerTurn || t.playerLastCall) &&
     (beat === 'smell' || beat === 'bluff' || beat === 'done') &&
     newest !== undefined &&
     newest.owner === 'p2' &&
@@ -124,11 +125,13 @@ export function TutorialMatch({
 
   const active = t.terminal
     ? null
-    : state.phase === 'P1_TURN'
-      ? ('p1' as const)
-      : state.phase === 'P2_TURN'
-        ? ('p2' as const)
-        : null
+    : state.phase === 'LAST_CALL'
+      ? lastCallActorOf(state)
+      : state.phase === 'P1_TURN'
+        ? ('p1' as const)
+        : state.phase === 'P2_TURN'
+          ? ('p2' as const)
+          : null
 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
@@ -188,13 +191,17 @@ export function TutorialMatch({
       {/* The guided first word (ANTIC) is the one exception — its scripted
           glow owns the deck. Every other turn shows the real game's key
           hints, so nothing about the deck changes when the tutorial ends. */}
-      <Deck
-        disabled={!composerActive}
-        glowKey={glowKey}
-        keyHints={beat === 'firstWord' ? null : composer.keyHints}
-        onKey={composer.key}
-        onBackspace={composer.backspace}
-      />
+      {t.playerLastCall && newest ? (
+        <LastCallBar finisherName="Lloyd" word={newest.word} onShake={t.shake} />
+      ) : (
+        <Deck
+          disabled={!composerActive}
+          glowKey={glowKey}
+          keyHints={beat === 'firstWord' ? null : composer.keyHints}
+          onKey={composer.key}
+          onBackspace={composer.backspace}
+        />
+      )}
 
       {confirmingChallenge && newest && (
         <ConfirmChallengeSheet

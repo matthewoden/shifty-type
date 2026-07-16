@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WORD_LIST, applyMove, pickPlayWord, type MatchState } from '../game'
+import { WORD_LIST, applyMove, lastCallActorOf, pickPlayWord, type MatchState } from '../game'
 import {
   GATED_BEATS,
   TUTORIAL_CHAIN_LIMIT,
@@ -42,7 +42,18 @@ describe('tutorial match setup', () => {
     // tail (a real player just types any word) — then the actor passes, as
     // the game rules say.
     let cursor = 1
-    while (state.phase === 'P1_TURN' || state.phase === 'P2_TURN') {
+    while (
+      state.phase === 'P1_TURN' ||
+      state.phase === 'P2_TURN' ||
+      state.phase === 'LAST_CALL'
+    ) {
+      // The 10th word opens last call; the non-finisher shakes on it.
+      if (state.phase === 'LAST_CALL') {
+        const r = applyMove(state, lastCallActorOf(state), { type: 'accept' })
+        expect(r.ok).toBe(true)
+        state = (r as { ok: true; state: MatchState }).state
+        continue
+      }
       const actor = state.phase === 'P1_TURN' ? 'p1' : 'p2'
       let word: string | null
       if (actor === 'p2') {

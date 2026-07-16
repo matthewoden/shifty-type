@@ -4,7 +4,14 @@
 // fine. Completion sets the Home-card flag.
 
 import { useEffect, useRef, useState } from 'react'
-import { applyMove, chooseBotMove, type MatchState, type Move, type PlayerId } from '../game'
+import {
+  applyMove,
+  chooseBotMove,
+  lastCallActorOf,
+  type MatchState,
+  type Move,
+  type PlayerId,
+} from '../game'
 import type { SoloEvent } from './useSoloMatch'
 import {
   GATED_BEATS,
@@ -41,10 +48,14 @@ export function useTutorial() {
 
   const terminal = state.phase === 'GAME_OVER' || state.phase === 'CHAIN_COMPLETE'
   const playerTurn = state.phase === 'P1_TURN'
+  // Lloyd played the 10th word; the player answers last call.
+  const playerLastCall = state.phase === 'LAST_CALL' && lastCallActorOf(state) === 'p1'
   const gated = (GATED_BEATS as readonly string[]).includes(beat)
   const passive = (PASSIVE_BEATS as readonly string[]).includes(beat)
-  // Challenges resolve instantly, so Lloyd only ever acts on his own turn.
-  const botTurn = state.phase === 'P2_TURN'
+  // Challenges resolve instantly, so Lloyd only ever acts on his own turn —
+  // including answering last call when the player played the final word.
+  const botTurn =
+    state.phase === 'P2_TURN' || (state.phase === 'LAST_CALL' && lastCallActorOf(state) === 'p2')
 
   // Completing the tutorial (either ending) retires the Home card.
   useEffect(() => {
@@ -68,8 +79,12 @@ export function useTutorial() {
       setBotThinking(false)
 
       // P2_TURN: scripted while the script lasts, the real easy bot after.
+      // Last call: tutorial Lloyd never challenges, so he always shakes.
       const cursor = cursorRef.current
-      const move = scriptedLloydMove(state, cursor) ?? chooseBotMove(state, 'easy')
+      const move: Move =
+        state.phase === 'LAST_CALL'
+          ? { type: 'accept' }
+          : (scriptedLloydMove(state, cursor) ?? chooseBotMove(state, 'easy'))
       const r = applyMove(state, 'p2', move)
       if (!r.ok) return
       setState(r.state)
@@ -166,9 +181,12 @@ export function useTutorial() {
     botThinking,
     terminal,
     playerTurn,
+    playerLastCall,
     advance,
     playWord,
     pass,
+    /** Shake on Lloyd's final word — the player's last-call answer. */
+    shake: () => apply('p1', { type: 'accept' }),
     challenge,
     neverMind: () => setCtx((c) => ({ ...c, needled: true })),
     clearEvent: () => setEvent(null),

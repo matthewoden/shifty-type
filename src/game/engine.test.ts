@@ -348,20 +348,43 @@ describe("challenges", () => {
     });
 });
 
-describe("chain completion (CHAIN_COMPLETE)", () => {
+describe("the full chain: last call, then completion", () => {
     // aabb → bbcc → ccdd … each 4 letters, overlap 2, 4g apiece.
     const pair = (i: number) => String.fromCharCode(97 + i).repeat(2);
     const chainWords = Array.from(
         { length: CHAIN_LIMIT },
         (_, i) => pair(i) + pair(i + 1),
     );
+    // p2 plays every even-numbered word, including the 20th — so p1 answers
+    // last call.
+    const full = () =>
+        run(
+            fresh(),
+            chainWords.map((w, i): [PlayerId, Move] => [
+                i % 2 === 0 ? "p1" : "p2",
+                play(w),
+            ]),
+        );
+    const accept: Move = { type: "accept" };
 
-    it("completes the chain at 20 words and the higher scoring player wins", () => {
-        const steps = chainWords.map((w, i): [PlayerId, Move] => [
-            i % 2 === 0 ? "p1" : "p2",
-            play(w),
-        ]);
-        const state = run(fresh(), steps);
+    it("the 20th word opens last call for the non-finisher — not the end", () => {
+        const state = full();
+        expect(state.phase).toBe("LAST_CALL");
+        expect(state.winner).toBeNull();
+        // Only the non-finisher may answer, and only with a shake or a flag.
+        expectError(applyMove(state, "p2", accept), "Not your turn yet.");
+        expectError(
+            applyMove(state, "p1", play("ttzz")),
+            "The chain is full — shake on the last word, or challenge it.",
+        );
+        expectError(
+            applyMove(state, "p1", pass),
+            "The chain is full — shake on the last word, or challenge it.",
+        );
+    });
+
+    it("shaking on the final word completes the chain; highest points wins", () => {
+        const state = run(full(), [["p1", accept]]);
         expect(state.phase).toBe("CHAIN_COMPLETE");
         // p1's opener earns just letter points, so p2 leads 60 to 54.
         expect(state.players.p1.points).toBe(54);
@@ -370,6 +393,46 @@ describe("chain completion (CHAIN_COMPLETE)", () => {
         expectError(
             applyMove(state, "p1", play("anything")),
             "This match is over.",
+        );
+    });
+
+    it("a last-call challenge that STANDS completes the chain, a life spent on the call", () => {
+        const state = run(full(), [["p1", challenge(true)]]);
+        expect(state.phase).toBe("CHAIN_COMPLETE");
+        expect(state.chain[state.chain.length - 1].challengeSurvived).toBe(
+            true,
+        );
+        expect(state.players.p1.lives).toBe(2);
+        expect(state.winner).toBe("p2");
+    });
+
+    it("a bad last-call flag on the challenger's final life ends the game outright", () => {
+        const worn = full();
+        worn.players.p1.lives = 1;
+        const state = run(worn, [["p1", challenge(true)]]);
+        expect(state.phase).toBe("GAME_OVER");
+        expect(state.winner).toBe("p2");
+    });
+
+    it("a REJECTED last-call challenge rewinds and play continues to a fresh last call", () => {
+        let state = run(full(), [["p1", challenge(false)]]);
+        // The fake 20th word is struck (points refunded), its owner pays a
+        // life, and the challenger plays on from the rewound tail.
+        expect(state.phase).toBe("P1_TURN");
+        expect(state.chain.length).toBe(CHAIN_LIMIT - 1);
+        expect(state.players.p2.lives).toBe(2);
+        expect(state.players.p2.points).toBe(54);
+        // The challenger lays a new 20th word — last call swings to p2.
+        state = run(state, [["p1", play("ttzz")]]);
+        expect(state.phase).toBe("LAST_CALL");
+        state = run(state, [["p2", accept]]);
+        expect(state.phase).toBe("CHAIN_COMPLETE");
+    });
+
+    it("there is nothing to shake on before the chain is full", () => {
+        expectError(
+            applyMove(fresh(), "p1", accept),
+            "Nothing to shake on yet — the chain isn't full.",
         );
     });
 

@@ -4,6 +4,7 @@
 // fallback for hospital wifi, and both paths dedupe on `revision`.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { lastCallActorOf } from '../game'
 import { api } from '../lib/api'
 import type { ClientMove, LastEvent, MatchView, SocketPush } from '../lib/protocol'
 
@@ -19,11 +20,13 @@ const HEARTBEAT_MS = 25_000
 const RECONNECT_MAX_MS = 30_000
 
 /** Is the local player the one who must act right now? Challenges resolve
- *  instantly, so it's simply whose turn the phase names. */
+ *  instantly, so it's whose turn the phase names — or, at last call, whoever
+ *  didn't play the final word. */
 function myMove(view: MatchView): boolean {
   const { state, you } = view
   if (state.phase === 'P1_TURN') return you === 'p1'
   if (state.phase === 'P2_TURN') return you === 'p2'
+  if (state.phase === 'LAST_CALL') return lastCallActorOf(state) === you
   return false
 }
 

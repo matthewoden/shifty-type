@@ -3,6 +3,7 @@ import {
   applyMove,
   createMatch as newMatchState,
   joinMatch,
+  lastCallActorOf,
   opponentOf,
   type MatchState,
   type Move,
@@ -65,6 +66,9 @@ function nudgeBody(m: StoredMatch): string {
     return `That's game with ${name} — come see how the chain ended.`
   if (!ev) return `${name} is waiting on you — your move.`
   const word = 'word' in ev ? ev.word.toUpperCase() : ''
+  // Last call: the chain just filled, and the recipient has the closing move.
+  if (s.phase === 'LAST_CALL' && ev.kind === 'play')
+    return `${name} played their last word, ${word} — shake on it or challenge.`
   switch (ev.kind) {
     case 'play':
       return `${name} played ${word} — your move.`
@@ -74,6 +78,9 @@ function nudgeBody(m: StoredMatch): string {
       return `Ruling's in — ${word} stands. Your move.`
     case 'fake':
       return `Busted — ${word} was a fake. Your move.`
+    case 'accept':
+      // Unreachable in practice — an accept always lands in a terminal phase.
+      return `${name} shook on ${word} — that's game.`
     case 'rematch':
       return `${name} dealt a new chain — rematch is on.`
   }
@@ -271,6 +278,7 @@ export class MatchDO extends DurableObject<Env> {
     const s = m.state
     if (s.phase === 'P1_TURN') return 'p1'
     if (s.phase === 'P2_TURN') return 'p2'
+    if (s.phase === 'LAST_CALL') return lastCallActorOf(s)
     return null
   }
 
@@ -403,6 +411,10 @@ export class MatchDO extends DurableObject<Env> {
       case 'pass':
         engineMove = { type: 'pass' }
         break
+      case 'accept':
+        // Shaking on the final word needs no referee — the chain stands.
+        engineMove = { type: 'accept' }
+        break
       case 'challenge': {
         // The DO is the referee: resolve the verdict now (embedded list →
         // dictionary API) and apply the instant STANDS/REJECTED outcome. If
@@ -437,6 +449,9 @@ export class MatchDO extends DurableObject<Env> {
         break
       case 'pass':
         m.lastEvent = { kind: 'pass', by: actor }
+        break
+      case 'accept':
+        m.lastEvent = { kind: 'accept', word: accusedWord, by: actor }
         break
       case 'challenge':
         m.lastEvent = {
