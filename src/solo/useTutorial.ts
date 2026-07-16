@@ -69,7 +69,7 @@ export function useTutorial() {
 
       // P2_TURN: scripted while the script lasts, the real easy bot after.
       const cursor = cursorRef.current
-      const move = scriptedLloydMove(state, cursor) ?? chooseBotMove(state, 'p2', 'easy')
+      const move = scriptedLloydMove(state, cursor) ?? chooseBotMove(state, 'easy')
       const r = applyMove(state, 'p2', move)
       if (!r.ok) return
       setState(r.state)

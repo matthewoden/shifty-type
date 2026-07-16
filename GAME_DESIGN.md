@@ -33,7 +33,7 @@ Instead of playing, you may challenge the word your opponent just played (only t
 **Interaction (FINAL):** the challenge does NOT live in the deck — the deck's only job is playing your word. The opponent's newest word carries a small flag tag on its row; tapping the word opens a confirm sheet ("Challenge this word? Incorrect answers lose a life."). Confirm, and the referee rules immediately:
 - Word is in the embedded common-word list → **real**, instantly (offline-safe).
 - Otherwise → Free Dictionary API lookup.
-- API unreachable → **error** ("Couldn't get a ruling just now — check your connection and flag it again."). Nothing changes, no life lost; the challenger can flag it again. (Solo: a *bot*-initiated challenge instead falls back to the embedded list so solo stays fully playable offline.)
+- API unreachable → **error** ("Couldn't get a ruling just now — check your connection and flag it again."). Nothing changes, no life lost; the challenger can flag it again. (Solo: a *bot*-initiated challenge that can't reach the referee is quietly dropped — the bot takes a normal turn instead, so solo stays fully playable offline and never rules on a word the referee hasn't seen.)
 
 The verdict is a state stamped on the word; either way the challenger is on move next:
 - **STANDS** (real) — the word keeps its place and its points; the **challenger** loses a life for the bad call. Blue-grey stamp (`p1-lip`).
@@ -49,7 +49,7 @@ Player 1's first word can be anything (3+ letters). Show a "pick your entry poin
 Same rules vs a bot. Bot behavior:
 - Plays only from the embedded word list; picks by searching words starting with each possible overlap suffix of the current word (longest overlap first).
 - **Difficulty via greed**: Easy bot takes the first valid 2-overlap word. Hard bot maximizes overlap² and prefers long words.
-- Bot challenge logic: challenges the player's word with probability that scales when the word is NOT in the embedded list — Easy: 15%, Medium: 40%, Hard: 75%. Never challenges words in the list. The bot never *defends* — challenges resolve instantly, and a bot challenge is ruled against the embedded list only (offline-safe, and the bot only ever flags out-of-list words → REJECTED).
+- Bot challenge logic: challenges the player's word with probability that scales when the word is NOT in the embedded list — Easy: 15%, Medium: 40%, Hard: 75%. Never challenges words in the list. The bot never *defends* — challenges resolve instantly, and a bot challenge is ruled by the **same referee as a player's** (embedded list, then dictionary API), so the bot loses a life when it flags a real word it doesn't know. If the referee is unreachable, the bot drops the flag and plays a normal turn (offline-safe; changed 2026-07 — it previously ruled list-only, which meant every bot challenge auto-won and real words like "convoluted" got struck).
 - Bot never bluffs on Easy/Medium. On Hard, 10% of the time when stuck it plays a plausible fake (list word + common suffix like "-ry", "-ish") instead of passing. This is the fun part — don't cut it.
 - Bot moves resolve after a 1–2s "thinking" delay with a little animation.
 

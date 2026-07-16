@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { chooseBotMove } from './bot'
+import { chooseBotMove, wantsChallenge } from './bot'
 import { applyMove, createMatch } from './engine'
 import { WORD_SET } from './wordlist'
 import type { MatchState, PlayerId } from './types'
@@ -27,7 +27,7 @@ describe('bot word choice', () => {
   const list = ['ethos', 'nettle', 'netting', 'only'] as const
 
   it('easy takes the first valid 2-overlap word in list order', () => {
-    const move = chooseBotMove(chainOf('planet'), BOT, 'easy', {
+    const move = chooseBotMove(chainOf('planet'), 'easy', {
       rng: never,
       wordList: [...list],
     })
@@ -35,7 +35,7 @@ describe('bot word choice', () => {
   })
 
   it('hard maximizes overlap and prefers long words', () => {
-    const move = chooseBotMove(chainOf('planet'), BOT, 'hard', {
+    const move = chooseBotMove(chainOf('planet'), 'hard', {
       rng: never,
       wordList: [...list],
     })
@@ -43,7 +43,7 @@ describe('bot word choice', () => {
   })
 
   it('medium picks a random valid word', () => {
-    const move = chooseBotMove(chainOf('planet'), BOT, 'medium', {
+    const move = chooseBotMove(chainOf('planet'), 'medium', {
       rng: () => 0.5,
       wordList: [...list],
     })
@@ -55,64 +55,57 @@ describe('bot word choice', () => {
     // netting/nettle/ethos all playable but burned; only 'only' has no grip.
     const state = chainOf('planet')
     state.usedWords.push('netting', 'nettle', 'ethos')
-    const move = chooseBotMove(state, BOT, 'easy', { rng: never, wordList: [...list] })
+    const move = chooseBotMove(state, 'easy', { rng: never, wordList: [...list] })
     expect(move).toEqual({ type: 'pass' })
   })
 
   it('plays only real list words on the default vocabulary', () => {
-    const move = chooseBotMove(chainOf('vault'), BOT, 'hard', { rng: never })
+    const move = chooseBotMove(chainOf('vault'), 'hard', { rng: never })
     expect(move.type).toBe('play')
     if (move.type === 'play') expect(WORD_SET.has(move.word)).toBe(true)
   })
 
   it('opens from the list when it goes first', () => {
     const state = createMatch('You', 'Rook', 'p2')
-    const move = chooseBotMove(state, BOT, 'easy', { rng: never, wordList: [...list] })
+    const move = chooseBotMove(state, 'easy', { rng: never, wordList: [...list] })
     expect(move).toEqual({ type: 'play', word: 'ethos' })
   })
 })
 
 describe('bot challenges', () => {
-  it('challenges a non-list player word when the dice say so', () => {
+  it('wants to flag a non-list player word when the dice say so', () => {
     // 'netqx' opened by p1 is not in the default list → suspect
-    expect(chooseBotMove(chainOf('netqx'), BOT, 'easy', { rng: () => 0.1 })).toEqual({
-      type: 'challenge',
-      wordIsReal: false,
-    })
-    expect(chooseBotMove(chainOf('netqx'), BOT, 'easy', { rng: () => 0.2 })).not.toEqual({
-      type: 'challenge',
-    })
-    expect(chooseBotMove(chainOf('netqx'), BOT, 'medium', { rng: () => 0.39 })).toEqual({
-      type: 'challenge',
-      wordIsReal: false,
-    })
-    expect(chooseBotMove(chainOf('netqx'), BOT, 'hard', { rng: () => 0.74 })).toEqual({
-      type: 'challenge',
-      wordIsReal: false,
-    })
+    expect(wantsChallenge(chainOf('netqx'), BOT, 'easy', { rng: () => 0.1 })).toBe(true)
+    expect(wantsChallenge(chainOf('netqx'), BOT, 'easy', { rng: () => 0.2 })).toBe(false)
+    expect(wantsChallenge(chainOf('netqx'), BOT, 'medium', { rng: () => 0.39 })).toBe(true)
+    expect(wantsChallenge(chainOf('netqx'), BOT, 'hard', { rng: () => 0.74 })).toBe(true)
   })
 
-  it('never challenges a word from the embedded list', () => {
+  it('never flags a word from the embedded list', () => {
     // 'water' is in the default list ('planet' isn't — it just misses the
     // top-2,000 frequency cut).
-    const move = chooseBotMove(chainOf('water'), BOT, 'hard', { rng: always })
-    expect(move.type).not.toBe('challenge')
+    expect(wantsChallenge(chainOf('water'), BOT, 'hard', { rng: always })).toBe(false)
   })
 
-  it('never challenges a word that already survived a challenge', () => {
+  it('never flags a word that already survived a challenge', () => {
     const state = chainOf('netqx')
     state.chain[0].challengeSurvived = true
-    const move = chooseBotMove(state, BOT, 'hard', { rng: always })
-    expect(move.type).not.toBe('challenge')
+    expect(wantsChallenge(state, BOT, 'hard', { rng: always })).toBe(false)
   })
 
-  it('never challenges its own word', () => {
+  it('never flags its own word', () => {
     // p1 opener, p2 (bot) word, p1 passes → bot to move, last word is its own
     let state = chainOf('planet', 'netqx') // netqx played by the BOT here
     const r = applyMove(state, 'p1', { type: 'pass' })
     if (!r.ok) throw new Error(r.error)
     state = r.state
-    const move = chooseBotMove(state, BOT, 'hard', { rng: always })
+    expect(wantsChallenge(state, BOT, 'hard', { rng: always })).toBe(false)
+  })
+
+  it('chooseBotMove never carries a verdict — that ruling belongs to the referee', () => {
+    // Out-of-list word, dice all in: the move itself still can't be a
+    // challenge. The caller pairs wantsChallenge with an async lookup.
+    const move = chooseBotMove(chainOf('netqx'), 'hard', { rng: always })
     expect(move.type).not.toBe('challenge')
   })
 })
@@ -126,16 +119,16 @@ describe('bot when stuck', () => {
   const tinyList = ['lemon', 'zebra']
 
   it('easy and medium pass', () => {
-    expect(chooseBotMove(stuckState(), BOT, 'easy', { rng: always, wordList: tinyList })).toEqual(
+    expect(chooseBotMove(stuckState(), 'easy', { rng: always, wordList: tinyList })).toEqual(
       { type: 'pass' },
     )
     expect(
-      chooseBotMove(stuckState(), BOT, 'medium', { rng: always, wordList: tinyList }),
+      chooseBotMove(stuckState(), 'medium', { rng: always, wordList: tinyList }),
     ).toEqual({ type: 'pass' })
   })
 
   it('hard bluffs 10% of the time: list word + common ending', () => {
-    const move = chooseBotMove(stuckState(), BOT, 'hard', {
+    const move = chooseBotMove(stuckState(), 'hard', {
       rng: () => 0.05,
       wordList: tinyList,
     })
@@ -146,7 +139,7 @@ describe('bot when stuck', () => {
   })
 
   it('hard passes the other 90%', () => {
-    const move = chooseBotMove(stuckState(), BOT, 'hard', {
+    const move = chooseBotMove(stuckState(), 'hard', {
       rng: () => 0.5,
       wordList: tinyList,
     })
@@ -158,7 +151,7 @@ describe('bot when stuck', () => {
     // (Word marked survived so the bot doesn't challenge it instead.)
     const state = stuckState()
     state.chain[0].challengeSurvived = true
-    const move = chooseBotMove(state, BOT, 'hard', {
+    const move = chooseBotMove(state, 'hard', {
       rng: () => 0.05,
       wordList: ['zebra'],
     })

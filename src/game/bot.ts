@@ -26,31 +26,45 @@ const BLUFF_PROBABILITY = 0.1
 /** Plausible fake-word endings, per GAME_DESIGN.md §Solo. */
 const BLUFF_ENDINGS = ['ry', 'ish'] as const
 
-export function chooseBotMove(
+/**
+ * Does the bot want to flag the player's newest word? Words in the bot's own
+ * list are never challenged; anything else is suspect with difficulty-scaled
+ * probability. This is only the decision to flag — the caller asks the real
+ * referee for the verdict (embedded list, then dictionary API), exactly like
+ * a player's flag, so the bot loses a life when it flags a real word it
+ * simply doesn't know.
+ */
+export function wantsChallenge(
   state: MatchState,
   botId: PlayerId,
+  difficulty: Difficulty,
+  options: BotOptions = {},
+): boolean {
+  const rng = options.rng ?? Math.random
+  const list = options.wordList ?? WORD_LIST
+  const last = state.chain[state.chain.length - 1]
+  return (
+    !!last &&
+    last.owner !== botId &&
+    !last.challengeSurvived &&
+    !list.includes(last.word) &&
+    rng() < CHALLENGE_PROBABILITY[difficulty]
+  )
+}
+
+/**
+ * The bot's turn when it isn't challenging: play a word, bluff, or pass.
+ * Challenge decisions live in wantsChallenge — the verdict needs the async
+ * referee, so it can't resolve inside a pure move choice.
+ */
+export function chooseBotMove(
+  state: MatchState,
   difficulty: Difficulty,
   options: BotOptions = {},
 ): Move {
   const rng = options.rng ?? Math.random
   const list = options.wordList ?? WORD_LIST
-  const listSet = new Set(list)
   const last = state.chain[state.chain.length - 1]
-
-  // Maybe challenge the player's newest word. Words in the bot's own list
-  // are never challenged; anything else is suspect with difficulty-scaled
-  // probability. The challenge resolves instantly against the referee — the
-  // bot never has to defend one of its own words. `wordIsReal` is resolved by
-  // the caller (list-only in solo, keeping the bot playable offline).
-  if (
-    last &&
-    last.owner !== botId &&
-    !last.challengeSurvived &&
-    !listSet.has(last.word) &&
-    rng() < CHALLENGE_PROBABILITY[difficulty]
-  ) {
-    return { type: 'challenge', wordIsReal: listSet.has(last.word) }
-  }
 
   const word = pickPlayWord(state, difficulty, options)
   if (word) return { type: 'play', word }

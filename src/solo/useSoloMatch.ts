@@ -12,6 +12,7 @@ import {
   type MatchState,
   type Move,
   type PlayerId,
+  wantsChallenge,
 } from '../game'
 import { lookupWord } from '../lib/referee'
 
@@ -73,12 +74,23 @@ export function useSoloMatch(initial: SoloSave) {
   useEffect(() => {
     if (!botTurn) return
     setBotThinking(true)
-    const timer = setTimeout(() => {
-      setBotThinking(false)
-      const move = chooseBotMove(state, 'p2', difficulty)
+    let cancelled = false
+    const timer = setTimeout(async () => {
       // The word under a bot challenge is the player's newest — capture it
       // before applyMove, since a rejected word is popped off the chain.
       const accused = state.chain[state.chain.length - 1]
+      let move: Move | null = null
+      if (accused && wantsChallenge(state, 'p2', difficulty)) {
+        // Same referee as the player's flags: embedded list, then dictionary
+        // API — the bot can flag a real word it doesn't know and lose the
+        // life. Unreachable referee: the flag is quietly dropped and the bot
+        // takes a normal turn, so offline solo never gets an unfair ruling.
+        const verdict = await lookupWord(accused.word)
+        if (cancelled) return
+        if (verdict !== 'unknown') move = { type: 'challenge', wordIsReal: verdict === 'real' }
+      }
+      move ??= chooseBotMove(state, difficulty)
+      setBotThinking(false)
       const r = applyMove(state, 'p2', move)
       if (!r.ok) return // engine rejected a bot move: a bug, but never strand the UI
       setSave((s) => ({ ...s, state: r.state }))
@@ -86,7 +98,10 @@ export function useSoloMatch(initial: SoloSave) {
       else if (move.type === 'challenge')
         setEvent({ kind: 'verdict', word: accused.word, real: move.wordIsReal, challenger: 'p2' })
     }, 1000 + Math.random() * 1000)
-    return () => clearTimeout(timer)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [state, difficulty, botTurn])
 
   // The transient banners (bot passed, referee unreachable) clear themselves.
