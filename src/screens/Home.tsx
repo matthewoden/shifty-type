@@ -99,7 +99,7 @@ export function Home({
           onClick={onDuel}
           className="h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5"
         >
-          Duel a friend
+          Challenge a friend
         </button>
         <button
           onClick={onSolo}

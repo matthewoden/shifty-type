@@ -63,7 +63,7 @@ export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
 
   return (
     <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-5 p-6">
-      <h2 className="text-2xl font-extrabold text-ink-strong">Start a duel</h2>
+      <h2 className="text-2xl font-extrabold text-ink-strong">Challenge a friend</h2>
       <div className="flex flex-col gap-3.5 w-full max-w-xs">
         <label className="text-[13px] font-bold text-ink">
           Your name

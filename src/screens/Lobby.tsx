@@ -436,7 +436,7 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel }: LobbyPro
           <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-20">
             <p className="font-extrabold text-ink-strong text-lg">No games yet</p>
             <p className="font-semibold text-dim text-[13.5px] max-w-[15rem]">
-              Duel a friend or play a llama, and your games will gather here.
+              Challenge a friend or play a llama, and your games will gather here.
             </p>
           </div>
         ) : (
@@ -502,7 +502,7 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel }: LobbyPro
             onClick={onNewDuel}
             className="w-full h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5"
           >
-            Duel a friend
+            Challenge a friend
           </button>
         </div>
       </div>

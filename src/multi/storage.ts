@@ -61,7 +61,21 @@ export function listSeats(): Seat[] {
 /** Drop a seat whose match is gone (deleted after 60 days of silence). */
 export function removeMatchAuth(code: string): void {
   localStorage.removeItem(AUTH_PREFIX + code)
+  localStorage.removeItem(SEEN_PREFIX + code)
   if (localStorage.getItem(ACTIVE_KEY) === code) localStorage.removeItem(ACTIVE_KEY)
+}
+
+// The newest chain row ("<index>-<word>") this device has watched land, per
+// match — so a friend's word that arrived while the player was away types
+// itself in exactly once (ChainLedger revealOnMount), not on every open.
+const SEEN_PREFIX = 'wordchain.seen.'
+
+export function loadSeenNewest(code: string): string | null {
+  return localStorage.getItem(SEEN_PREFIX + code)
+}
+
+export function saveSeenNewest(code: string, rowKey: string): void {
+  localStorage.setItem(SEEN_PREFIX + code, rowKey)
 }
 
 // The last lobby snapshot, kept so the lobby (and Home's badge) paint instantly

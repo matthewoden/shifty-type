@@ -174,7 +174,7 @@ export function GameOverPanel({
   busy?: boolean
   /** Tutorial-only: Lloyd's one-line sendoff under the heading. */
   sendoff?: string
-  /** Tutorial-only: the coral primary action above Rematch — "Duel a friend"
+  /** Tutorial-only: the coral primary action above Rematch — "Challenge a friend"
    *  for a cold-open player, or "Play your turn against {inviter}" when they
    *  came in from an invite. */
   primary?: { label: string; onClick: () => void }

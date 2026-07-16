@@ -42,10 +42,15 @@ function BubbleText({ text }: { text: string }) {
   )
 }
 
-/** Lloyd's coach bubble, with his LL-tile avatar. */
-function Bubble({ copy, tapnext }: { copy: BubbleCopy; tapnext: boolean }) {
+/** Lloyd's coach bubble, with his LL-tile avatar. Each beat's cards deal in
+ *  one after another (`delay` staggers them) so a copy change is visible
+ *  even when the player's eyes are on the board. */
+function Bubble({ copy, tapnext, delay }: { copy: BubbleCopy; tapnext: boolean; delay: number }) {
   return (
-    <div className="bg-white rounded-2xl px-3.5 py-3 shadow-[0_4px_0_#E2DDD3]">
+    <div
+      className="bubble-in bg-white rounded-2xl px-3.5 py-3 shadow-[0_4px_0_#E2DDD3]"
+      style={{ animationDelay: `${delay}ms` }}
+    >
       <div className="flex items-center gap-1.5 mb-1">
         <span className="flex gap-[2px]">
           <span className="w-[15px] h-[15px] rounded bg-p2 text-white text-[10px] font-extrabold flex items-center justify-center shadow-[0_2px_0_var(--color-p2-lip)]">
@@ -153,7 +158,12 @@ export function TutorialMatch({
         {t.bubbles.length > 0 && (
           <div className="absolute top-2 left-3.5 right-3.5 flex flex-col gap-2.5 z-[6] pointer-events-none">
             {t.bubbles.map((b, i) => (
-              <Bubble key={`${beat}-${i}`} copy={b} tapnext={t.gated && i === t.bubbles.length - 1} />
+              <Bubble
+                key={`${beat}-${i}`}
+                copy={b}
+                tapnext={t.gated && i === t.bubbles.length - 1}
+                delay={i * 160}
+              />
             ))}
           </div>
         )}
@@ -210,7 +220,7 @@ export function TutorialMatch({
                   label: `Play your turn against ${inviterName ?? 'your friend'}`,
                   onClick: () => onResumeInvite(resumeInvite),
                 }
-              : { label: 'Duel a friend', onClick: onDuel }
+              : { label: 'Challenge a friend', onClick: onDuel }
           }
           onRematch={onRematchLloyd}
           onExit={onExit}

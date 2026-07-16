@@ -102,7 +102,7 @@ export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack 
         className="invite-in text-[13.5px] font-semibold text-ink max-w-[16rem]"
         style={{ animationDelay: '1500ms' }}
       >
-        An async word duel — you and a friend trade words that overlap.{' '}
+        A word game at your own pace — you and a friend trade words that overlap.{' '}
         {preview.openingWord ? `${inviter} already opened. You're up.` : `${inviter} is waiting for you.`}
       </p>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChainLedger } from '../components/ChainLedger'
 import { Deck, PassButton } from '../components/Deck'
 import { Toast } from '../components/Toast'
@@ -7,7 +7,12 @@ import { useComposer } from '../components/useComposer'
 import { gripOptions } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { opponentOf } from '../game'
-import { clearActiveCode, removeMatchAuth } from '../multi/storage'
+import {
+  clearActiveCode,
+  loadSeenNewest,
+  removeMatchAuth,
+  saveSeenNewest,
+} from '../multi/storage'
 import { useMultiMatch, type StampEvent } from '../multi/useMultiMatch'
 import { useClearBadge, useNudge, type NudgeStatus } from '../multi/useNudge'
 import { BellOffSheet, SoftAskSheet } from '../components/NudgeSheets'
@@ -41,6 +46,22 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   // Hook order stays stable across the early returns below. Busy doesn't
   // reset the draft — a failed send must leave the word intact to fix.
   const composer = useComposer(newestWord, isMyTurn)
+  // Decided once, when the match first paints: a friend's word that landed
+  // while the player was away types itself in (words arriving while watching
+  // are the ledger's own live detection). Then the newest row is marked seen
+  // so re-opening the match doesn't replay the reveal.
+  const newestRowKey =
+    view && view.state.chain.length > 0
+      ? `${view.state.chain.length - 1}-${view.state.chain[view.state.chain.length - 1].word}`
+      : null
+  const revealRef = useRef<boolean | null>(null)
+  if (view && revealRef.current === null) {
+    const last = view.state.chain[view.state.chain.length - 1]
+    revealRef.current = !!last && last.owner !== view.you && newestRowKey !== loadSeenNewest(code)
+  }
+  useEffect(() => {
+    if (newestRowKey) saveSeenNewest(code, newestRowKey)
+  }, [code, newestRowKey])
   const nudge = useNudge(code, token)
   useClearBadge()
   // 'ask' = our friendly pre-prompt (guards the one-shot OS dialog);
@@ -132,6 +153,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
         composer={composer.typed ? composer : null}
         fan={fan}
         openerCaret={isMyTurn && state.chain.length === 0}
+        revealOnMount={revealRef.current ?? false}
         onSeed={composer.seed}
         onPlay={() => {
           void m.send({ type: 'play', word: composer.typed }).then((ok) => {

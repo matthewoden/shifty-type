@@ -25,6 +25,12 @@ const ANCHOR_X = 14 // where the current row's head sits, from the left
 const ANCHOR_BOTTOM = 86 // …and from the container bottom — roomy enough that the
 // fan's hint floats clear of the deck (the reclaimed slack, split below)
 const BOTTOM_SNAP = 40 // within this of the end counts as "at latest"
+const REVEAL_MS = 300 // unseen-word type-in starts as the camera ride lands
+
+/** How long a reveal owns the stage: the last tile landed, plus a beat. */
+function revealSpan(word: string): number {
+  return REVEAL_MS + word.length * 60 + 320
+}
 
 export interface LedgerComposer {
   typed: string
@@ -55,6 +61,10 @@ interface ChainLedgerProps {
   fan?: GripOption[] | null
   /** The player's opening turn: show a cursor on the empty board as the cue to type. */
   openerCaret?: boolean
+  /** The newest link landed while the player was away (the parent knows):
+   *  type it in on mount as if the other player just played it. Words that
+   *  arrive while mounted are detected internally. */
+  revealOnMount?: boolean
   onSeed?: (letters: string) => void
   onPlay?: () => void
 }
@@ -132,6 +142,42 @@ export function ChainLedger(props: ChainLedgerProps) {
   const reduced = useReducedMotion()
   const [detail, setDetail] = useState<{ link: ChainLink; index: number } | null>(null)
 
+  // An opponent word the player hasn't watched land — the newest link on
+  // mount (when the parent says so) or one appended while we're mounted —
+  // types itself in, tile by tile. Keyed to its row so it plays exactly
+  // once per word; the key simply moves on when the next reveal arrives.
+  const [reveal, setReveal] = useState<string | null>(() => {
+    if (!props.revealOnMount) return null
+    const last = props.chain[props.chain.length - 1]
+    return last && last.owner !== props.you ? `${props.chain.length - 1}-${last.word}` : null
+  })
+  // While the reveal types, the ghost fan — which mounts the same instant,
+  // since their word arriving IS your turn starting — holds hidden, then
+  // deals in row by row. Cleared on a timer so later fan mounts (a
+  // backspaced draft, a next turn) come back instantly as usual.
+  const [fanHold, setFanHold] = useState<number>(() => {
+    if (!props.revealOnMount) return 0
+    const last = props.chain[props.chain.length - 1]
+    return last && last.owner !== props.you ? revealSpan(last.word) : 0
+  })
+  useEffect(() => {
+    if (!fanHold) return
+    const t = setTimeout(() => setFanHold(0), fanHold + 800)
+    return () => clearTimeout(t)
+  }, [fanHold])
+  const chainLenRef = useRef(props.chain.length)
+  useEffect(() => {
+    const len = props.chain.length
+    if (len > chainLenRef.current) {
+      const last = props.chain[len - 1]
+      if (last.owner !== props.you) {
+        setReveal(`${len - 1}-${last.word}`)
+        setFanHold(revealSpan(last.word))
+      }
+    }
+    chainLenRef.current = len
+  }, [props.chain, props.you])
+
   const rows = useMemo(
     () => buildRows(props.chain, props.composer, props.fan),
     [props.chain, props.composer, props.fan],
@@ -142,7 +188,7 @@ export function ChainLedger(props: ChainLedgerProps) {
       {reduced ? (
         <FlatLedger {...props} rows={rows} onDetail={setDetail} />
       ) : (
-        <RailLedger {...props} rows={rows} onDetail={setDetail} />
+        <RailLedger {...props} rows={rows} reveal={reveal} fanHold={fanHold} onDetail={setDetail} />
       )}
       {detail && (
         <DetailCard
@@ -159,6 +205,10 @@ export function ChainLedger(props: ChainLedgerProps) {
 
 interface LedgerViewProps extends ChainLedgerProps {
   rows: DisplayRow[]
+  /** Row key of the unseen opponent word currently typing itself in. */
+  reveal?: string | null
+  /** While > 0, ghost starters hold hidden this many ms, then deal in. */
+  fanHold?: number
   onDetail: (row: { link: ChainLink; index: number }) => void
 }
 
@@ -243,7 +293,18 @@ function PlayChip({ composer, onPlay }: { composer: LedgerComposer; onPlay?: () 
 }
 
 function RailLedger(props: LedgerViewProps) {
-  const { rows, you, canChallenge, onChallenge, composer, onSeed, onPlay, onDetail } = props
+  const {
+    rows,
+    you,
+    canChallenge,
+    onChallenge,
+    composer,
+    reveal,
+    fanHold = 0,
+    onSeed,
+    onPlay,
+    onDetail,
+  } = props
   const scrollerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const rowsRef = useRef(rows)
@@ -442,6 +503,7 @@ function RailLedger(props: LedgerViewProps) {
   }, [])
 
   const chainLast = props.chain.length - 1
+  const firstGhost = rows.findIndex((r) => r.kind === 'ghost')
 
   const rowNodes = rows.map((row, rowIndex) => {
             const common = { position: 'absolute' as const, left: row.x, top: row.y }
@@ -459,6 +521,14 @@ function RailLedger(props: LedgerViewProps) {
               const isChainTip = row.index === chainLast
               const liveTint = isChainTip && composer?.typed ? composer.grip : 0
               const challengeable = isChainTip && canChallenge && !composer?.typed
+              // The unseen-word reveal: tiles type in one by one instead of
+              // the row sliding in whole; the meta and flag hold until the
+              // last tile has landed.
+              const revealing = row.key === reveal
+              const revealDone = REVEAL_MS + row.link.word.length * 60
+              const trim = revealing
+                ? { className: ' typein-meta', style: { animationDelay: `${revealDone}ms` } }
+                : { className: '', style: undefined }
               return (
                 <button
                   key={row.key}
@@ -466,7 +536,7 @@ function RailLedger(props: LedgerViewProps) {
                   onClick={() =>
                     challengeable ? onChallenge() : onDetail({ link: row.link, index: row.index })
                   }
-                  className={`flex items-center gap-2 -m-1.5 p-1.5 rounded-xl active:bg-board-lo row-settle transition-shadow duration-150${glow}`}
+                  className={`flex items-center gap-2 -m-1.5 p-1.5 rounded-xl active:bg-board-lo ${revealing ? '' : 'row-settle '}transition-shadow duration-150${glow}`}
                   style={common}
                   aria-label={
                     challengeable
@@ -479,11 +549,12 @@ function RailLedger(props: LedgerViewProps) {
                     side={side}
                     headTint={row.link.overlap}
                     tailTint={next?.overlap ?? liveTint}
+                    typeinFrom={revealing ? REVEAL_MS : undefined}
                   />
                   {challengeable && (
-                    <span className="bg-white text-p2-lip rounded-full w-7 h-7 flex items-center justify-center shadow-[0_3px_0_#E2DDD3]"><FlagIcon className="w-4 h-4" /></span>
+                    <span className={`bg-white text-p2-lip rounded-full w-7 h-7 flex items-center justify-center shadow-[0_3px_0_#E2DDD3]${trim.className}`} style={trim.style}><FlagIcon className="w-4 h-4" /></span>
                   )}
-                  <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
+                  <span className={`text-[10px] font-extrabold text-dim whitespace-nowrap${trim.className}`} style={trim.style}>
                     {locked
                       ? `word ${row.index + 1} of ${props.chain.length} · ${linkMeta(row.link, row.index)}`
                       : isChainTip && composer?.typed
@@ -494,6 +565,8 @@ function RailLedger(props: LedgerViewProps) {
               )
             }
             if (row.kind === 'ghost') {
+              // After a reveal, the fan waits for the word to finish typing,
+              // then deals in shallowest-first (delays past fanHold).
               return (
                 <button
                   key={row.key}
@@ -501,8 +574,12 @@ function RailLedger(props: LedgerViewProps) {
                   onClick={() => seedTap(row.option, row.x)}
                   className={`flex items-center gap-2 -m-1.5 p-1.5 rounded-xl active:bg-board-lo transition-opacity duration-150${
                     seeding ? ' opacity-0 pointer-events-none' : ''
-                  }`}
-                  style={common}
+                  }${fanHold ? ' ghost-in' : ''}`}
+                  style={
+                    fanHold
+                      ? { ...common, animationDelay: `${fanHold + (rowIndex - firstGhost) * 70}ms` }
+                      : common
+                  }
                   aria-label={`Start with ${row.option.letters.toUpperCase()}`}
                 >
                   <span className="flex gap-[3px]">
@@ -576,7 +653,8 @@ function RailLedger(props: LedgerViewProps) {
         <p
           className={`absolute inset-x-0 bottom-[28px] text-center text-[10px] font-extrabold text-dim uppercase tracking-wider pointer-events-none transition-opacity duration-150${
             seeding ? ' opacity-0' : ''
-          }`}
+          }${fanHold ? ' typein-meta' : ''}`}
+          style={fanHold ? { animationDelay: `${fanHold + 150}ms` } : undefined}
         >
           tap a starter, or just type — deeper scores more
         </p>

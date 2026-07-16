@@ -116,9 +116,9 @@ export function HowTo({
         </p>
         <p className="font-semibold text-[13.5px] text-ink leading-relaxed mt-2">
           But your friend can tap your word and challenge it{' '}
-          <FlagIcon className="inline w-4 h-4 align-[-2px] text-p2-lip" /> — then you <b>fold</b> (take it
-          back, lose a life) or <b>stand</b> (there's an official ruling, and whoever's wrong takes
-          the hit).
+          <FlagIcon className="inline w-4 h-4 align-[-2px] text-p2-lip" /> — the ruling comes down
+          on the spot, and whoever's wrong takes the hit: if your word <b>stands</b>, the bad call
+          costs them a life; if it's <b>rejected</b>, it's struck and the lost life is yours.
         </p>
         <p className="font-extrabold text-[13px] text-ink-strong mt-3">
           Bluffing is legal; getting caught is not.

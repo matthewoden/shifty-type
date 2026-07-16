@@ -187,6 +187,52 @@ body {
   }
 }
 
+/* Lloyd's coach cards deal in one after another (TutorialMatch staggers the
+   delays), so a copy change reads even if you were watching the board. */
+.bubble-in {
+  animation: bubble-in 0.32s cubic-bezier(0.2, 0.8, 0.3, 1.15) both;
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    translate: 0 -10px;
+    scale: 0.97;
+  }
+}
+
+/* An unseen word from the other side lands like it's being typed: tiles
+   fill-pop one after another (delays inline, WordTiles typeinFrom), then
+   the row's meta and flag fade up once the last tile has landed. */
+.typein-tile {
+  animation: fill-pop 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+.typein-meta {
+  animation: invite-in 0.3s ease both;
+}
+
+/* The ghost starters wait out a reveal, then deal in row by row. The from-
+   frame's visibility keeps them untappable through their delay, not just
+   unseen — a fill-pop with a hidden opening beat. */
+.ghost-in {
+  animation: ghost-in 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+@keyframes ghost-in {
+  from {
+    opacity: 0;
+    visibility: hidden;
+    scale: 0.6;
+    translate: 0 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bubble-in,
+  .typein-tile,
+  .typein-meta,
+  .ghost-in {
+    animation: none;
+  }
+}
+
 /* Table talk (passes, plays) slides up to arrive and sinks away to leave.
    Reduced motion keeps a 10ms flicker of animation so the animationend
    event that unmounts the leaving toast still fires. */

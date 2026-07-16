@@ -143,7 +143,7 @@ export function PasteBadge({
                 onClick={() => onOpenMatch(sheet.result.active as string)}
                 className="h-13 rounded-2xl font-extrabold bg-ink-strong text-white shadow-[0_4px_0_#262E38] active:translate-y-0.5"
               >
-                Open your duel · {sheet.result.active}
+                Open your match · {sheet.result.active}
               </button>
             )}
             <button
