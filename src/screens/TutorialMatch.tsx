@@ -185,14 +185,13 @@ export function TutorialMatch({
           {t.error}
         </div>
       )}
-      {/* Deck guidance eases off as the lesson goes: 'firstWord' glows the
-          one scripted key, 'rep' is deliberately bare (Lloyd says "no hints
-          this time"), and from the bluff on the real-play key hints light up
-          — the tutorial ends on the same deck the real game shows. */}
+      {/* The guided first word (ANTIC) is the one exception — its scripted
+          glow owns the deck. Every other turn shows the real game's key
+          hints, so nothing about the deck changes when the tutorial ends. */}
       <Deck
         disabled={!composerActive}
         glowKey={glowKey}
-        keyHints={beat === 'bluff' || beat === 'done' ? composer.keyHints : null}
+        keyHints={beat === 'firstWord' ? null : composer.keyHints}
         onKey={composer.key}
         onBackspace={composer.backspace}
       />

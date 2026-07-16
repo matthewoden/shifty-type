@@ -51,7 +51,7 @@ export type Beat =
   | 'firstWord' // passive: guided ANTIC (ghost finish + glowing key)
   | 'wait1' // Lloyd's lazy reply is coming
   | 'points' // gated: the scoring rule
-  | 'rep' // passive: second word, no hints
+  | 'rep' // passive: second word, unscripted
   | 'wait2' // Lloyd's fake is coming
   | 'smellIntro' // gated: Lloyd oversells the fake, in character
   | 'smell' // challenge-gated: tap the flagged word
@@ -179,7 +179,7 @@ export function bubbleFor(
         },
       ]
     case 'rep':
-      return [{ text: 'Your go — no hints this time. Tap a starter to get going.' }]
+      return [{ text: "Your go — this one's all you. Tap a starter to get going." }]
     case 'smellIntro': {
       const word = (ctx.fakeWord ?? '').toUpperCase()
       const meaning =
