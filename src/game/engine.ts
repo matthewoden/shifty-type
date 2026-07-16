@@ -2,32 +2,34 @@
 // no randomness. Runs identically in the browser and the Durable Object.
 
 import {
-  CHAIN_LIMIT,
-  MAX_WORD_LENGTH,
-  MIN_OVERLAP,
-  MIN_WORD_LENGTH,
-  STARTING_LIVES,
-  type MatchPhase,
-  type MatchState,
-  type Move,
-  type PlayerId,
-} from './types'
+    CHAIN_LIMIT,
+    MAX_WORD_LENGTH,
+    MIN_OVERLAP,
+    MIN_WORD_LENGTH,
+    STARTING_LIVES,
+    type MatchPhase,
+    type MatchState,
+    type Move,
+    type PlayerId,
+} from "./types";
 
-export type MoveResult = { ok: true; state: MatchState } | { ok: false; error: string }
+export type MoveResult =
+    | { ok: true; state: MatchState }
+    | { ok: false; error: string };
 
-const WORD_RE = new RegExp(`^[a-z]{${MIN_WORD_LENGTH},${MAX_WORD_LENGTH}}$`)
+const WORD_RE = new RegExp(`^[a-z]{${MIN_WORD_LENGTH},${MAX_WORD_LENGTH}}$`);
 
 export function opponentOf(id: PlayerId): PlayerId {
-  return id === 'p1' ? 'p2' : 'p1'
+    return id === "p1" ? "p2" : "p1";
 }
 
 function turnPhaseOf(id: PlayerId): MatchPhase {
-  return id === 'p1' ? 'P1_TURN' : 'P2_TURN'
+    return id === "p1" ? "P1_TURN" : "P2_TURN";
 }
 
-/** Points earned by a word: overlap² + 1 per letter beyond 6. */
+/** Points earned by a word: (overlap * overlap) + 1 per non-overlapped letter. */
 export function pointsFor(overlap: number, wordLength: number): number {
-  return overlap * overlap + Math.max(0, wordLength - 6)
+    return overlap * overlap + Math.max(0, wordLength - overlap);
 }
 
 /**
@@ -37,19 +39,19 @@ export function pointsFor(overlap: number, wordLength: number): number {
  * proper prefix: ultra → ultramarine). Returns 0 when no valid overlap.
  */
 export function overlapOf(prev: string, next: string): number {
-  const max = Math.min(prev.length, next.length)
-  for (let k = max; k >= MIN_OVERLAP; k--) {
-    if (k === prev.length && next.length <= prev.length) continue
-    if (prev.slice(-k) === next.slice(0, k)) return k
-  }
-  return 0
+    const max = Math.min(prev.length, next.length);
+    for (let k = max; k >= MIN_OVERLAP; k--) {
+        if (k === prev.length && next.length <= prev.length) continue;
+        if (prev.slice(-k) === next.slice(0, k)) return k;
+    }
+    return 0;
 }
 
 /** All suffixes of prev a next word may start with, shortest first. */
 export function validSuffixes(prev: string): string[] {
-  const out: string[] = []
-  for (let k = MIN_OVERLAP; k <= prev.length; k++) out.push(prev.slice(-k))
-  return out
+    const out: string[] = [];
+    for (let k = MIN_OVERLAP; k <= prev.length; k++) out.push(prev.slice(-k));
+    return out;
 }
 
 /**
@@ -59,34 +61,36 @@ export function validSuffixes(prev: string): string[] {
  * grip. Display-only — submission is judged by overlapOf.
  */
 export function provisionalGrip(prev: string, typed: string): number {
-  if (!typed) return 0
-  for (let k = prev.length; k >= MIN_OVERLAP; k--) {
-    const suffix = prev.slice(-k)
-    const consistent =
-      typed.length >= k ? typed.startsWith(suffix) : suffix.startsWith(typed)
-    if (consistent) return k
-  }
-  return 0
+    if (!typed) return 0;
+    for (let k = prev.length; k >= MIN_OVERLAP; k--) {
+        const suffix = prev.slice(-k);
+        const consistent =
+            typed.length >= k
+                ? typed.startsWith(suffix)
+                : suffix.startsWith(typed);
+        if (consistent) return k;
+    }
+    return 0;
 }
 
 /** The shallow grips shown as ghost seeds, with their base payouts. */
 export function gripOptions(
-  prev: string,
-  max = 3,
+    prev: string,
+    max = 3,
 ): Array<{ letters: string; overlap: number; points: number }> {
-  const out: Array<{ letters: string; overlap: number; points: number }> = []
-  for (let k = MIN_OVERLAP; k <= prev.length && out.length < max; k++) {
-    out.push({ letters: prev.slice(-k), overlap: k, points: k * k })
-  }
-  return out
+    const out: Array<{ letters: string; overlap: number; points: number }> = [];
+    for (let k = MIN_OVERLAP; k <= prev.length && out.length < max; k++) {
+        out.push({ letters: prev.slice(-k), overlap: k, points: k * k });
+    }
+    return out;
 }
 
 /** Per-key deck guidance while composing a reply. */
 export interface KeyHints {
-  /** Letters that may legally be pressed next, as one lowercase string. */
-  valid: string
-  /** The single letter, if exactly one is legal (the forced next press). */
-  forced: string | null
+    /** Letters that may legally be pressed next, as one lowercase string. */
+    valid: string;
+    /** The single letter, if exactly one is legal (the forced next press). */
+    forced: string | null;
 }
 
 /**
@@ -97,44 +101,53 @@ export interface KeyHints {
  * the dead-key rule in useComposer: a letter is valid iff it keeps the
  * provisional grip at or above MIN_OVERLAP.
  */
-export function nextKeyHints(prev: string | null, typed: string): KeyHints | null {
-  if (!prev) return null
-  let valid = ''
-  for (let c = 97; c <= 122; c++) {
-    const letter = String.fromCharCode(c)
-    if (provisionalGrip(prev, typed + letter) >= MIN_OVERLAP) valid += letter
-  }
-  // All 26 legal → grip is locked, the rest of the word is free-form.
-  if (valid.length === 26) return null
-  return { valid, forced: valid.length === 1 ? valid : null }
+export function nextKeyHints(
+    prev: string | null,
+    typed: string,
+): KeyHints | null {
+    if (!prev) return null;
+    let valid = "";
+    for (let c = 97; c <= 122; c++) {
+        const letter = String.fromCharCode(c);
+        if (provisionalGrip(prev, typed + letter) >= MIN_OVERLAP)
+            valid += letter;
+    }
+    // All 26 legal → grip is locked, the rest of the word is free-form.
+    if (valid.length === 26) return null;
+    return { valid, forced: valid.length === 1 ? valid : null };
 }
 
 export function createMatch(
-  p1Name: string,
-  p2Name: string | null = null,
-  opener: PlayerId = 'p1',
-  chainLimit?: number,
+    p1Name: string,
+    p2Name: string | null = null,
+    opener: PlayerId = "p1",
+    chainLimit?: number,
 ): MatchState {
-  return {
-    // The opener plays and shares the invite before anyone joins, so a fresh
-    // match starts in the opener's turn with the second seat empty.
-    phase: turnPhaseOf(opener),
-    players: {
-      p1: { id: 'p1', name: p1Name, points: 0, lives: STARTING_LIVES },
-      p2: { id: 'p2', name: p2Name ?? '', points: 0, lives: STARTING_LIVES },
-    },
-    chain: [],
-    usedWords: [],
-    winner: null,
-    version: 0,
-    ...(chainLimit !== undefined ? { chainLimit } : {}),
-    ...(p2Name === null ? { awaitingOpponent: true } : {}),
-  }
+    return {
+        // The opener plays and shares the invite before anyone joins, so a fresh
+        // match starts in the opener's turn with the second seat empty.
+        phase: turnPhaseOf(opener),
+        players: {
+            p1: { id: "p1", name: p1Name, points: 0, lives: STARTING_LIVES },
+            p2: {
+                id: "p2",
+                name: p2Name ?? "",
+                points: 0,
+                lives: STARTING_LIVES,
+            },
+        },
+        chain: [],
+        usedWords: [],
+        winner: null,
+        version: 0,
+        ...(chainLimit !== undefined ? { chainLimit } : {}),
+        ...(p2Name === null ? { awaitingOpponent: true } : {}),
+    };
 }
 
 /** The chain length that closes this match. */
 export function chainLimitOf(state: MatchState): number {
-  return state.chainLimit ?? CHAIN_LIMIT
+    return state.chainLimit ?? CHAIN_LIMIT;
 }
 
 /**
@@ -143,11 +156,11 @@ export function chainLimitOf(state: MatchState): number {
  * if not, it's still the opener's move. Only the waiting flag clears.
  */
 export function joinMatch(state: MatchState, p2Name: string): MatchState {
-  const next = structuredClone(state)
-  next.players.p2.name = p2Name
-  delete next.awaitingOpponent
-  next.version++
-  return next
+    const next = structuredClone(state);
+    next.players.p2.name = p2Name;
+    delete next.awaitingOpponent;
+    next.version++;
+    return next;
 }
 
 /**
@@ -155,15 +168,20 @@ export function joinMatch(state: MatchState, p2Name: string): MatchState {
  * lives, then by longest single word on the chain. Null on a full tie.
  */
 export function decideChainWinner(state: MatchState): PlayerId | null {
-  const { p1, p2 } = state.players
-  if (p1.points !== p2.points) return p1.points > p2.points ? 'p1' : 'p2'
-  if (p1.lives !== p2.lives) return p1.lives > p2.lives ? 'p1' : 'p2'
-  const longest = (id: PlayerId) =>
-    Math.max(0, ...state.chain.filter((l) => l.owner === id).map((l) => l.word.length))
-  const l1 = longest('p1')
-  const l2 = longest('p2')
-  if (l1 !== l2) return l1 > l2 ? 'p1' : 'p2'
-  return null
+    const { p1, p2 } = state.players;
+    if (p1.points !== p2.points) return p1.points > p2.points ? "p1" : "p2";
+    if (p1.lives !== p2.lives) return p1.lives > p2.lives ? "p1" : "p2";
+    const longest = (id: PlayerId) =>
+        Math.max(
+            0,
+            ...state.chain
+                .filter((l) => l.owner === id)
+                .map((l) => l.word.length),
+        );
+    const l1 = longest("p1");
+    const l2 = longest("p2");
+    if (l1 !== l2) return l1 > l2 ? "p1" : "p2";
+    return null;
 }
 
 /**
@@ -171,67 +189,73 @@ export function decideChainWinner(state: MatchState): PlayerId | null {
  * against the current phase and returns a NEW state (the input is never
  * mutated) or a player-facing error message.
  */
-export function applyMove(state: MatchState, actor: PlayerId, move: Move): MoveResult {
-  if (state.phase === 'CHAIN_COMPLETE' || state.phase === 'GAME_OVER')
-    return err('This match is over.')
+export function applyMove(
+    state: MatchState,
+    actor: PlayerId,
+    move: Move,
+): MoveResult {
+    if (state.phase === "CHAIN_COMPLETE" || state.phase === "GAME_OVER")
+        return err("This match is over.");
 
-  // P1_TURN or P2_TURN
-  const active: PlayerId = state.phase === 'P1_TURN' ? 'p1' : 'p2'
-  if (actor !== active) return err('Not your turn yet.')
-  if (move.type === 'play') return play(state, actor, move.word)
-  if (move.type === 'pass') return pass(state, actor)
-  return challenge(state, actor, move.wordIsReal)
+    // P1_TURN or P2_TURN
+    const active: PlayerId = state.phase === "P1_TURN" ? "p1" : "p2";
+    if (actor !== active) return err("Not your turn yet.");
+    if (move.type === "play") return play(state, actor, move.word);
+    if (move.type === "pass") return pass(state, actor);
+    return challenge(state, actor, move.wordIsReal);
 }
 
 function err(error: string): MoveResult {
-  return { ok: false, error }
+    return { ok: false, error };
 }
 
 function play(state: MatchState, actor: PlayerId, rawWord: string): MoveResult {
-  const word = rawWord.trim().toLowerCase()
-  if (!WORD_RE.test(word))
-    return err(`Words are ${MIN_WORD_LENGTH}–${MAX_WORD_LENGTH} letters, a–z only.`)
-  if (state.usedWords.includes(word))
-    return err(`${word.toUpperCase()} has already been played this match.`)
+    const word = rawWord.trim().toLowerCase();
+    if (!WORD_RE.test(word))
+        return err(
+            `Words are ${MIN_WORD_LENGTH}–${MAX_WORD_LENGTH} letters, a–z only.`,
+        );
+    if (state.usedWords.includes(word))
+        return err(`${word.toUpperCase()} has already been played this match.`);
 
-  const prev = state.chain[state.chain.length - 1]
-  let overlap = 0
-  if (prev) {
-    overlap = overlapOf(prev.word, word)
-    if (overlap === 0) {
-      const s2 = prev.word.slice(-2).toUpperCase()
-      const s3 = prev.word.slice(-3).toUpperCase()
-      return err(`Your word needs to start with ${s2} or ${s3}.`)
+    const prev = state.chain[state.chain.length - 1];
+    let overlap = 0;
+    if (prev) {
+        overlap = overlapOf(prev.word, word);
+        if (overlap === 0) {
+            const s2 = prev.word.slice(-2).toUpperCase();
+            const s3 = prev.word.slice(-3).toUpperCase();
+            return err(`Your word needs to start with ${s2} or ${s3}.`);
+        }
     }
-  }
 
-  const next = structuredClone(state)
-  const points = prev ? pointsFor(overlap, word.length) : 0
-  next.chain.push({ word, owner: actor, overlap, points })
-  next.usedWords.push(word)
-  next.players[actor].points += points
-  next.version++
-  if (next.chain.length >= chainLimitOf(next)) {
-    next.phase = 'CHAIN_COMPLETE'
-    next.winner = decideChainWinner(next)
-  } else {
-    next.phase = turnPhaseOf(opponentOf(actor))
-  }
-  return { ok: true, state: next }
+    const next = structuredClone(state);
+    const points = prev ? pointsFor(overlap, word.length) : 0;
+    next.chain.push({ word, owner: actor, overlap, points });
+    next.usedWords.push(word);
+    next.players[actor].points += points;
+    next.version++;
+    if (next.chain.length >= chainLimitOf(next)) {
+        next.phase = "CHAIN_COMPLETE";
+        next.winner = decideChainWinner(next);
+    } else {
+        next.phase = turnPhaseOf(opponentOf(actor));
+    }
+    return { ok: true, state: next };
 }
 
 function pass(state: MatchState, actor: PlayerId): MoveResult {
-  const next = structuredClone(state)
-  next.players[actor].lives--
-  next.version++
-  if (next.players[actor].lives <= 0) {
-    next.phase = 'GAME_OVER'
-    next.winner = opponentOf(actor)
-  } else {
-    // Opponent continues from the same word; no points moves.
-    next.phase = turnPhaseOf(opponentOf(actor))
-  }
-  return { ok: true, state: next }
+    const next = structuredClone(state);
+    next.players[actor].lives--;
+    next.version++;
+    if (next.players[actor].lives <= 0) {
+        next.phase = "GAME_OVER";
+        next.winner = opponentOf(actor);
+    } else {
+        // Opponent continues from the same word; no points moves.
+        next.phase = turnPhaseOf(opponentOf(actor));
+    }
+    return { ok: true, state: next };
 }
 
 /**
@@ -241,43 +265,50 @@ function pass(state: MatchState, actor: PlayerId): MoveResult {
  * loses a life, the chain rewinds. Either way the challenger is on move next
  * (they play on from the survived word, or from the rewound tail).
  */
-function challenge(state: MatchState, actor: PlayerId, wordIsReal: boolean): MoveResult {
-  const target = state.chain[state.chain.length - 1]
-  if (!target) return err('Nothing to challenge yet.')
-  if (target.owner === actor) return err("You can't challenge your own word.")
-  if (target.challengeSurvived)
-    return err(`${target.word.toUpperCase()} already survived a challenge.`)
+function challenge(
+    state: MatchState,
+    actor: PlayerId,
+    wordIsReal: boolean,
+): MoveResult {
+    const target = state.chain[state.chain.length - 1];
+    if (!target) return err("Nothing to challenge yet.");
+    if (target.owner === actor)
+        return err("You can't challenge your own word.");
+    if (target.challengeSurvived)
+        return err(
+            `${target.word.toUpperCase()} already survived a challenge.`,
+        );
 
-  const defender = opponentOf(actor)
-  const next = structuredClone(state)
-  next.version++
-  if (wordIsReal) {
-    next.chain[next.chain.length - 1].challengeSurvived = true
-    next.players[actor].lives--
-    if (next.players[actor].lives <= 0) {
-      next.phase = 'GAME_OVER'
-      next.winner = defender
+    const defender = opponentOf(actor);
+    const next = structuredClone(state);
+    next.version++;
+    if (wordIsReal) {
+        next.chain[next.chain.length - 1].challengeSurvived = true;
+        next.players[actor].lives--;
+        if (next.players[actor].lives <= 0) {
+            next.phase = "GAME_OVER";
+            next.winner = defender;
+        } else {
+            // Challenger still has to make a move, now from the verified word.
+            next.phase = turnPhaseOf(actor);
+        }
     } else {
-      // Challenger still has to make a move, now from the verified word.
-      next.phase = turnPhaseOf(actor)
+        rewindChain(next);
+        next.players[defender].lives--;
+        if (next.players[defender].lives <= 0) {
+            next.phase = "GAME_OVER";
+            next.winner = actor;
+        } else {
+            // Challenger plays from the previous word.
+            next.phase = turnPhaseOf(actor);
+        }
     }
-  } else {
-    rewindChain(next)
-    next.players[defender].lives--
-    if (next.players[defender].lives <= 0) {
-      next.phase = 'GAME_OVER'
-      next.winner = actor
-    } else {
-      // Challenger plays from the previous word.
-      next.phase = turnPhaseOf(actor)
-    }
-  }
-  return { ok: true, state: next }
+    return { ok: true, state: next };
 }
 
 /** Remove the accused word and refund the points it earned. */
 function rewindChain(state: MatchState): void {
-  const removed = state.chain.pop()
-  if (removed) state.players[removed.owner].points -= removed.points
-  // The word stays in usedWords: busted fakes can't be replayed.
+    const removed = state.chain.pop();
+    if (removed) state.players[removed.owner].points -= removed.points;
+    // The word stays in usedWords: busted fakes can't be replayed.
 }
