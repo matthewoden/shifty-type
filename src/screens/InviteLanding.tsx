@@ -4,6 +4,7 @@ import type { PreviewResponse } from '../lib/protocol'
 import { getSavedName, saveMatchAuth, saveName } from '../multi/storage'
 import { WordTiles } from '../components/WordTiles'
 import { Logo } from '../components/Logo'
+import { NameSheet } from '../components/NameSheet'
 
 interface InviteLandingProps {
   code: string
@@ -20,7 +21,6 @@ interface InviteLandingProps {
  */
 export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack }: InviteLandingProps) {
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
-  const [name, setName] = useState(getSavedName())
   const [askName, setAskName] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -35,12 +35,19 @@ export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack 
     }
   }, [code])
 
-  async function getStarted() {
-    const displayName = name.trim()
-    if (!displayName) {
+  // Tapping Get started with no saved name opens the name card; the card's
+  // submit routes back here with the name in hand.
+  function getStarted() {
+    const saved = getSavedName().trim()
+    if (!saved) {
       setAskName(true)
       return
     }
+    void join(saved)
+  }
+
+  async function join(displayName: string) {
+    setAskName(false)
     setPending(true)
     setError(null)
     saveName(displayName)
@@ -112,23 +119,12 @@ export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack 
       )}
 
       <div className="invite-in flex flex-col gap-3 w-full max-w-xs" style={{ animationDelay: '1800ms' }}>
-        {askName && (
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void getStarted()}
-            maxLength={20}
-            placeholder="Your name"
-            autoFocus
-            className="h-12 bg-white rounded-xl px-3.5 font-extrabold text-lg text-center text-ink-strong shadow-[0_4px_0_#E2DDD3] outline-none placeholder:text-dim placeholder:font-bold"
-          />
-        )}
         <button
-          onClick={() => void getStarted()}
+          onClick={getStarted}
           disabled={pending}
           className="h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 disabled:opacity-50"
         >
-          Get started
+          {pending ? 'Taking your seat…' : 'Get started'}
         </button>
         <button
           onClick={onHowTo}
@@ -147,6 +143,18 @@ export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack 
           Do the tutorial first and we'll bring you right back to {inviter}'s match.
         </p>
       </div>
+
+      {askName && (
+        <NameSheet
+          title="One thing first — your name?"
+          subtitle={`So ${inviter} knows who they're playing.`}
+          cta="Let's go"
+          accent="p2"
+          pending={pending}
+          onSubmit={(n) => void join(n)}
+          onClose={() => setAskName(false)}
+        />
+      )}
     </div>
   )
 }

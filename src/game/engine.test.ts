@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest'
 import {
   applyMove,
   createMatch,
-  decideVaultWinner,
-  goldFor,
+  decideChainWinner,
+  pointsFor,
   joinMatch,
   gripOptions,
+  nextKeyHints,
   overlapOf,
   provisionalGrip,
   validSuffixes,
@@ -57,12 +58,12 @@ describe('overlapOf', () => {
   })
 })
 
-describe('goldFor', () => {
+describe('pointsFor', () => {
   it('is overlap squared plus length bonus beyond 6', () => {
-    expect(goldFor(2, 4)).toBe(4)
-    expect(goldFor(3, 6)).toBe(9)
-    expect(goldFor(4, 7)).toBe(17)
-    expect(goldFor(5, 11)).toBe(30) // ultramarine
+    expect(pointsFor(2, 4)).toBe(4)
+    expect(pointsFor(3, 6)).toBe(9)
+    expect(pointsFor(4, 7)).toBe(17)
+    expect(pointsFor(5, 11)).toBe(30) // ultramarine
   })
 })
 
@@ -99,10 +100,10 @@ describe('match setup', () => {
 })
 
 describe('playing a word', () => {
-  it('accepts any well-formed opener with no gold', () => {
+  it('accepts any well-formed opener with no points', () => {
     const state = run(fresh(), [['p1', play('vault')]])
-    expect(state.chain).toEqual([{ word: 'vault', owner: 'p1', overlap: 0, gold: 0 }])
-    expect(state.players.p1.gold).toBe(0)
+    expect(state.chain).toEqual([{ word: 'vault', owner: 'p1', overlap: 0, points: 0 }])
+    expect(state.players.p1.points).toBe(0)
     expect(state.phase).toBe('P2_TURN')
   })
 
@@ -112,13 +113,13 @@ describe('playing a word', () => {
       ['p2', play('ultra')], // overlap ult → 9g
       ['p1', play('radish')], // overlap ra → 4g
     ])
-    expect(state.players.p2.gold).toBe(9)
-    expect(state.players.p1.gold).toBe(4)
+    expect(state.players.p2.points).toBe(9)
+    expect(state.players.p1.points).toBe(4)
     expect(state.phase).toBe('P2_TURN')
     expect(state.version).toBe(3)
   })
 
-  it('handles ultra → ultramarine: overlap 5, gold 30', () => {
+  it('handles ultra → ultramarine: overlap 5, points 30', () => {
     const state = run(fresh(), [
       ['p1', play('vault')],
       ['p2', play('ultra')],
@@ -126,8 +127,8 @@ describe('playing a word', () => {
     ])
     const link = state.chain[2]
     expect(link.overlap).toBe(5)
-    expect(link.gold).toBe(30)
-    expect(state.players.p1.gold).toBe(30)
+    expect(link.points).toBe(30)
+    expect(state.players.p1.points).toBe(30)
   })
 
   it('normalizes case and whitespace', () => {
@@ -168,7 +169,7 @@ describe('playing a word', () => {
       ['p2', play('ltxq')], // pure nonsense, valid overlap "lt"
     ])
     expect(state.chain[1].word).toBe('ltxq')
-    expect(state.players.p2.gold).toBe(4)
+    expect(state.players.p2.points).toBe(4)
   })
 
   it('does not mutate the input state', () => {
@@ -194,7 +195,7 @@ describe('passing', () => {
       ['p2', pass],
     ])
     expect(state.players.p2.lives).toBe(2)
-    expect(state.players.p2.gold).toBe(0)
+    expect(state.players.p2.points).toBe(0)
     expect(state.chain).toHaveLength(1)
     expect(state.phase).toBe('P1_TURN')
   })
@@ -232,10 +233,10 @@ describe('challenges', () => {
     expectError(applyMove(state, 'p1', challenge(false)), "You can't challenge your own word.")
   })
 
-  it('REJECTED (fake): word removed, gold refunded, owner loses a life, challenger plays on', () => {
+  it('REJECTED (fake): word removed, points refunded, owner loses a life, challenger plays on', () => {
     const state = run(midMatch(), [['p1', challenge(false)]])
     expect(state.chain.map((l) => l.word)).toEqual(['vault'])
-    expect(state.players.p2.gold).toBe(0) // the 9g refunded
+    expect(state.players.p2.points).toBe(0) // the 9g refunded
     expect(state.players.p2.lives).toBe(2)
     expect(state.phase).toBe('P1_TURN') // the challenger plays from the previous word
 
@@ -258,14 +259,14 @@ describe('challenges', () => {
     expect(state.phase).toBe('P2_TURN') // the challenger (p2) opens next
     const next = applyMove(state, 'p2', play('vault'))
     expect(next.ok).toBe(true)
-    if (next.ok) expect(next.state.chain[0].gold).toBe(0)
+    if (next.ok) expect(next.state.chain[0].points).toBe(0)
   })
 
   it('STANDS (real): challenger loses a life and plays on from the verified word', () => {
     const state = run(midMatch(), [['p1', challenge(true)]])
     expect(state.players.p1.lives).toBe(2)
     expect(state.players.p2.lives).toBe(3)
-    expect(state.players.p2.gold).toBe(9) // keeps the gold
+    expect(state.players.p2.points).toBe(9) // keeps the points
     expect(state.chain[1].challengeSurvived).toBe(true)
     expect(state.phase).toBe('P1_TURN')
   })
@@ -304,43 +305,43 @@ describe('challenges', () => {
   })
 })
 
-describe('chain completion (VAULT_CLOSED)', () => {
+describe('chain completion (CHAIN_COMPLETE)', () => {
   // aabb → bbcc → ccdd … each 4 letters, overlap 2, 4g apiece.
   const pair = (i: number) => String.fromCharCode(97 + i).repeat(2)
   const chainWords = Array.from({ length: CHAIN_LIMIT }, (_, i) => pair(i) + pair(i + 1))
 
-  it('closes the vault at 20 words and the richer player wins', () => {
+  it('completes the chain at 20 words and the richer player wins', () => {
     const steps = chainWords.map(
       (w, i): [PlayerId, Move] => [i % 2 === 0 ? 'p1' : 'p2', play(w)],
     )
     const state = run(fresh(), steps)
-    expect(state.phase).toBe('VAULT_CLOSED')
+    expect(state.phase).toBe('CHAIN_COMPLETE')
     // p1's opener earns nothing, so p2 leads 40g to 36g.
-    expect(state.players.p1.gold).toBe(36)
-    expect(state.players.p2.gold).toBe(40)
+    expect(state.players.p1.points).toBe(36)
+    expect(state.players.p2.points).toBe(40)
     expect(state.winner).toBe('p2')
     expectError(applyMove(state, 'p1', play('anything')), 'This match is over.')
   })
 
-  it('breaks gold ties by lives, then longest word, then null', () => {
+  it('breaks points ties by lives, then longest word, then null', () => {
     const base = fresh()
     const withStats = (
-      overrides: Partial<Record<PlayerId, { gold?: number; lives?: number }>>,
+      overrides: Partial<Record<PlayerId, { points?: number; lives?: number }>>,
       chain: Array<{ word: string; owner: PlayerId }> = [],
     ): MatchState => {
       const s = structuredClone(base)
       for (const id of ['p1', 'p2'] as PlayerId[]) {
-        s.players[id].gold = overrides[id]?.gold ?? 10
+        s.players[id].points = overrides[id]?.points ?? 10
         s.players[id].lives = overrides[id]?.lives ?? 2
       }
-      s.chain = chain.map((c) => ({ ...c, overlap: 2, gold: 4 }))
+      s.chain = chain.map((c) => ({ ...c, overlap: 2, points: 4 }))
       return s
     }
 
-    expect(decideVaultWinner(withStats({ p1: { gold: 12 }, p2: { gold: 9 } }))).toBe('p1')
-    expect(decideVaultWinner(withStats({ p1: { lives: 1 }, p2: { lives: 3 } }))).toBe('p2')
+    expect(decideChainWinner(withStats({ p1: { points: 12 }, p2: { points: 9 } }))).toBe('p1')
+    expect(decideChainWinner(withStats({ p1: { lives: 1 }, p2: { lives: 3 } }))).toBe('p2')
     expect(
-      decideVaultWinner(
+      decideChainWinner(
         withStats({}, [
           { word: 'longests', owner: 'p1' },
           { word: 'short', owner: 'p2' },
@@ -348,7 +349,7 @@ describe('chain completion (VAULT_CLOSED)', () => {
       ),
     ).toBe('p1')
     expect(
-      decideVaultWinner(
+      decideChainWinner(
         withStats({}, [
           { word: 'equal', owner: 'p1' },
           { word: 'level', owner: 'p2' },
@@ -376,8 +377,8 @@ describe('scripted match replay', () => {
     const state = run(fresh(), script)
     expect(state.phase).toBe('GAME_OVER')
     expect(state.winner).toBe('p2')
-    expect(state.players.p1).toMatchObject({ gold: 34, lives: 0 })
-    expect(state.players.p2).toMatchObject({ gold: 13, lives: 1 })
+    expect(state.players.p1).toMatchObject({ points: 34, lives: 0 })
+    expect(state.players.p2).toMatchObject({ points: 13, lives: 1 })
     expect(state.chain.map((l) => l.word)).toEqual([
       'vault',
       'ultra',
@@ -414,16 +415,49 @@ describe('provisionalGrip (composer display)', () => {
 describe('gripOptions (the fan)', () => {
   it('lists the shallowest grips with base payouts', () => {
     expect(gripOptions('onward')).toEqual([
-      { letters: 'rd', overlap: 2, gold: 4 },
-      { letters: 'ard', overlap: 3, gold: 9 },
-      { letters: 'ward', overlap: 4, gold: 16 },
+      { letters: 'rd', overlap: 2, points: 4 },
+      { letters: 'ard', overlap: 3, points: 9 },
+      { letters: 'ward', overlap: 4, points: 16 },
     ])
   })
 
   it('caps at the word itself for short words', () => {
     expect(gripOptions('ram')).toEqual([
-      { letters: 'am', overlap: 2, gold: 4 },
-      { letters: 'ram', overlap: 3, gold: 9 },
+      { letters: 'am', overlap: 2, points: 4 },
+      { letters: 'ram', overlap: 3, points: 9 },
     ])
+  })
+})
+
+describe('nextKeyHints (guided deck keys)', () => {
+  it('has no restriction for the opener (no previous word)', () => {
+    expect(nextKeyHints(null, '')).toBeNull()
+  })
+
+  it('lights the first letters of every valid suffix when nothing is typed', () => {
+    // plant → suffixes nt, ant, lant, plant → first letters n, a, l, p
+    const h = nextKeyHints('plant', '')
+    expect(h).not.toBeNull()
+    expect([...(h?.valid ?? '')].sort()).toEqual(['a', 'l', 'n', 'p'])
+    expect(h?.forced).toBeNull()
+  })
+
+  it('narrows to a single forced letter mid-grip', () => {
+    // otter, typed "te" → only "ter" is consistent, so r is forced
+    const h = nextKeyHints('otter', 'te')
+    expect(h?.valid).toBe('r')
+    expect(h?.forced).toBe('r')
+  })
+
+  it('offers the branch letters while several suffixes remain reachable', () => {
+    // otter, typed "t" → "ter" (needs e) and "tter" (needs t) both live
+    const h = nextKeyHints('otter', 't')
+    expect([...(h?.valid ?? '')].sort()).toEqual(['e', 't'])
+    expect(h?.forced).toBeNull()
+  })
+
+  it('returns null once the grip is locked and the word is free-form', () => {
+    // otter, typed "ter" → grip locked at 3, any next letter is legal
+    expect(nextKeyHints('otter', 'ter')).toBeNull()
   })
 })

@@ -59,7 +59,7 @@ export function useSoloMatch(initial: SoloSave) {
   const [event, setEvent] = useState<SoloEvent | null>(null)
   const [botThinking, setBotThinking] = useState(false)
 
-  const terminal = state.phase === 'GAME_OVER' || state.phase === 'VAULT_CLOSED'
+  const terminal = state.phase === 'GAME_OVER' || state.phase === 'CHAIN_COMPLETE'
   // Challenges resolve instantly, so the bot only ever acts on its own turn.
   const botTurn = state.phase === 'P2_TURN'
 

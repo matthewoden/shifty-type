@@ -257,19 +257,19 @@ body {
   }
 }
 
-/* Game-over gold bars grow to their totals. */
-.gold-bar {
-  width: var(--gold-w);
-  animation: gold-grow 1s ease-out;
+/* Game-over points bars grow to their totals. */
+.points-bar {
+  width: var(--points-w);
+  animation: points-grow 1s ease-out;
 }
-@keyframes gold-grow {
+@keyframes points-grow {
   from {
     width: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .stamp-in,
-  .gold-bar {
+  .points-bar {
     animation: none;
   }
 }

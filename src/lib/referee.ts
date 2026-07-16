@@ -1,6 +1,6 @@
 // Challenge resolution: embedded list first (instant, offline-friendly),
 // Free Dictionary API second, 'unknown' when the referee is unreachable —
-// the UI then falls back to the coin flip ("settle it like thieves").
+// the UI then falls back to the coin flip to settle it.
 
 import { WORD_SET } from '../game/wordlist'
 

@@ -9,7 +9,7 @@ import type { SoloSave } from '../solo/useSoloMatch'
 export type Bucket = 'yourMove' | 'theirMove' | 'pending' | 'finished'
 
 function isTerminal(phase: MatchState['phase']): boolean {
-  return phase === 'GAME_OVER' || phase === 'VAULT_CLOSED'
+  return phase === 'GAME_OVER' || phase === 'CHAIN_COMPLETE'
 }
 
 /** Which lobby section a duel belongs in. */

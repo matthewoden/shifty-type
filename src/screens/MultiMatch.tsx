@@ -81,7 +81,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   const oppName = state.players[opponentOf(you)].name
   const oppHere = presence?.[opponentOf(you)] ?? false
   const newest = state.chain[state.chain.length - 1]
-  const terminal = state.phase === 'GAME_OVER' || state.phase === 'VAULT_CLOSED'
+  const terminal = state.phase === 'GAME_OVER' || state.phase === 'CHAIN_COMPLETE'
   // The friend hasn't taken their seat yet — the opener plays their word, then
   // hands off the invite. Only ever true for the opener (the joiner clears it).
   const awaiting = !!state.awaitingOpponent
@@ -131,6 +131,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
         onChallenge={() => setConfirmingChallenge(true)}
         composer={composer.typed ? composer : null}
         fan={fan}
+        openerCaret={isMyTurn && state.chain.length === 0}
         onSeed={composer.seed}
         onPlay={() => {
           void m.send({ type: 'play', word: composer.typed }).then((ok) => {
@@ -151,7 +152,13 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
         </p>
       )}
       {myTurn ? (
-        <Deck disabled={m.busy} rise onKey={composer.key} onBackspace={composer.backspace} />
+        <Deck
+          disabled={m.busy}
+          rise
+          keyHints={composer.keyHints}
+          onKey={composer.key}
+          onBackspace={composer.backspace}
+        />
       ) : awaiting ? (
         <div className="px-5 pb-10 pt-2 text-center">
           <p className="font-extrabold text-[15px] text-ink-strong">

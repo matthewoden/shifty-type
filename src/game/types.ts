@@ -6,7 +6,7 @@ export type PlayerId = 'p1' | 'p2'
 export interface Player {
   id: PlayerId
   name: string
-  gold: number
+  points: number
   lives: number
 }
 
@@ -16,14 +16,14 @@ export interface ChainLink {
   owner: PlayerId
   /** Letters shared with the previous word (0 for the opener). */
   overlap: number
-  /** Gold earned by this word: overlap² + max(0, length − 6). 0 for the opener. */
-  gold: number
+  /** Points earned by this word: overlap² + max(0, length − 6). 0 for the opener. */
+  points: number
   /** Set once the word has survived a challenge. */
   challengeSurvived?: boolean
 }
 
 /** See GAME_DESIGN.md §States. */
-export type MatchPhase = 'P1_TURN' | 'P2_TURN' | 'VAULT_CLOSED' | 'GAME_OVER'
+export type MatchPhase = 'P1_TURN' | 'P2_TURN' | 'CHAIN_COMPLETE' | 'GAME_OVER'
 
 export type Move =
   | { type: 'play'; word: string }
@@ -47,7 +47,7 @@ export interface MatchState {
    * challenge — no word may repeat within a match, even a busted fake.
    */
   usedWords: string[]
-  /** Winner, once phase is VAULT_CLOSED or GAME_OVER. Null on gold tie… which tiebreaks prevent. */
+  /** Winner, once phase is CHAIN_COMPLETE or GAME_OVER. Null on points tie… which tiebreaks prevent. */
   winner: PlayerId | null
   /** Monotonic counter, bumped on every applied move; used for cheap polling. */
   version: number

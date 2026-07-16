@@ -1,8 +1,8 @@
 # Shifty Type — Game Design
 
-> Renamed from "Word Chain" and fully de-heisted, 2026-07 (Matt's call). Voice: silly, warm, card-table — bluff/busted/accuse/ruling/stands/rejected are game words; vault/heist/thieves/stash/accomplice/hideout are banned. Scores show as **points ("pts")** in the UI (code and this doc historically say gold). The bot is a llama — one per mood: **Lloyd** (Mellow/easy), **Llois** (Curious/medium), **Llarry** (Unhinged/hard). Name updated again 2026-07-12: **Shifty Type** (SHIFTY → TYPE, grip TY, fused SHIFTYPE — see mockups/name-board.html); logo remains "the stair" with the new words.
+> Renamed from "Word Chain" and fully de-heisted, 2026-07 (Matt's call). Voice: silly, warm, card-table — bluff/busted/accuse/ruling/stands/rejected are game words; vault/heist/thieves/stash/accomplice/hideout are banned. Scores are **points ("pts")** everywhere — UI, code, and this doc (renamed 2026-07-16 from the old "gold"). The bot is a llama — one per mood: **Lloyd** (Mellow/easy), **Llois** (Curious/medium), **Llarry** (Unhinged/hard). Name updated again 2026-07-12: **Shifty Type** (SHIFTY → TYPE, grip TY, fused SHIFTYPE — see mockups/name-board.html); logo remains "the stair" with the new words.
 
-Two players build one chain of overlapping words. Shared letters are the joints — riskier overlaps earn more gold. Bluffing is legal; getting caught is not.
+Two players build one chain of overlapping words. Shared letters are the joints — riskier overlaps earn more points. Bluffing is legal; getting caught is not.
 
 ## Core loop
 
@@ -15,7 +15,7 @@ Players alternate turns. On your turn you either **play a word** or **challenge*
 - **No word may repeat within a match** (case-insensitive).
 - Words are NOT dictionary-checked when played. Anything matching `^[a-z]{3,}$` with a valid overlap is accepted onto the chain. This is deliberate: bluffing is the game.
 
-### Points (scoring — shown as "pts"; code and this doc historically say gold)
+### Points (scoring — shown as "pts")
 - Points taken = **overlap² + max(0, wordLength − 6)**.
   - Overlap 2 → 4g. Overlap 3 → 9g. Overlap 4 → 16g. Overlap 5 → 25g.
   - Length bonus: +1 per letter beyond 6 (`ultramarine` = 25 + 5 = 30g).
@@ -25,7 +25,7 @@ Players alternate turns. On your turn you either **play a word** or **challenge*
 Each player starts with **3 lives** (rendered as pips in the player's color). You lose a life when:
 1. A word of yours is **REJECTED** under a challenge — the challenger proved it fake, and it's removed from the chain.
 2. Your **challenge fails** — the word you accused **STANDS** (it was real).
-3. You **pass** because you're stuck. (Passing also skips your gold for the turn; opponent continues from the same word.)
+3. You **pass** because you're stuck. (Passing also skips your points for the turn; opponent continues from the same word.)
 
 ### The challenge (signature mechanic)
 Instead of playing, you may challenge the word your opponent just played (only the most recent word is challengeable). It resolves **on the spot** — there is no defender fold/stand step (removed 2026-07: folding and a failed stand had identical outcomes, so the defender's "choice" was pure async delay).
@@ -36,11 +36,11 @@ Instead of playing, you may challenge the word your opponent just played (only t
 - API unreachable → **error** ("Couldn't get a ruling just now — check your connection and flag it again."). Nothing changes, no life lost; the challenger can flag it again. (Solo: a *bot*-initiated challenge instead falls back to the embedded list so solo stays fully playable offline.)
 
 The verdict is a state stamped on the word; either way the challenger is on move next:
-- **STANDS** (real) — the word keeps its place and its gold; the **challenger** loses a life for the bad call. Blue-grey stamp (`p1-lip`).
-- **REJECTED** (fake) — the word is removed, its gold refunded, the chain rewinds one link, and the **word's owner** loses a life; the challenger plays from the previous word. Red stamp (always red — a word died, whoever played it).
+- **STANDS** (real) — the word keeps its place and its points; the **challenger** loses a life for the bad call. Blue-grey stamp (`p1-lip`).
+- **REJECTED** (fake) — the word is removed, its points refunded, the chain rewinds one link, and the **word's owner** loses a life; the challenger plays from the previous word. Red stamp (always red — a word died, whoever played it).
 
 ### Match end
-A match ends when either player is out of lives (**opponent wins outright, gold irrelevant**), or when the chain reaches **20 words** ("the chain is complete") — then **highest gold wins**. Ties broken by remaining lives, then by longest single word played.
+A match ends when either player is out of lives (**opponent wins outright, points irrelevant**), or when the chain reaches **20 words** ("the chain is complete") — then **highest points wins**. Ties broken by remaining lives, then by longest single word played.
 
 ### Opening move
 Player 1's first word can be anything (3+ letters). Show a "pick your entry point" framing.
@@ -65,7 +65,7 @@ Same rules vs a bot. Bot behavior:
 
 ## States
 ```
-(create) → P1_TURN ⇄ P2_TURN → VAULT_CLOSED
+(create) → P1_TURN ⇄ P2_TURN → CHAIN_COMPLETE
                 → GAME_OVER (lives exhausted)
 ```
 A challenge resolves inside a single turn — no `CHALLENGE_PENDING` phase (removed
@@ -83,9 +83,9 @@ caller (DO / solo controller), keeping the engine pure.
 ## Screens (mobile-first, 375px)
 1. **Home** — Duel a friend (create) / Play a local llama / Join with a code / Resume match (if one is live).
 2. **Open + invite** — creating drops the opener straight onto the board in their own turn; they play an opening word, then an invite sheet (native share + copy-link + raw code) hands the match to a friend. A friend who taps the invite link lands on an **invite screen** ("{name} invited you…", the opening word, and Get started / How to play / Try the tutorial — the tutorial returns them to the invite). There is no waiting lobby.
-3. **Match** — the staircase ledger with the camera rail (see §The ledger camera) over a custom key deck (see §Inline play & the deck — this supersedes the earlier input-bar spec). Challenge is initiated by tapping the opponent's newest word (⚖ tag + confirm sheet). Player HUD cards (color, gold, life pips) pinned top; the active player's card wears its own color as the chiclet lip (soft pulse while the bot thinks) — there is no turn pill.
+3. **Match** — the staircase ledger with the camera rail (see §The ledger camera) over a custom key deck (see §Inline play & the deck — this supersedes the earlier input-bar spec). Challenge is initiated by tapping the opponent's newest word (⚖ tag + confirm sheet). Player HUD cards (color, points, life pips) pinned top; the active player's card wears its own color as the chiclet lip (soft pulse while the bot thinks) — there is no turn pill.
 4. **Challenge verdict** — full-screen dramatic beat: the **STANDS** / **REJECTED** stamp on the word, the ruling, and who lost a life. It fires instantly on the challenger's tap — no defender prompt, no waiting.
-5. **Chain complete / Game over** — gold count-up animation, full chain replay, Rematch button (rematch swaps who opens).
+5. **Chain complete / Game over** — points count-up animation, full chain replay, Rematch button (rematch swaps who opens).
 
 ## Visual direction (FINAL — see mockups/threes-v2-rail.html for the reference)
 - Threes-inspired: warm cream board, candy "chiclet" tiles with a hard bottom lip (solid color, `box-shadow: 0 4px 0 <lip>`), border-radius ~7px, no blur shadows on tiles, rounded chunky type (Baloo 2 or similar) for words and UI.
@@ -95,14 +95,14 @@ caller (DO / solo controller), keeping the engine pure.
   - (Re-colored 2026-07 from the original sky-blue/pink at Matt's call — indigo/coral is also the colorblind-safer pairing.)
 - **The tint-joint rule (signature):** every word renders in its owner's color. Letters that are shared with an adjacent word render in the pale tint of their own word's color — the giving word's tail tints, and the gripping word's head tints. Both sides of every joint fade. Consequence to preserve: full-saturation tiles are the *unspent* letters, so the board visibly "drains" as the chain gets used up.
 - **Logo (FINAL, 2026-07): "the stair"** — SPELL over LLAMA as real chain tiles, LLAMA's head LL gripping SPELL's tail LL, tint-joints applied (see mockups/logo-mocks.html, direction A). Used on the home screen and as the app icon. No other logo surfaces in v1.
-- Lives are colored pips in the player's color (grayed when lost). Gold totals in each player's HUD card. Turn pill takes the active player's color.
+- Lives are colored pips in the player's color (grayed when lost). Points totals in each player's HUD card. Turn pill takes the active player's color.
 - Motion: new word slides in along the rail and lands with a small settle; challenge verdicts stamp REAL/FAKE. Respect `prefers-reduced-motion`.
 
 ## The ledger camera (FINAL)
 - The chain is a pure staircase on a virtual canvas: each word's row is offset so its head letters sit under the tail letters it grips. No wrapping, no cropping. Word length cap: 12 letters (enforced by rules), so any single row fits the viewport.
 - **Camera on a rail:** the user scrolls vertically (native scroll element for momentum); scroll position maps to distance along the polyline of actual row anchor positions, and the canvas transform follows — the view glides diagonally along the chain's true path, never drifting. A faint dotted thread renders the rail behind the tiles.
 - Default camera position: pinned to the newest word + required tail + input. When scrolled away, show a "▼ Back to latest" pill; new-move arrival while scrolled shows a toast, doesn't yank the camera.
-- History rows are tappable for a detail card (owner, gold, challenge outcome ⚖). Margin annotations keep the receipts.
+- History rows are tappable for a detail card (owner, points, challenge outcome ⚖). Margin annotations keep the receipts.
 - **Scroll-back = free explore (revised 2026-07, v2)**: a small scroll up releases the camera from the rail — free native two-axis panning over the true staircase canvas, dotted thread and all. "▼ Back to latest" snaps back onto the rail at the newest word. The rail-locked glide is only for the pinned live view; history is explored freely on the diagonal itself.
 - `prefers-reduced-motion` / accessibility fallback: a plain left-aligned vertical list, one word per row, tint-joints intact (they carry the overlap info without the staircase).
 

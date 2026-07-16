@@ -29,7 +29,7 @@ const BOTTOM_SNAP = 40 // within this of the end counts as "at latest"
 export interface LedgerComposer {
   typed: string
   grip: number
-  gold: number
+  points: number
   canPlay: boolean
   /** Tutorial-only: the suggested finish, rendered as ghost tiles after the draft. */
   hintTail?: string
@@ -38,7 +38,7 @@ export interface LedgerComposer {
 export interface GripOption {
   letters: string
   overlap: number
-  gold: number
+  points: number
 }
 
 interface ChainLedgerProps {
@@ -53,6 +53,8 @@ interface ChainLedgerProps {
   composer?: LedgerComposer | null
   /** Ghost seeds, when it's the local player's move and nothing is typed. */
   fan?: GripOption[] | null
+  /** The player's opening turn: show a cursor on the empty board as the cue to type. */
+  openerCaret?: boolean
   onSeed?: (letters: string) => void
   onPlay?: () => void
 }
@@ -80,7 +82,7 @@ function useReducedMotion(): boolean {
 
 function linkMeta(link: ChainLink, index: number): string {
   if (index === 0) return 'opener'
-  return `+${link.gold}${link.challengeSurvived ? ' · real' : ''}`
+  return `+${link.points}${link.challengeSurvived ? ' · real' : ''}`
 }
 
 function buildRows(
@@ -235,7 +237,7 @@ function PlayChip({ composer, onPlay }: { composer: LedgerComposer; onPlay?: () 
       className="absolute right-3 bottom-[103px] h-11 px-5 rounded-[13px] font-extrabold text-[14px] bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5 active:shadow-[0_2px_0_var(--color-p1-lip)] disabled:opacity-40 disabled:active:translate-y-0 flex items-center gap-1.5 draft-in"
     >
       Play it!
-      {composer.gold > 0 && <small className="text-[11px] opacity-85">+{composer.gold}</small>}
+      {composer.points > 0 && <small className="text-[11px] opacity-85">+{composer.points}</small>}
     </button>
   )
 }
@@ -511,7 +513,7 @@ function RailLedger(props: LedgerViewProps) {
                     ))}
                   </span>
                   <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
-                    · {row.option.gold}+
+                    · {row.option.points}+
                   </span>
                 </button>
               )
@@ -554,9 +556,16 @@ function RailLedger(props: LedgerViewProps) {
         >
           <Rail rows={rows} />
           {rows.length === 0 && (
-            <p className="absolute left-3.5 top-0 w-64 text-dim font-bold text-sm">
-              The chain starts with you. Any word, three letters or more…
-            </p>
+            <>
+              {props.openerCaret && (
+                <span className="absolute left-0 top-0 h-9 w-[3px] bg-p1 rounded motion-safe:animate-pulse" />
+              )}
+              <p className="absolute left-3.5 top-12 w-64 text-dim font-bold text-sm">
+                {props.openerCaret
+                  ? 'Tap any letter to open — your word can be anything, three letters or more.'
+                  : 'The chain starts with you. Any word, three letters or more…'}
+              </p>
+            </>
           )}
           {rowNodes}
         </div>
@@ -654,9 +663,14 @@ function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: 
     <div ref={ref} className="absolute inset-0 overflow-y-auto px-3.5 py-3 flex flex-col">
       <div className="mt-auto" />
       {props.chain.length === 0 && !composer?.typed && (
-        <p className="text-dim font-bold text-sm pb-4">
-          The chain starts with you. Any word, three letters or more…
-        </p>
+        <div className="flex items-center gap-2 pb-4">
+          {props.openerCaret && <span className="h-9 w-[3px] bg-p1 rounded motion-safe:animate-pulse" />}
+          <p className="text-dim font-bold text-sm">
+            {props.openerCaret
+              ? 'Tap any letter to open — your word can be anything, three letters or more.'
+              : 'The chain starts with you. Any word, three letters or more…'}
+          </p>
+        </div>
       )}
       {props.chain.map((link, index) => {
         const next = props.chain[index + 1]
@@ -709,7 +723,7 @@ function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: 
                       </span>
                     ))}
                   </span>
-                  <span className="text-[10px] font-extrabold text-dim">· {g.option.gold}+</span>
+                  <span className="text-[10px] font-extrabold text-dim">· {g.option.points}+</span>
                 </button>
               ),
           )}
@@ -736,7 +750,7 @@ function PlayChipFlat({ composer, onPlay }: { composer: LedgerComposer; onPlay?:
       className="h-11 px-5 rounded-[13px] font-extrabold text-[14px] bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] disabled:opacity-40 flex items-center gap-1.5"
     >
       Play it!
-      {composer.gold > 0 && <small className="text-[11px] opacity-85">+{composer.gold}</small>}
+      {composer.points > 0 && <small className="text-[11px] opacity-85">+{composer.points}</small>}
     </button>
   )
 }
@@ -770,7 +784,7 @@ function DetailCard({
           · word {index + 1}
           {index === 0
             ? ' · the opener (no points)'
-            : ` · overlapped ${link.overlap} letters for ${link.gold} points`}
+            : ` · overlapped ${link.overlap} letters for ${link.points} points`}
         </p>
         {link.challengeSurvived && (
           <p className="font-bold text-ink text-[14px] flex items-center gap-1.5">

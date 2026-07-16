@@ -1,0 +1,391 @@
+<title>Shifty Type — name card & typing hints</title>
+<style>
+  :root {
+    /* App tokens (from src/index.css) — the phones always render in these,
+       regardless of the reviewer's theme. */
+    --board: #f6f3ee;
+    --board-lo: #eae6de;
+    --ink: #55606e;
+    --ink-strong: #3e4854;
+    --dim: #a8aeb8;
+    --p1: #8B90F4;      --p1-lip: #6A6FDC;
+    --p1-tint: #DCDEFB; --p1-tint-lip: #BFC2F3; --p1-tint-ink: #565CC4;
+    --p2: #F98B57;      --p2-lip: #DE6A2E;
+    --p2-tint: #FDE2D3; --p2-tint-lip: #F5C4A6; --p2-tint-ink: #D0682A;
+    --key-lip: #DDD8CE;
+    --new: #16a34a;
+
+    /* Page chrome — adapts to the reviewer's theme. */
+    --page: #eceae4;
+    --panel: #ffffff;
+    --page-ink: #2f3742;
+    --page-dim: #6b7480;
+    --hair: #ddd8ce;
+    --font: 'Baloo 2', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #1a1d21; --panel: #23272c; --page-ink: #e7e4dd;
+      --page-dim: #9aa1ab; --hair: #33383e;
+    }
+  }
+  :root[data-theme="light"] {
+    --page: #eceae4; --panel: #ffffff; --page-ink: #2f3742;
+    --page-dim: #6b7480; --hair: #ddd8ce;
+  }
+  :root[data-theme="dark"] {
+    --page: #1a1d21; --panel: #23272c; --page-ink: #e7e4dd;
+    --page-dim: #9aa1ab; --hair: #33383e;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--page-ink);
+    font-family: var(--font); -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  header.top { margin-bottom: 8px; }
+  .eyebrow {
+    font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--p2-lip);
+  }
+  h1 { font-size: 27px; font-weight: 800; margin: 6px 0 8px; letter-spacing: -.3px; text-wrap: balance; }
+  .lede { font-size: 15px; color: var(--page-dim); max-width: 56ch; font-weight: 600; }
+
+  .legend {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;
+    font-size: 12px; font-weight: 700; color: var(--page-dim);
+    padding: 6px 12px; border: 1px dashed var(--new); border-radius: 999px;
+  }
+  .legend b { color: var(--new); }
+
+  section.item { margin-top: 44px; }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 8px; background: var(--p1);
+    color: #fff; font-weight: 800; font-size: 14px; box-shadow: 0 3px 0 var(--p1-lip);
+  }
+  .head { display: flex; align-items: center; gap: 11px; margin-bottom: 4px; }
+  .head h2 { font-size: 19px; font-weight: 800; margin: 0; }
+  .desc { font-size: 14.5px; font-weight: 600; color: var(--page-dim); max-width: 60ch; margin: 0 0 18px 37px; }
+  .desc b { color: var(--page-ink); font-weight: 800; }
+
+  .stage {
+    display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;
+    margin-left: 37px;
+  }
+  @media (max-width: 620px) { .desc, .stage { margin-left: 0; } }
+
+  /* ---- phone frame ---- */
+  .phone {
+    width: 320px; max-width: 100%; background: var(--board);
+    border-radius: 30px; padding: 10px; flex: 0 0 auto;
+    box-shadow: 0 0 0 8px #d9d4cb, 0 18px 40px rgba(40,44,52,.28);
+    position: relative; overflow: hidden;
+  }
+  @media (prefers-color-scheme: dark) { .phone { box-shadow: 0 0 0 8px #3a3d43, 0 18px 40px rgba(0,0,0,.5); } }
+  .screen { border-radius: 22px; overflow: hidden; background: var(--board); display: flex; flex-direction: column; min-height: 520px; }
+
+  .capt { flex: 1 1 220px; min-width: 200px; font-size: 13.5px; color: var(--page-dim); font-weight: 600; }
+  .capt h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--page-ink); margin: 0 0 6px; }
+  .capt p { margin: 0 0 10px; }
+  .capt code { background: var(--board-lo); color: var(--ink-strong); padding: 1px 6px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 12px; }
+
+  /* NEW ring + badge */
+  .new-ring { position: relative; outline: 2px dashed var(--new); outline-offset: 4px; border-radius: 16px; }
+  .badge {
+    position: absolute; top: -10px; right: -8px; z-index: 5;
+    background: var(--new); color: #fff; font-size: 9.5px; font-weight: 800;
+    letter-spacing: .8px; text-transform: uppercase; padding: 3px 7px; border-radius: 999px;
+    box-shadow: 0 2px 0 #0f7a37;
+  }
+
+  /* ---- app bits ---- */
+  .logo-row { display: flex; gap: 3px; }
+  .tile {
+    width: 30px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 21px; text-transform: uppercase; color: #fff; flex: 0 0 auto;
+  }
+  .tile.sm { width: 23px; height: 34px; font-size: 17px; border-radius: 7px; }
+  .tile.you { background: var(--p1); box-shadow: 0 4px 0 var(--p1-lip); }
+  .tile.you.tint { background: var(--p1-tint); color: var(--p1-tint-ink); box-shadow: 0 4px 0 var(--p1-tint-lip); }
+  .tile.them { background: var(--p2); box-shadow: 0 4px 0 var(--p2-lip); }
+  .tile.them.tint { background: var(--p2-tint); color: var(--p2-tint-ink); box-shadow: 0 4px 0 var(--p2-tint-lip); }
+  .tile.ghost { background: transparent; color: var(--dim); border: 2px dashed #C9CFD8; box-shadow: none; }
+
+  .btn { border: 0; font-family: var(--font); font-weight: 800; border-radius: 16px; cursor: default; width: 100%; }
+  .btn.p2 { background: var(--p2); color: #fff; box-shadow: 0 4px 0 var(--p2-lip); height: 52px; font-size: 17px; }
+  .btn.p1 { background: var(--p1); color: #fff; box-shadow: 0 4px 0 var(--p1-lip); height: 52px; font-size: 17px; }
+  .btn.ghost { background: #fff; color: var(--ink); box-shadow: 0 3px 0 var(--board-lo); height: 46px; font-size: 15px; }
+
+  /* deck */
+  .deck { background: #E7E2D9; padding: 10px 8px 14px; display: flex; flex-direction: column; gap: 7px; margin-top: auto; }
+  .krow { display: flex; gap: 5px; justify-content: center; }
+  .krow.mid { padding: 0 16px; }
+  .k {
+    flex: 1 1 0; max-width: 30px; height: 42px; background: #fff; border-radius: 7px;
+    box-shadow: 0 3px 0 var(--key-lip); display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; text-transform: uppercase; color: var(--ink-strong);
+  }
+  .k.wide { max-width: 50px; flex: 1.6; color: var(--ink); }
+  /* proposal states */
+  .k.lit  { background: var(--p1-tint); color: var(--p1-tint-ink); box-shadow: 0 3px 0 var(--p1-tint-lip); }
+  .k.glow { background: var(--p1); color: #fff; box-shadow: 0 3px 0 var(--p1-lip); }
+  .k.off  { opacity: .3; box-shadow: 0 1px 0 var(--key-lip); }
+
+  /* board area */
+  .board { flex: 1; padding: 18px 16px; position: relative; display: flex; flex-direction: column; }
+  .rail-note { color: var(--dim); font-weight: 700; font-size: 13.5px; }
+  .draftline { display: flex; align-items: center; gap: 3px; }
+  .caret { width: 3px; height: 26px; background: var(--p1); border-radius: 3px; margin-left: 4px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+  .meta { font-size: 10px; font-weight: 800; color: var(--dim); }
+
+  /* sheet / card */
+  .backdrop { position: absolute; inset: 0; background: rgba(62,72,84,.34); display: flex; align-items: flex-end; }
+  .sheet { width: 100%; background: #fff; border-radius: 24px 24px 22px 22px; padding: 22px 20px 26px; display: flex; flex-direction: column; gap: 14px; }
+  .sheet h4 { margin: 0; font-size: 18px; font-weight: 800; color: var(--ink-strong); }
+  .sheet p.sub { margin: 0; font-size: 13px; font-weight: 600; color: var(--dim); }
+  .field { height: 50px; background: var(--board); border-radius: 14px; display: flex; align-items: center; padding: 0 16px; font-size: 18px; font-weight: 800; color: var(--ink-strong); box-shadow: inset 0 0 0 2px var(--p2-tint-lip); }
+  .field .fcaret { width: 2px; height: 24px; background: var(--p2); margin-left: 2px; animation: blink 1s steps(1) infinite; }
+
+  /* settings rows */
+  .setlabel { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--dim); margin: 14px 4px 6px; }
+  .srow { background: #fff; border-radius: 14px; box-shadow: 0 3px 0 var(--board-lo); padding: 13px 14px; display: flex; align-items: center; gap: 12px; }
+  .srow .rtitle { font-size: 15px; font-weight: 800; color: var(--ink-strong); }
+  .srow .rsub { font-size: 12px; font-weight: 600; color: var(--dim); }
+  .switch { margin-left: auto; width: 46px; height: 28px; border-radius: 999px; background: var(--p1); position: relative; flex: 0 0 auto; box-shadow: inset 0 0 0 2px var(--p1-lip); }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 21px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 3px rgba(0,0,0,.2); }
+  .switch.off { background: #d7d2c8; box-shadow: none; }
+  .switch.off::after { left: 3px; }
+  .chev { margin-left: auto; color: var(--dim); font-weight: 800; font-size: 18px; }
+
+  .hudrow { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; }
+  .backlink { font-size: 13px; font-weight: 800; color: var(--dim); }
+  .pass { height: 40px; padding: 0 15px; background: #fff; border-radius: 13px; font-weight: 800; font-size: 13px; color: var(--ink); box-shadow: 0 4px 0 var(--board-lo); display: flex; align-items: center; }
+
+  /* home chip */
+  .homecard { background: #fff; border-radius: 16px; box-shadow: 0 4px 0 var(--board-lo); padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 34px; height: 34px; border-radius: 10px; background: var(--p1); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 var(--p1-lip); }
+  .pencil { margin-left: auto; color: var(--dim); font-weight: 800; }
+  .stack { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+  .word-slab { background: #fff; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 3px 0 var(--board-lo); }
+  .slab-label { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--p2-lip); }
+  .center { text-align: center; }
+  .note-pill { background: #fff; border-radius: 12px; padding: 9px 12px; font-size: 12.5px; font-weight: 700; color: var(--ink-strong); box-shadow: 0 3px 0 var(--board-lo); text-align: center; }
+  .note-pill span { color: var(--dim); font-weight: 600; }
+
+  .footnote { margin-top: 56px; font-size: 12.5px; color: var(--page-dim); border-top: 1px solid var(--hair); padding-top: 16px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Shifty Type · proposal</div>
+    <h1>Get your name, then guide the typing</h1>
+    <p class="lede">Four changes to smooth onboarding and make the board teach itself. The phones below are the real screens; only the dashed-green pieces are new.</p>
+    <div class="legend"><b>▢ dashed green</b> = the new bit</div>
+  </header>
+
+  <!-- 1 — NAME CARD -->
+  <section class="item">
+    <div class="head"><span class="num">1</span><h2>“Get started” asks your name in a card</h2></div>
+    <p class="desc">Today, tapping <b>Get started</b> with no saved name slides an input in <i>above</i> the button — so you have to reach back up and tap it again. Instead, one tap brings up a name card. Type it, tap <b>Let’s go</b>, and you’re in the match. Saved once, never asked again.</p>
+    <div class="stage">
+      <div class="phone">
+        <div class="screen" style="justify-content:center; position:relative;">
+          <!-- dimmed invite behind -->
+          <div style="opacity:.5; padding:26px 18px; display:flex; flex-direction:column; align-items:center; gap:16px;">
+            <p style="font-size:14px;font-weight:800;color:var(--ink)"><span style="color:var(--p2-lip)">Lloyd</span> invited you to</p>
+            <div class="logo-row">
+              <span class="tile you sm">s</span><span class="tile you sm">h</span><span class="tile you sm">i</span><span class="tile you sm">f</span><span class="tile you sm tint">t</span><span class="tile you sm tint">y</span><span class="tile them sm tint">t</span><span class="tile them sm tint">y</span><span class="tile them sm">p</span><span class="tile them sm">e</span>
+            </div>
+            <button class="btn p2" style="max-width:220px">Get started</button>
+          </div>
+          <!-- name card sheet -->
+          <div class="backdrop">
+            <div class="sheet new-ring">
+              <span class="badge">new</span>
+              <h4>One thing first — your name?</h4>
+              <p class="sub">So Lloyd knows who they’re playing.</p>
+              <div class="field">Matt<span class="fcaret"></span></div>
+              <button class="btn p2">Let’s go</button>
+              <!-- reused verbatim in the settings view (#2) -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="capt">
+        <h3>Why</h3>
+        <p>The old flow makes you tap the same button twice with a context switch in between — it reads as “nothing happened.” A card is an unmistakable “answer this, then continue.”</p>
+        <p>Same field is reused in the settings view, so the rename pattern is learned once.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 — SETTINGS VIEW -->
+  <section class="item">
+    <div class="head"><span class="num">2</span><h2>A quiet settings view</h2></div>
+    <p class="desc">Instead of a loud chip on Home, a small <b>gear</b> in the corner opens a settings screen. Right now it holds one thing that matters — <b>your name</b> — with room to grow (bell, install, restore games) later. Renaming saves instantly.</p>
+    <div class="stage">
+      <div class="phone">
+        <div class="screen">
+          <div style="position:relative; flex:1; display:flex; flex-direction:column;">
+            <!-- gear entry, top-right -->
+            <div style="position:absolute; top:12px; right:12px;">
+              <div class="new-ring" style="border-radius:999px; padding:2px;">
+                <span class="badge" style="top:-12px;">new</span>
+                <span style="width:38px;height:38px;border-radius:12px;background:#fff;box-shadow:0 3px 0 var(--board-lo);display:flex;align-items:center;justify-content:center;font-size:18px;">⚙</span>
+              </div>
+            </div>
+            <div class="stack" style="justify-content:center; flex:1;">
+              <div class="center" style="margin-bottom:6px;">
+                <div class="logo-row" style="justify-content:center;">
+                  <span class="tile you sm">s</span><span class="tile you sm">h</span><span class="tile you sm">i</span><span class="tile you sm">f</span><span class="tile you sm tint">t</span><span class="tile you sm tint">y</span><span class="tile them sm tint">t</span><span class="tile them sm tint">y</span><span class="tile them sm">p</span><span class="tile them sm">e</span>
+                </div>
+              </div>
+              <button class="btn p2">Duel a friend</button>
+              <button class="btn p1">Play against a local llama</button>
+              <button class="btn ghost">Join with a code</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="screen">
+          <div class="hudrow"><span class="backlink">← Home</span></div>
+          <div class="new-ring" style="margin:0 12px 12px; padding:10px 12px 14px;">
+            <span class="badge">new</span>
+            <h4 style="margin:2px 2px 2px;font-size:22px;font-weight:800;color:var(--ink-strong);">Settings</h4>
+
+            <div class="setlabel">Your name</div>
+            <div class="srow" style="gap:8px;">
+              <div class="field" style="flex:1; box-shadow:inset 0 0 0 2px var(--p1-tint-lip);">Matt<span class="fcaret" style="background:var(--p1);"></span></div>
+              <button class="btn p1" style="width:auto;padding:0 16px;height:46px;font-size:14px;">Save</button>
+            </div>
+            <p class="sub" style="margin:6px 4px 0;">How friends see you at the table.</p>
+
+            <div class="setlabel">Notifications</div>
+            <div class="srow">
+              <div>
+                <div class="rtitle">Ring me for every game</div>
+                <div class="rsub">A nudge when it’s your move.</div>
+              </div>
+              <span class="switch"></span>
+            </div>
+            <p class="sub" style="margin:6px 4px 0;">On iOS this needs the app added to your Home Screen.</p>
+
+            <div class="setlabel">App</div>
+            <div class="srow">
+              <div>
+                <div class="rtitle">Add to Home Screen</div>
+                <div class="rsub">Play offline · get nudges.</div>
+              </div>
+              <span class="chev">›</span>
+            </div>
+          </div>
+          <p class="sub" style="text-align:center;padding-bottom:12px;">Shifty Type · v1</p>
+        </div>
+      </div>
+      <div class="capt">
+        <h3>Why</h3>
+        <p>A settings view keeps Home focused on <i>playing</i>. <b>Ring me for every game</b> is the master switch — flip it on and every current and future match nudges you, no per-game tapping.</p>
+        <p>The per-match bell stays for one-off control; it just reads “on” once the master switch is set.</p>
+        <p>The gear is the only new Home pixel; everything else there is untouched.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 — OPENING CARET -->
+  <section class="item">
+    <div class="head"><span class="num">3</span><h2>The opening turn shows a cursor</h2></div>
+    <p class="desc">On your very first turn the board is empty — nothing tells you it’s time to type, or where the tiles will land. A blinking cursor sits at the first tile’s spot, and the hint invites the tap. The keys are all live, because an opener can be <b>any</b> word.</p>
+    <div class="stage">
+      <div class="phone">
+        <div class="screen">
+          <div class="hudrow"><span class="backlink">← Home</span><span class="pass">Pass?</span></div>
+          <div class="board">
+            <div class="new-ring" style="align-self:flex-start; padding:6px 8px; margin-top:8px;">
+              <span class="badge">new</span>
+              <div class="draftline"><span class="caret"></span></div>
+            </div>
+            <p class="rail-note" style="margin-top:14px;">Tap any letter to open — your word can be anything, three letters or more.</p>
+          </div>
+          <div class="deck">
+            <div class="krow"><span class="k">q</span><span class="k">w</span><span class="k">e</span><span class="k">r</span><span class="k">t</span><span class="k">y</span><span class="k">u</span><span class="k">i</span><span class="k">o</span><span class="k">p</span></div>
+            <div class="krow mid"><span class="k">a</span><span class="k">s</span><span class="k">d</span><span class="k">f</span><span class="k">g</span><span class="k">h</span><span class="k">j</span><span class="k">k</span><span class="k">l</span></div>
+            <div class="krow"><span class="k">z</span><span class="k">x</span><span class="k">c</span><span class="k">v</span><span class="k">b</span><span class="k">n</span><span class="k">m</span><span class="k wide">⌫</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="capt">
+        <h3>Why</h3>
+        <p>An empty board with a hidden custom keyboard is a dead end for a first-timer. The cursor borrows the same pulsing caret the draft already uses, so it reads instantly as “type here.”</p>
+        <p>It also previews <i>where</i> tiles appear, so the first letter doesn’t jump in from nowhere.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 — GUIDED KEYS -->
+  <section class="item">
+    <div class="head"><span class="num">4</span><h2>Guided keys after the first word</h2></div>
+    <p class="desc">From the second word on, your word must start with the tail of the last one. The deck now <b>lights the letters you can start with</b> and greys out the rest — the tutorial’s coloring, everywhere. As soon as your overlap is locked in, every key wakes back up and you type <b>freely</b>. (The engine already ignores illegal keys — this just makes it visible.)</p>
+    <div class="stage" style="gap:14px;">
+
+      <!-- state A -->
+      <div class="phone" style="width:250px;">
+        <div class="screen" style="min-height:440px;">
+          <div class="board" style="padding:14px;">
+            <div class="draftline"><span class="tile them sm">o</span><span class="tile them sm">t</span><span class="tile them sm">t</span><span class="tile them sm tint">e</span><span class="tile them sm tint">r</span><span class="meta" style="margin-left:8px;">Lloyd · +9</span></div>
+            <p class="rail-note" style="font-size:12px;margin-top:12px;">Start with <b style="color:var(--ink-strong)">ER</b>, <b style="color:var(--ink-strong)">TER</b>, or <b style="color:var(--ink-strong)">TTER</b>…</p>
+          </div>
+          <div class="deck new-ring" style="border-radius:0;">
+            <span class="badge" style="top:6px;">new</span>
+            <div class="krow"><span class="k off">q</span><span class="k off">w</span><span class="k lit">e</span><span class="k off">r</span><span class="k lit">t</span><span class="k off">y</span><span class="k off">u</span><span class="k off">i</span><span class="k lit">o</span><span class="k off">p</span></div>
+            <div class="krow mid"><span class="k off">a</span><span class="k off">s</span><span class="k off">d</span><span class="k off">f</span><span class="k off">g</span><span class="k off">h</span><span class="k off">j</span><span class="k off">k</span><span class="k off">l</span></div>
+            <div class="krow"><span class="k off">z</span><span class="k off">x</span><span class="k off">c</span><span class="k off">v</span><span class="k off">b</span><span class="k off">n</span><span class="k off">m</span><span class="k wide off">⌫</span></div>
+          </div>
+        </div>
+        <p style="text-align:center;font-size:11.5px;font-weight:800;color:var(--page-dim);margin:8px 0 0;">A · nothing typed → valid starters lit</p>
+      </div>
+
+      <!-- state B -->
+      <div class="phone" style="width:250px;">
+        <div class="screen" style="min-height:440px;">
+          <div class="board" style="padding:14px;">
+            <div class="draftline"><span class="tile you sm tint">t</span><span class="tile you sm tint">e</span><span class="caret"></span><span class="meta" style="margin-left:8px;">overlap 2</span></div>
+            <p class="rail-note" style="font-size:12px;margin-top:12px;">One letter left to lock the overlap.</p>
+          </div>
+          <div class="deck">
+            <div class="krow"><span class="k off">q</span><span class="k off">w</span><span class="k off">e</span><span class="k glow">r</span><span class="k off">t</span><span class="k off">y</span><span class="k off">u</span><span class="k off">i</span><span class="k off">o</span><span class="k off">p</span></div>
+            <div class="krow mid"><span class="k off">a</span><span class="k off">s</span><span class="k off">d</span><span class="k off">f</span><span class="k off">g</span><span class="k off">h</span><span class="k off">j</span><span class="k off">k</span><span class="k off">l</span></div>
+            <div class="krow"><span class="k off">z</span><span class="k off">x</span><span class="k off">c</span><span class="k off">v</span><span class="k off">b</span><span class="k off">n</span><span class="k off">m</span><span class="k wide off">⌫</span></div>
+          </div>
+        </div>
+        <p style="text-align:center;font-size:11.5px;font-weight:800;color:var(--page-dim);margin:8px 0 0;">B · one legal letter → solid glow</p>
+      </div>
+
+      <!-- state C -->
+      <div class="phone" style="width:250px;">
+        <div class="screen" style="min-height:440px;">
+          <div class="board" style="padding:14px;">
+            <div class="draftline"><span class="tile you sm tint">t</span><span class="tile you sm tint">e</span><span class="tile you sm">r</span><span class="caret"></span><span class="meta" style="margin-left:8px;">overlap 3</span></div>
+            <p class="rail-note" style="font-size:12px;margin-top:12px;">Grip locked — type anything from here.</p>
+          </div>
+          <div class="deck">
+            <div class="krow"><span class="k">q</span><span class="k">w</span><span class="k">e</span><span class="k">r</span><span class="k">t</span><span class="k">y</span><span class="k">u</span><span class="k">i</span><span class="k">o</span><span class="k">p</span></div>
+            <div class="krow mid"><span class="k">a</span><span class="k">s</span><span class="k">d</span><span class="k">f</span><span class="k">g</span><span class="k">h</span><span class="k">j</span><span class="k">k</span><span class="k">l</span></div>
+            <div class="krow"><span class="k">z</span><span class="k">x</span><span class="k">c</span><span class="k">v</span><span class="k">b</span><span class="k">n</span><span class="k">m</span><span class="k wide">⌫</span></div>
+          </div>
+        </div>
+        <p style="text-align:center;font-size:11.5px;font-weight:800;color:var(--page-dim);margin:8px 0 0;">C · overlap set → full keyboard</p>
+      </div>
+
+    </div>
+    <p class="desc" style="margin-top:16px;"><b>Open question:</b> two shades in play — soft indigo <span style="color:var(--p1-tint-ink);font-weight:800">tint</span> for “a valid starter” and solid <span style="color:var(--p1);font-weight:800">indigo</span> for “the one forced next letter” (matching the tutorial glow). We could also make <i>every</i> valid key solid, or use a gentler grey-out. Say the word.</p>
+  </section>
+
+  <p class="footnote">Rendered with a rounded system font as a stand-in for Baloo&nbsp;2. All colors, shadows, and tile geometry are the shipped tokens from <code style="background:var(--board-lo);padding:1px 5px;border-radius:5px">src/index.css</code>.</p>
+</div>

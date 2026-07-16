@@ -1,14 +1,16 @@
 // Draft-word state for inline play. The word under composition lives here;
-// the grip, gold quote, and validity are derived live. Purely input UI —
+// the grip, points quote, and validity are derived live. Purely input UI —
 // submission is judged by the engine's applyMove as ever.
 
 import { useEffect, useState } from 'react'
 import {
-  goldFor,
+  pointsFor,
   MAX_WORD_LENGTH,
   MIN_OVERLAP,
   MIN_WORD_LENGTH,
+  nextKeyHints,
   provisionalGrip,
+  type KeyHints,
 } from '../game'
 
 export interface Composer {
@@ -16,8 +18,10 @@ export interface Composer {
   /** Provisional grip on the previous word (0 = opener or no valid start). */
   grip: number
   /** Live take if played right now. */
-  gold: number
+  points: number
   canPlay: boolean
+  /** Which deck keys to light for the next press; null = unrestricted. */
+  keyHints: KeyHints | null
   key: (letter: string) => void
   backspace: () => void
   seed: (letters: string) => void
@@ -33,14 +37,18 @@ export function useComposer(prevWord: string | null, active: boolean): Composer 
   }, [prevWord, active])
 
   const grip = prevWord && typed ? provisionalGrip(prevWord, typed) : 0
-  const gold = prevWord ? goldFor(grip, typed.length) : 0
+  const points = prevWord ? pointsFor(grip, typed.length) : 0
   const canPlay = active && typed.length >= MIN_WORD_LENGTH
+  // Only guide while it's actually the player's turn; otherwise the deck is
+  // inert anyway and hints would be noise.
+  const keyHints = active ? nextKeyHints(prevWord, typed) : null
 
   return {
     typed,
     grip,
-    gold,
+    points,
     canPlay,
+    keyHints,
     key: (letter) => {
       if (!active) return
       setTyped((t) => {

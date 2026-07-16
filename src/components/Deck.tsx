@@ -6,6 +6,7 @@
 // from the keys and still behind its two-step confirm.
 
 import { useEffect, useState } from 'react'
+import type { KeyHints } from '../game'
 
 const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'] as const
 
@@ -15,14 +16,31 @@ interface DeckProps {
   rise?: boolean
   /** Tutorial-only: this letter's key glows indigo (the guided next press). */
   glowKey?: string
+  /** Real play: light the legal next letters, grey the rest. Null = free-form. */
+  keyHints?: KeyHints | null
   onKey: (letter: string) => void
   onBackspace: () => void
 }
 
 const KEY =
   'flex-1 max-w-[34px] h-12 bg-white rounded-[7px] shadow-[0_3px_0_#DDD8CE] flex items-center justify-center font-extrabold text-base uppercase text-ink-strong select-none active:translate-y-0.5 active:shadow-[0_1px_0_#DDD8CE] disabled:opacity-40 disabled:active:translate-y-0'
+// The one forced next letter (or the tutorial's guided key): solid indigo.
+const KEY_GLOW = '!bg-p1 !text-white !shadow-[0_3px_0_var(--color-p1-lip)]'
+// A legal-but-optional starter: soft indigo tint.
+const KEY_LIT = '!bg-p1-tint !text-p1-tint-ink !shadow-[0_3px_0_var(--color-p1-tint-lip)]'
+// An illegal next letter: flattened, and disabled so it dims via disabled:opacity-40.
+const KEY_OFF = '!shadow-[0_1px_0_#DDD8CE]'
 
-export function Deck({ disabled, rise = false, glowKey, onKey, onBackspace }: DeckProps) {
+/** How one letter key should look given the tutorial glow and/or live hints. */
+function keyStyle(letter: string, glowKey: string | undefined, hints: KeyHints | null | undefined) {
+  if (letter === glowKey) return { cls: KEY_GLOW, off: false }
+  if (!hints) return { cls: '', off: false }
+  if (letter === hints.forced) return { cls: KEY_GLOW, off: false }
+  if (hints.valid.includes(letter)) return { cls: KEY_LIT, off: false }
+  return { cls: KEY_OFF, off: true }
+}
+
+export function Deck({ disabled, rise = false, glowKey, keyHints, onKey, onBackspace }: DeckProps) {
   return (
     // Installed to the home screen, the page runs under the iOS home
     // indicator — pad the deck past it (max() keeps 1rem in browsers).
@@ -31,21 +49,20 @@ export function Deck({ disabled, rise = false, glowKey, onKey, onBackspace }: De
     >
       {KEY_ROWS.map((row, i) => (
         <div key={row} className={`flex gap-[5px] justify-center ${i === 1 ? 'px-4' : ''}`}>
-          {row.split('').map((letter) => (
-            <button
-              key={letter}
-              type="button"
-              disabled={disabled}
-              onClick={() => onKey(letter)}
-              className={
-                letter === glowKey
-                  ? `${KEY} !bg-p1 !text-white !shadow-[0_3px_0_var(--color-p1-lip)]`
-                  : KEY
-              }
-            >
-              {letter}
-            </button>
-          ))}
+          {row.split('').map((letter) => {
+            const style = keyStyle(letter, glowKey, keyHints)
+            return (
+              <button
+                key={letter}
+                type="button"
+                disabled={disabled || style.off}
+                onClick={() => onKey(letter)}
+                className={style.cls ? `${KEY} ${style.cls}` : KEY}
+              >
+                {letter}
+              </button>
+            )
+          })}
           {i === 2 && (
             <button
               type="button"

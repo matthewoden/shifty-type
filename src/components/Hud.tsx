@@ -48,7 +48,7 @@ function Card({
     : 'shadow-[0_4px_0_#E2DDD3]'
   return (
     <div
-      aria-label={`${p.name} — ${p.gold} points, ${p.lives} lives${active ? ', to move' : ''}`}
+      aria-label={`${p.name} — ${p.points} points, ${p.lives} lives${active ? ', to move' : ''}`}
       className={`flex-1 bg-white rounded-2xl px-3 py-2 ${side === 'them' ? 'text-right' : ''} ${lip} ${
         active && pulse ? 'motion-safe:animate-pulse' : ''
       }`}
@@ -56,7 +56,7 @@ function Card({
       <div className={`font-extrabold text-[13px] ${side === 'you' ? 'text-p1-lip' : 'text-p2-lip'}`}>
         {p.name.toUpperCase()}
       </div>
-      <div className="font-extrabold text-2xl text-ink-strong">{p.gold}<span className="text-[11px] text-dim"> pts</span></div>
+      <div className="font-extrabold text-2xl text-ink-strong">{p.points}<span className="text-[11px] text-dim"> pts</span></div>
       <LifePips lives={p.lives} side={side} />
     </div>
   )

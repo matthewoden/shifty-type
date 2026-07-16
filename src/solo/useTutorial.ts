@@ -30,7 +30,7 @@ export function useTutorial() {
   const [ctx, setCtx] = useState<{
     lazyWord?: string
     lazyOverlap?: number
-    lazyGold?: number
+    lazyPoints?: number
     fakeWord?: string
     realWord?: string
     needled?: boolean
@@ -39,7 +39,7 @@ export function useTutorial() {
     bluffWasReal?: boolean
   }>({})
 
-  const terminal = state.phase === 'GAME_OVER' || state.phase === 'VAULT_CLOSED'
+  const terminal = state.phase === 'GAME_OVER' || state.phase === 'CHAIN_COMPLETE'
   const playerTurn = state.phase === 'P1_TURN'
   const gated = (GATED_BEATS as readonly string[]).includes(beat)
   const passive = (PASSIVE_BEATS as readonly string[]).includes(beat)
@@ -82,7 +82,7 @@ export function useTutorial() {
             ...c,
             lazyWord: played.word,
             lazyOverlap: played.overlap,
-            lazyGold: played.gold,
+            lazyPoints: played.points,
           }))
           setBeat('points')
         } else if (cursor === 2) {

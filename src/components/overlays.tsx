@@ -1,6 +1,6 @@
 // Full-screen match moments shared by solo and multiplayer: the challenge
 // confirm sheet, the STANDS/REJECTED verdict stamp, and the game-over panel
-// with its gold count-up.
+// with its points count-up.
 
 import { useEffect, useRef, useState } from 'react'
 import { opponentOf, type MatchState, type PlayerId } from '../game'
@@ -124,19 +124,19 @@ function useCountUp(target: number): number {
   return value
 }
 
-function GoldBar({
+function PointsBar({
   name,
-  gold,
-  maxGold,
+  points,
+  maxPoints,
   side,
 }: {
   name: string
-  gold: number
-  maxGold: number
+  points: number
+  maxPoints: number
   side: Side
 }) {
-  const shown = useCountUp(gold)
-  const pct = maxGold > 0 ? Math.max(8, (gold / maxGold) * 100) : 8
+  const shown = useCountUp(points)
+  const pct = maxPoints > 0 ? Math.max(8, (points / maxPoints) * 100) : 8
   const fill =
     side === 'you'
       ? 'bg-p1 shadow-[0_3px_0_var(--color-p1-lip)]'
@@ -149,8 +149,8 @@ function GoldBar({
       </div>
       <div className="h-4 bg-board-lo rounded-full mt-1 overflow-hidden">
         <div
-          className={`h-full rounded-full ${fill} motion-safe:transition-[width] motion-safe:duration-1000 gold-bar`}
-          style={{ ['--gold-w' as string]: `${pct}%` }}
+          className={`h-full rounded-full ${fill} motion-safe:transition-[width] motion-safe:duration-1000 points-bar`}
+          style={{ ['--points-w' as string]: `${pct}%` }}
         />
       </div>
     </div>
@@ -185,9 +185,9 @@ export function GameOverPanel({
 }) {
   const me = state.players[you]
   const them = state.players[opponentOf(you)]
-  const maxGold = Math.max(me.gold, them.gold)
+  const maxPoints = Math.max(me.points, them.points)
   const heading =
-    state.phase === 'VAULT_CLOSED'
+    state.phase === 'CHAIN_COMPLETE'
       ? state.winner
         ? state.winner === you
           ? 'Chain complete — you win on points!'
@@ -205,8 +205,8 @@ export function GameOverPanel({
         </p>
       )}
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <GoldBar name={me.name} gold={me.gold} maxGold={maxGold} side="you" />
-        <GoldBar name={them.name} gold={them.gold} maxGold={maxGold} side="them" />
+        <PointsBar name={me.name} points={me.points} maxPoints={maxPoints} side="you" />
+        <PointsBar name={them.name} points={them.points} maxPoints={maxPoints} side="them" />
       </div>
       <div className="flex flex-col items-start gap-2 max-h-44 overflow-y-auto px-2 py-1">
         {state.chain.map((link, i) => (
@@ -219,7 +219,7 @@ export function GameOverPanel({
               small
             />
             <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
-              {i === 0 ? 'opener' : `+${link.gold}`}
+              {i === 0 ? 'opener' : `+${link.points}`}
               {link.challengeSurvived ? ' · real' : ''}
             </span>
           </div>

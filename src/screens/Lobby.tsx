@@ -391,8 +391,8 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel }: LobbyPro
         key="solo"
         name={st.players.p2.name}
         live={false}
-        you={st.players.p1.gold}
-        them={st.players.p2.gold}
+        you={st.players.p1.points}
+        them={st.players.p2.points}
         pill={pill}
         onClick={() => onResumeSolo(save)}
         editing={editing}

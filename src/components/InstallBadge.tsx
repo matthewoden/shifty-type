@@ -16,7 +16,7 @@ import {
   type InstallKind,
 } from './useInstallPrompt'
 
-function IosHowToSheet({ onClose }: { onClose: () => void }) {
+export function IosHowToSheet({ onClose }: { onClose: () => void }) {
   const steps: [string, React.ReactNode, React.ReactNode][] = [
     ['1', <>Tap <b className="text-ink-strong">Share</b> in the bar below</>, <ShareIcon className="w-5 h-5" />],
     ['2', <>Scroll down to <b className="text-ink-strong">Add to Home Screen</b></>, <PlusSquareIcon className="w-5 h-5" />],
@@ -61,7 +61,7 @@ function IosHowToSheet({ onClose }: { onClose: () => void }) {
  *  taps (never an auto-navigation) so the page stays theirs if the
  *  undocumented x-safari-https scheme gets ignored — the visible link and
  *  copy button are the manual fallback for that case. */
-function SafariHandoffSheet({ onClose }: { onClose: () => void }) {
+export function SafariHandoffSheet({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false)
   const copy = () => {
     navigator.clipboard

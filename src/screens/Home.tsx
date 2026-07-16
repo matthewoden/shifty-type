@@ -1,5 +1,6 @@
 import { useReducer } from 'react'
 import { InstallBadge } from '../components/InstallBadge'
+import { GearIcon } from '../components/icons'
 import { Logo } from '../components/Logo'
 import { PasteBadge } from '../components/PasteBadge'
 import { needsYouCount } from '../multi/lobby'
@@ -14,6 +15,7 @@ interface HomeProps {
   onJoinCode: () => void
   onTutorial: () => void
   onOpenGames: () => void
+  onSettings: () => void
   /** PasteBadge restores seats then opens the match it just recovered. */
   onResumeDuel: (code: string) => void
 }
@@ -24,6 +26,7 @@ export function Home({
   onJoinCode,
   onTutorial,
   onOpenGames,
+  onSettings,
   onResumeDuel,
   onHowTo,
 }: HomeProps) {
@@ -38,7 +41,14 @@ export function Home({
   const gamesSubtitle =
     needsYou > 0 ? `${needsYou} waiting on you` : `${gameCount} game${gameCount === 1 ? '' : 's'}`
   return (
-    <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-8 p-6">
+    <div className="relative min-h-dvh bg-board flex flex-col items-center justify-start gap-6 px-6 pt-11 pb-8">
+      <button
+        onClick={onSettings}
+        aria-label="Settings"
+        className="absolute top-2.5 right-2.5 w-11 h-11 flex items-center justify-center text-dim active:translate-y-0.5"
+      >
+        <GearIcon className="w-6 h-6" />
+      </button>
       <div className="flex flex-col items-center gap-4">
         <Logo />
         <p className="text-ink font-semibold max-w-2xs text-center">

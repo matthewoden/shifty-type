@@ -39,7 +39,7 @@ describe('duelBucket', () => {
 
   it('routes a decided game to finished', () => {
     expect(duelBucket(summary({ phase: 'GAME_OVER', winner: 'p1' }))).toBe('finished')
-    expect(duelBucket(summary({ phase: 'VAULT_CLOSED', winner: 'p2' }))).toBe('finished')
+    expect(duelBucket(summary({ phase: 'CHAIN_COMPLETE', winner: 'p2' }))).toBe('finished')
   })
 
   it('splits an active game by whose turn it is', () => {

@@ -53,6 +53,7 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
         onChallenge={() => setConfirmingChallenge(true)}
         composer={composer.typed ? composer : null}
         fan={fan}
+        openerCaret={playerTurn && state.chain.length === 0}
         onSeed={composer.seed}
         onPlay={() => {
           if (m.playWord(composer.typed)) composer.clear()
@@ -72,7 +73,12 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
           {m.error}
         </div>
       )}
-      <Deck disabled={!playerTurn} onKey={composer.key} onBackspace={composer.backspace} />
+      <Deck
+        disabled={!playerTurn}
+        keyHints={playerTurn ? composer.keyHints : null}
+        onKey={composer.key}
+        onBackspace={composer.backspace}
+      />
 
       {confirmingChallenge && newest && (
         <ConfirmChallengeSheet

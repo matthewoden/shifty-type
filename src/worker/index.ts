@@ -61,7 +61,7 @@ function nudgeBody(m: StoredMatch): string {
   const s = m.state
   const ev = m.lastEvent
   const name = ev ? s.players[ev.by].name : 'Your friend'
-  if (s.phase === 'GAME_OVER' || s.phase === 'VAULT_CLOSED')
+  if (s.phase === 'GAME_OVER' || s.phase === 'CHAIN_COMPLETE')
     return `That's game with ${name} — come see how the chain ended.`
   if (!ev) return `${name} is waiting on you — your move.`
   const word = 'word' in ev ? ev.word.toUpperCase() : ''
@@ -164,8 +164,8 @@ export class MatchDO extends DurableObject<Env> {
       phase: s.phase,
       yourTurn: this.nextActor(m) === you,
       awaitingOpponent: awaiting,
-      yourScore: s.players[you].gold,
-      opponentScore: awaiting ? 0 : s.players[opp].gold,
+      yourScore: s.players[you].points,
+      opponentScore: awaiting ? 0 : s.players[opp].points,
       winner: s.winner,
       lastMoveAt: m.lastMoveAt ?? null,
       opponentPresent: this.presence()[opp],
@@ -358,7 +358,7 @@ export class MatchDO extends DurableObject<Env> {
     const m = await this.load()
     if (!m) return { ok: false, error: 'No match with that code.' }
     const s = m.state
-    const terminal = s.phase === 'GAME_OVER' || s.phase === 'VAULT_CLOSED'
+    const terminal = s.phase === 'GAME_OVER' || s.phase === 'CHAIN_COMPLETE'
     return {
       ok: true,
       creatorName: s.players.p1.name,
@@ -457,7 +457,7 @@ export class MatchDO extends DurableObject<Env> {
     if (!m) return { ok: false, error: 'No match with that code.' }
     const actor = this.identify(m, token)
     if (!actor) return { ok: false, error: "This device isn't part of that match." }
-    if (m.state.phase !== 'GAME_OVER' && m.state.phase !== 'VAULT_CLOSED')
+    if (m.state.phase !== 'GAME_OVER' && m.state.phase !== 'CHAIN_COMPLETE')
       return { ok: false, error: "The match isn't over yet." }
     m.opener = opponentOf(m.opener)
     m.state = newMatchState(m.state.players.p1.name, m.state.players.p2.name, m.opener)
@@ -489,7 +489,7 @@ export class MatchDO extends DurableObject<Env> {
     await this.ctx.storage.put('match', m)
     await this.ctx.storage.setAlarm(Date.now() + Math.max(0, MATCH_TTL_MS - REMIND_AFTER_MS))
     const s = m.state
-    if (s.phase === 'GAME_OVER' || s.phase === 'VAULT_CLOSED') return // nothing to come back for
+    if (s.phase === 'GAME_OVER' || s.phase === 'CHAIN_COMPLETE') return // nothing to come back for
     // While a seat is still empty, the only person to remind is the creator
     // (nextActor may name the unfilled seat) — nudge them to send the invite.
     if (s.awaitingOpponent) {

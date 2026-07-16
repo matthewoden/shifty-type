@@ -25,8 +25,8 @@ function turnPhaseOf(id: PlayerId): MatchPhase {
   return id === 'p1' ? 'P1_TURN' : 'P2_TURN'
 }
 
-/** Gold stolen by a word: overlap² + 1 per letter beyond 6. */
-export function goldFor(overlap: number, wordLength: number): number {
+/** Points earned by a word: overlap² + 1 per letter beyond 6. */
+export function pointsFor(overlap: number, wordLength: number): number {
   return overlap * overlap + Math.max(0, wordLength - 6)
 }
 
@@ -73,12 +73,40 @@ export function provisionalGrip(prev: string, typed: string): number {
 export function gripOptions(
   prev: string,
   max = 3,
-): Array<{ letters: string; overlap: number; gold: number }> {
-  const out: Array<{ letters: string; overlap: number; gold: number }> = []
+): Array<{ letters: string; overlap: number; points: number }> {
+  const out: Array<{ letters: string; overlap: number; points: number }> = []
   for (let k = MIN_OVERLAP; k <= prev.length && out.length < max; k++) {
-    out.push({ letters: prev.slice(-k), overlap: k, gold: k * k })
+    out.push({ letters: prev.slice(-k), overlap: k, points: k * k })
   }
   return out
+}
+
+/** Per-key deck guidance while composing a reply. */
+export interface KeyHints {
+  /** Letters that may legally be pressed next, as one lowercase string. */
+  valid: string
+  /** The single letter, if exactly one is legal (the forced next press). */
+  forced: string | null
+}
+
+/**
+ * Which letters the deck should light for the next keypress, given the chain
+ * tip and what's typed so far. Returns null when there is no restriction — the
+ * opener (no previous word), or once the grip is locked and any letter keeps a
+ * legal word going — so the deck shows a plain, fully-live keyboard. Mirrors
+ * the dead-key rule in useComposer: a letter is valid iff it keeps the
+ * provisional grip at or above MIN_OVERLAP.
+ */
+export function nextKeyHints(prev: string | null, typed: string): KeyHints | null {
+  if (!prev) return null
+  let valid = ''
+  for (let c = 97; c <= 122; c++) {
+    const letter = String.fromCharCode(c)
+    if (provisionalGrip(prev, typed + letter) >= MIN_OVERLAP) valid += letter
+  }
+  // All 26 legal → grip is locked, the rest of the word is free-form.
+  if (valid.length === 26) return null
+  return { valid, forced: valid.length === 1 ? valid : null }
 }
 
 export function createMatch(
@@ -92,8 +120,8 @@ export function createMatch(
     // match starts in the opener's turn with the second seat empty.
     phase: turnPhaseOf(opener),
     players: {
-      p1: { id: 'p1', name: p1Name, gold: 0, lives: STARTING_LIVES },
-      p2: { id: 'p2', name: p2Name ?? '', gold: 0, lives: STARTING_LIVES },
+      p1: { id: 'p1', name: p1Name, points: 0, lives: STARTING_LIVES },
+      p2: { id: 'p2', name: p2Name ?? '', points: 0, lives: STARTING_LIVES },
     },
     chain: [],
     usedWords: [],
@@ -123,12 +151,12 @@ export function joinMatch(state: MatchState, p2Name: string): MatchState {
 }
 
 /**
- * Winner when the chain completes: highest gold, ties broken by remaining
+ * Winner when the chain completes: highest points, ties broken by remaining
  * lives, then by longest single word on the chain. Null on a full tie.
  */
-export function decideVaultWinner(state: MatchState): PlayerId | null {
+export function decideChainWinner(state: MatchState): PlayerId | null {
   const { p1, p2 } = state.players
-  if (p1.gold !== p2.gold) return p1.gold > p2.gold ? 'p1' : 'p2'
+  if (p1.points !== p2.points) return p1.points > p2.points ? 'p1' : 'p2'
   if (p1.lives !== p2.lives) return p1.lives > p2.lives ? 'p1' : 'p2'
   const longest = (id: PlayerId) =>
     Math.max(0, ...state.chain.filter((l) => l.owner === id).map((l) => l.word.length))
@@ -144,7 +172,7 @@ export function decideVaultWinner(state: MatchState): PlayerId | null {
  * mutated) or a player-facing error message.
  */
 export function applyMove(state: MatchState, actor: PlayerId, move: Move): MoveResult {
-  if (state.phase === 'VAULT_CLOSED' || state.phase === 'GAME_OVER')
+  if (state.phase === 'CHAIN_COMPLETE' || state.phase === 'GAME_OVER')
     return err('This match is over.')
 
   // P1_TURN or P2_TURN
@@ -178,14 +206,14 @@ function play(state: MatchState, actor: PlayerId, rawWord: string): MoveResult {
   }
 
   const next = structuredClone(state)
-  const gold = prev ? goldFor(overlap, word.length) : 0
-  next.chain.push({ word, owner: actor, overlap, gold })
+  const points = prev ? pointsFor(overlap, word.length) : 0
+  next.chain.push({ word, owner: actor, overlap, points })
   next.usedWords.push(word)
-  next.players[actor].gold += gold
+  next.players[actor].points += points
   next.version++
   if (next.chain.length >= chainLimitOf(next)) {
-    next.phase = 'VAULT_CLOSED'
-    next.winner = decideVaultWinner(next)
+    next.phase = 'CHAIN_COMPLETE'
+    next.winner = decideChainWinner(next)
   } else {
     next.phase = turnPhaseOf(opponentOf(actor))
   }
@@ -200,7 +228,7 @@ function pass(state: MatchState, actor: PlayerId): MoveResult {
     next.phase = 'GAME_OVER'
     next.winner = opponentOf(actor)
   } else {
-    // Opponent continues from the same word; no gold moves.
+    // Opponent continues from the same word; no points moves.
     next.phase = turnPhaseOf(opponentOf(actor))
   }
   return { ok: true, state: next }
@@ -247,9 +275,9 @@ function challenge(state: MatchState, actor: PlayerId, wordIsReal: boolean): Mov
   return { ok: true, state: next }
 }
 
-/** Remove the accused word and give back the gold it stole. */
+/** Remove the accused word and refund the points it earned. */
 function rewindChain(state: MatchState): void {
   const removed = state.chain.pop()
-  if (removed) state.players[removed.owner].gold -= removed.gold
+  if (removed) state.players[removed.owner].points -= removed.points
   // The word stays in usedWords: busted fakes can't be replayed.
 }

@@ -136,7 +136,7 @@ function numberWord(n: number): string {
 
 export function bubbleFor(
   beat: Beat,
-  ctx: { lazyWord?: string; lazyOverlap?: number; lazyGold?: number; fakeWord?: string; realWord?: string; needled?: boolean; toldYou?: boolean; bluffWord?: string; bluffWasReal?: boolean },
+  ctx: { lazyWord?: string; lazyOverlap?: number; lazyPoints?: number; fakeWord?: string; realWord?: string; needled?: boolean; toldYou?: boolean; bluffWord?: string; bluffWasReal?: boolean },
 ): BubbleCopy[] {
   switch (beat) {
     case 'intro1':
@@ -175,7 +175,7 @@ export function bubbleFor(
     case 'points':
       return [
         {
-          text: `I played ${(ctx.lazyWord ?? '').toUpperCase()}. It only overlapped ${numberWord(ctx.lazyOverlap ?? 2)} letters for ${ctx.lazyGold ?? 4} points. When it comes to overlap, **go deep**.`,
+          text: `I played ${(ctx.lazyWord ?? '').toUpperCase()}. It only overlapped ${numberWord(ctx.lazyOverlap ?? 2)} letters for ${ctx.lazyPoints ?? 4} points. When it comes to overlap, **go deep**.`,
         },
       ]
     case 'rep':

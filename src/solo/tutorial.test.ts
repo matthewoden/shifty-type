@@ -59,7 +59,7 @@ describe('tutorial match setup', () => {
     }
     // Either the chain completed at exactly 10 words, or passes drained a
     // player's lives first — both are legal ends of a 10-word match.
-    if (state.phase === 'VAULT_CLOSED') {
+    if (state.phase === 'CHAIN_COMPLETE') {
       expect(state.chain.length).toBe(TUTORIAL_CHAIN_LIMIT)
     } else {
       expect(state.phase).toBe('GAME_OVER')

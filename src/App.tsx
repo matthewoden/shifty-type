@@ -9,6 +9,7 @@ import { Home } from './screens/Home'
 import { HowTo } from './screens/HowTo'
 import { Lobby } from './screens/Lobby'
 import { MultiMatch } from './screens/MultiMatch'
+import { Settings } from './screens/Settings'
 import { SoloMatch } from './screens/SoloMatch'
 import { SoloSetup } from './screens/SoloSetup'
 import { TutorialMatch } from './screens/TutorialMatch'
@@ -27,6 +28,7 @@ type Screen =
   | { name: 'duel'; code: string; from?: 'lobby' }
   | { name: 'tutorial-welcome' }
   | { name: 'tutorial' }
+  | { name: 'settings' }
 
 /** Deep link: /m/CODE resumes with a stored token or lands on the invite. */
 function initialScreen(): Screen {
@@ -153,6 +155,8 @@ export default function App() {
           onNewDuel={() => setScreen({ name: 'duel-create' })}
         />
       )
+    case 'settings':
+      return <Settings onBack={goHome} />
     case 'duel-create':
       return <DuelCreate onEnterMatch={enterDuel} onBack={goHome} />
     case 'join-code':
@@ -214,6 +218,7 @@ export default function App() {
           onJoinCode={() => setScreen({ name: 'join-code' })}
           onTutorial={() => setScreen({ name: 'tutorial-welcome' })}
           onOpenGames={() => setScreen({ name: 'lobby' })}
+          onSettings={() => setScreen({ name: 'settings' })}
           onResumeDuel={enterDuel}
         />
       )
