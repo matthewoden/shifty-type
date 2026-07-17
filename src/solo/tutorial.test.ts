@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { WORD_LIST, applyMove, lastCallActorOf, pickPlayWord, type MatchState } from '../game'
 import {
   GATED_BEATS,
+  SUGGESTED_WORD,
   TUTORIAL_CHAIN_LIMIT,
   bubbleFor,
   makeTutorialFake,
@@ -82,7 +83,12 @@ describe('the scripted beats', () => {
   it('plays the happy path: lazy reply, catchable fake, the ruling', () => {
     let state = newTutorialState()
     state = lloydPlays(state, 0) // PLANT
-    state = playerPlays(state) // any legal word
+    // The guided first word. The list has no legal reply to PLANT (ANTI is
+    // one letter short of the two-new-letters rule), so the sim types the
+    // tutorial's own suggestion, exactly like the guided beat.
+    const guided = applyMove(state, 'p1', { type: 'play', word: SUGGESTED_WORD })
+    expect(guided.ok).toBe(true)
+    state = (guided as { ok: true; state: MatchState }).state
 
     state = lloydPlays(state, 1) // the lazy reply
     const lazy = state.chain[state.chain.length - 1]
@@ -105,7 +111,14 @@ describe('the scripted beats', () => {
     expect(state.players.p2.lives).toBe(2)
     expect(state.phase).toBe('P1_TURN') // the challenger plays on
 
-    state = playerPlays(state) // the bluff slot, from the rewound tail
+    // The bluff slot, from the rewound tail. The beat invites a made-up word
+    // (the list may hold no legal reply), so the sim fabricates one.
+    const tip = state.chain[state.chain.length - 1]
+    const bluff = makeTutorialFake(tip.word, state.usedWords)
+    expect(bluff).toBeTruthy()
+    const played = applyMove(state, 'p1', { type: 'play', word: bluff as string })
+    expect(played.ok).toBe(true)
+    state = (played as { ok: true; state: MatchState }).state
 
     // Lloyd's remaining scripted moves are always plays, never challenges.
     expect(scriptedLloydMove(state, 3)?.type).toBe('play')

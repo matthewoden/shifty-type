@@ -87,3 +87,5 @@ export const CHAIN_LIMIT = 20
 export const MIN_WORD_LENGTH = 3
 export const MAX_WORD_LENGTH = 12
 export const MIN_OVERLAP = 2
+/** New letters a word must add past its overlap — pluralizing the tip is not a play. */
+export const MIN_EXTENSION = 2

@@ -4,6 +4,7 @@
 import {
     CHAIN_LIMIT,
     MAX_WORD_LENGTH,
+    MIN_EXTENSION,
     MIN_OVERLAP,
     MIN_WORD_LENGTH,
     STARTING_LIVES,
@@ -60,14 +61,16 @@ export function pointsFor(overlap: number, wordLength: number): number {
 
 /**
  * Longest k where the last k letters of prev equal the first k letters of
- * next. k ranges from MIN_OVERLAP up to the full previous word — but the
- * full word only counts when next is strictly longer (prev must be a
- * proper prefix: ultra → ultramarine). Returns 0 when no valid overlap.
+ * next. k ranges from MIN_OVERLAP up to the full previous word — but a grip
+ * only counts when next adds at least MIN_EXTENSION letters of its own past
+ * it (ram → rams is not a play; ultra → ultramarine is). A grip too deep to
+ * extend falls through to a shallower one that fits. Returns 0 when no
+ * valid overlap.
  */
 export function overlapOf(prev: string, next: string): number {
     const max = Math.min(prev.length, next.length);
     for (let k = max; k >= MIN_OVERLAP; k--) {
-        if (k === prev.length && next.length <= prev.length) continue;
+        if (next.length < k + MIN_EXTENSION) continue;
         if (prev.slice(-k) === next.slice(0, k)) return k;
     }
     return 0;
@@ -263,6 +266,11 @@ function play(state: MatchState, actor: PlayerId, rawWord: string): MoveResult {
     if (prev) {
         overlap = overlapOf(prev.word, word);
         if (overlap === 0) {
+            // Gripped, but came up short of the two-new-letter minimum.
+            if (validSuffixes(prev.word).some((s) => word.startsWith(s)))
+                return err(
+                    "Too snug — your word needs two letters of its own after the overlap.",
+                );
             const s2 = prev.word.slice(-2).toUpperCase();
             const s3 = prev.word.slice(-3).toUpperCase();
             return err(`Your word needs to start with ${s2} or ${s3}.`);

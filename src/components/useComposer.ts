@@ -9,6 +9,7 @@ import {
   MIN_OVERLAP,
   MIN_WORD_LENGTH,
   nextKeyHints,
+  overlapOf,
   provisionalGrip,
   type KeyHints,
 } from '../game'
@@ -38,7 +39,12 @@ export function useComposer(prevWord: string | null, active: boolean): Composer 
 
   const grip = prevWord && typed ? provisionalGrip(prevWord, typed) : 0
   const points = prevWord ? pointsFor(grip, typed.length) : 0
-  const canPlay = active && typed.length >= MIN_WORD_LENGTH
+  // Play lights only for words the real judge would take — overlapOf also
+  // enforces the two-new-letters-past-the-grip minimum.
+  const canPlay =
+    active &&
+    typed.length >= MIN_WORD_LENGTH &&
+    (!prevWord || overlapOf(prevWord, typed) >= MIN_OVERLAP)
   // Only guide while it's actually the player's turn; otherwise the deck is
   // inert anyway and hints would be noise.
   const keyHints = active ? nextKeyHints(prevWord, typed) : null

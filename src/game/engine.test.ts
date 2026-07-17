@@ -53,14 +53,23 @@ describe("overlapOf", () => {
         expect(overlapOf("onward", "zebra")).toBe(0);
     });
 
-    it("allows the full previous word only as a proper prefix", () => {
-        expect(overlapOf("ultra", "ultramarine")).toBe(5);
-        expect(overlapOf("ram", "rams")).toBe(3);
-        expect(overlapOf("ultra", "ultra")).toBe(0); // same word: not a proper prefix
+    it("requires at least two new letters past the grip", () => {
+        expect(overlapOf("ram", "rams")).toBe(0); // adding an S is not a play
+        expect(overlapOf("ram", "ramps")).toBe(3);
+        expect(overlapOf("planet", "net")).toBe(0); // no new letters at all
+        expect(overlapOf("planet", "nets")).toBe(0); // still just one
+        expect(overlapOf("planet", "netting")).toBe(3);
     });
 
-    it("allows the next word to be a suffix of the previous", () => {
-        expect(overlapOf("planet", "net")).toBe(3);
+    it("allows the full previous word as a grip when outgrown by two", () => {
+        expect(overlapOf("ultra", "ultramarine")).toBe(5);
+        expect(overlapOf("ultra", "ultras")).toBe(0); // one letter past — too snug
+        expect(overlapOf("ultra", "ultra")).toBe(0); // same word
+    });
+
+    it("falls back to a shallower grip when the deepest is too snug", () => {
+        // NANA can't extend (only one new letter), but NA can.
+        expect(overlapOf("banana", "nanas")).toBe(2);
     });
 
     it("never returns an overlap below 2", () => {
@@ -187,6 +196,14 @@ describe("playing a word", () => {
         expectError(
             applyMove(state, "p2", play("zebra")),
             "Your word needs to start with RD or ARD.",
+        );
+    });
+
+    it("rejects a word that grips but adds fewer than two new letters", () => {
+        const state = run(fresh(), [["p1", play("vault")]]);
+        expectError(
+            applyMove(state, "p2", play("ultr")),
+            "Too snug — your word needs two letters of its own after the overlap.",
         );
     });
 

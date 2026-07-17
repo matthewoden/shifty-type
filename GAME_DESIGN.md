@@ -12,7 +12,7 @@ Players alternate turns. On your turn you either **play a word** or **challenge*
 
 - Your word must **start with the last 2+ letters** of the previous word.
     - `vault` → `ultra` (overlap **ult**, 3) → `radish` (overlap **ra**, 2)
-- Minimum word length: 3. Minimum overlap: 2. Max overlap: full previous word minus 1 (you can't just replay the word with letters added in front — actually you can, if the previous word is a proper prefix of yours: `ultra` → `ultramarine` is legal and glorious, overlap 5).
+- Minimum word length: 3. Minimum overlap: 2. **Minimum extension: 2** (added 2026-07-17) — your word must add at least two letters of its own past the overlap. Adding an S is cheap: `ram` → `rams` is not a play, and neither is swallowing the tip whole (`planet` → `net`). Gripping the full previous word is still legal when you outgrow it by two: `ultra` → `ultramarine`, overlap 5, glorious. A grip too deep to extend falls back to the deepest shallower one that fits.
 - **No word may repeat within a match** (case-insensitive).
 - Words are NOT dictionary-checked when played. Anything matching `^[a-z]{3,}$` with a valid overlap is accepted onto the chain. This is deliberate: bluffing is the game.
 

@@ -163,7 +163,7 @@ export function bubbleFor(
           text: "On your turn, you'll get to reply with a word of your own. But your word is restricted by mine.",
         },
         {
-          text: 'Your word must start with at least the last two letters of my word. The more you overlap, the more points you get.',
+          text: 'Your word must start with at least the last two letters of my word, and add at least two letters of its own. The more you overlap, the more points you get.',
         },
       ]
     case 'firstWord':
