@@ -17,7 +17,7 @@ Async two-player word game (plus solo vs the llama bot). Renamed 2026-07 from "W
 
 ## Conventions
 - All game logic (chain validation, scoring, challenge resolution, bot) lives in `src/game/` as pure functions with unit tests. No game rules inside React components. The same module is imported by both the React client (solo mode, optimistic UI) and the Durable Object (authoritative multiplayer moves) — keep it dependency-free so it runs in both runtimes.
-- The embedded word list lives in `src/game/wordlist.ts` (~2,000 common English words, lowercase). Bot plays only from this list.
+- The embedded word list lives in `src/game/wordlist.ts` (~5,800 common English words, lowercase, frequency order). Bot plays only from this list. Regenerate with `scripts/generate-wordlist.mjs` — never hand-edit.
 - State machine for a match is explicit (see GAME_DESIGN.md §States). Never mutate match state ad hoc — every transition goes through `applyMove()`.
 - Touch targets ≥ 44px. Test at 375px width first.
 - Keep the bundle small; no heavy dependencies for animation (CSS transitions are fine).
