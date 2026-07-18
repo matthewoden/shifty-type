@@ -128,23 +128,23 @@ describe("match setup", () => {
 });
 
 describe("playing a word", () => {
-    it("accepts any well-formed opener with no points", () => {
+    it("accepts any well-formed opener, worth a point per letter", () => {
         const state = run(fresh(), [["p1", play("vault")]]);
         expect(state.chain).toEqual([
-            { word: "vault", owner: "p1", overlap: 0, points: 0 },
+            { word: "vault", owner: "p1", overlap: 0, points: 5 },
         ]);
-        expect(state.players.p1.points).toBe(0);
+        expect(state.players.p1.points).toBe(5);
         expect(state.phase).toBe("P2_TURN");
     });
 
     it("scores overlap² + length bonus and alternates turns", () => {
         const state = run(fresh(), [
-            ["p1", play("vault")],
+            ["p1", play("vault")], // opener → 5
             ["p2", play("ultra")], // overlap ult → 11
             ["p1", play("radish")], // overlap ra → 8
         ]);
         expect(state.players.p2.points).toBe(11);
-        expect(state.players.p1.points).toBe(8);
+        expect(state.players.p1.points).toBe(13);
         expect(state.phase).toBe("P2_TURN");
         expect(state.version).toBe(3);
     });
@@ -158,7 +158,7 @@ describe("playing a word", () => {
         const link = state.chain[2];
         expect(link.overlap).toBe(5);
         expect(link.points).toBe(31);
-        expect(state.players.p1.points).toBe(31);
+        expect(state.players.p1.points).toBe(36); // 5 for the opener + 31
     });
 
     it("normalizes case and whitespace", () => {
@@ -327,7 +327,7 @@ describe("challenges", () => {
         expect(state.phase).toBe("P2_TURN"); // the challenger (p2) opens next
         const next = applyMove(state, "p2", play("vault"));
         expect(next.ok).toBe(true);
-        if (next.ok) expect(next.state.chain[0].points).toBe(0);
+        if (next.ok) expect(next.state.chain[0].points).toBe(5);
     });
 
     it("STANDS (real): challenger loses a life and plays on from the verified word", () => {
@@ -414,8 +414,8 @@ describe("the full chain: last call, then completion", () => {
     it("shaking on the final word completes the chain; highest points wins", () => {
         const state = run(full(), [["p1", accept]]);
         expect(state.phase).toBe("CHAIN_COMPLETE");
-        // p1's opener earns just letter points, so p2 leads 60 to 54.
-        expect(state.players.p1.points).toBe(54);
+        // p1's opener earns just letter points (4), so p2 leads 60 to 58.
+        expect(state.players.p1.points).toBe(58);
         expect(state.players.p2.points).toBe(60);
         expect(state.winner).toBe("p2");
         expectError(
@@ -528,7 +528,7 @@ describe("scripted match replay", () => {
         const state = run(fresh(), script);
         expect(state.phase).toBe("GAME_OVER");
         expect(state.winner).toBe("p2");
-        expect(state.players.p1).toMatchObject({ points: 38, lives: 0 });
+        expect(state.players.p1).toMatchObject({ points: 43, lives: 0 });
         expect(state.players.p2).toMatchObject({ points: 19, lives: 1 });
         expect(state.chain.map((l) => l.word)).toEqual([
             "vault",
@@ -638,11 +638,11 @@ describe("the snap (both players pass on the same word)", () => {
         expect(s.players.p2.lives).toBe(2);
     });
 
-    it("opens the board: any word, no overlap, no points — even one that grips", () => {
+    it("opens the board: any word, no overlap, letter points — even one that grips", () => {
         const s = run(snapped(), [["p2", play("ultra")]]);
         const opener = s.chain[1];
-        expect(opener).toMatchObject({ word: "ultra", overlap: 0, points: 0 });
-        expect(s.players.p2.points).toBe(0);
+        expect(opener).toMatchObject({ word: "ultra", overlap: 0, points: 5 });
+        expect(s.players.p2.points).toBe(5);
         expect(s.breaks).toEqual([1]); // the break is history, not pending
         const next = run(s, [["p1", play("radish")]]);
         expect(next.chain[2].points).toBe(pointsFor(2, 6));
@@ -714,7 +714,7 @@ describe("the snap (both players pass on the same word)", () => {
         expect(s.chain).toHaveLength(1);
         expect(isChainBroken(s)).toBe(true); // breaks=[1] pends again
         const s2 = run(s, [["p1", play("grape")]]);
-        expect(s2.chain[1]).toMatchObject({ overlap: 0, points: 0 });
+        expect(s2.chain[1]).toMatchObject({ overlap: 0, points: 5 });
     });
 
     it("a fresh opener can fill the chain and trigger last call", () => {

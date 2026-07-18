@@ -109,8 +109,10 @@ function useReducedMotion(): boolean {
 }
 
 function linkMeta(link: ChainLink, index: number): string {
-  if (index === 0) return 'opener'
-  if (link.overlap === 0) return 'fresh chain' // opened after a snap
+  // Openers earn letter points; links saved before that rule hold 0 — skip the +0.
+  const earn = link.points > 0 ? ` · +${link.points}` : ''
+  if (index === 0) return `opener${earn}`
+  if (link.overlap === 0) return `fresh chain${earn}` // opened after a snap
   return `+${link.points}${link.challengeSurvived ? ' · real' : ''}`
 }
 
@@ -1141,9 +1143,9 @@ function DetailCard({
           </span>{' '}
           · word {index + 1}
           {index === 0
-            ? ' · the opener (no points)'
+            ? ` · the opener, ${link.points} points`
             : link.overlap === 0
-              ? ' · started a fresh chain after the snap (no points)'
+              ? ` · started a fresh chain after the snap, ${link.points} points`
               : ` · overlapped ${link.overlap} letters for ${link.points} points`}
         </p>
         {link.challengeSurvived && (

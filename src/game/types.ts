@@ -64,8 +64,8 @@ export interface MatchState {
   /**
    * Chain indices where a fresh chain starts after a snap (both players
    * passed on the same word). While an index equals chain.length the snap is
-   * pending: the next word played is a fresh opener — any word, no overlap,
-   * no points — and the words behind the break are settled (unchallengeable).
+   * pending: the next word played is a fresh opener — any word, no overlap
+   * required — and the words behind the break are settled (unchallengeable).
    * Absent on matches that never snapped.
    */
   breaks?: number[]

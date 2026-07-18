@@ -262,7 +262,7 @@ function play(state: MatchState, actor: PlayerId, rawWord: string): MoveResult {
         return err(`${word.toUpperCase()} has already been played this match.`);
 
     // A pending snap opens the board: the next word is a fresh opener —
-    // any word, no overlap, no points — just like the match's first word.
+    // any word, no overlap required — just like the match's first word.
     const prev = isChainBroken(state)
         ? null
         : state.chain[state.chain.length - 1];
@@ -282,7 +282,7 @@ function play(state: MatchState, actor: PlayerId, rawWord: string): MoveResult {
     }
 
     const next = structuredClone(state);
-    const points = prev ? pointsFor(overlap, word.length) : 0;
+    const points = pointsFor(overlap, word.length);
     next.chain.push({ word, owner: actor, overlap, points });
     next.usedWords.push(word);
     next.players[actor].points += points;
