@@ -134,6 +134,10 @@ export function nextKeyHints(
     prev: string | null,
     typed: string,
 ): KeyHints | null {
+    // The table's edge: at MAX_WORD_LENGTH no letter can land, so every key
+    // flattens — the same dead-key grammar as an impossible grip. Checked
+    // before the opener shortcut: the edge applies to free-form words too.
+    if (typed.length >= MAX_WORD_LENGTH) return { valid: "", forced: null };
     if (!prev) return null;
     let valid = "";
     for (let c = 97; c <= 122; c++) {

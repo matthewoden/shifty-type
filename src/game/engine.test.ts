@@ -585,6 +585,13 @@ describe("nextKeyHints (guided deck keys)", () => {
         expect(nextKeyHints(null, "")).toBeNull();
     });
 
+    it("flattens the whole deck at the word-length cap", () => {
+        const capped = "x".repeat(40);
+        // …whether mid-chain or on a free-form opener.
+        expect(nextKeyHints("plant", capped)).toEqual({ valid: "", forced: null });
+        expect(nextKeyHints(null, capped)).toEqual({ valid: "", forced: null });
+    });
+
     it("lights the first letters of every valid suffix when nothing is typed", () => {
         // plant → suffixes nt, ant, lant, plant → first letters n, a, l, p
         const h = nextKeyHints("plant", "");

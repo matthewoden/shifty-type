@@ -12,7 +12,7 @@
 
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { opponentOf, type ChainLink, type Player, type PlayerId } from '../game'
+import { MAX_WORD_LENGTH, opponentOf, type ChainLink, type Player, type PlayerId } from '../game'
 import { FlagIcon } from './icons'
 import { playerTextClass, sideOf } from './tiles'
 import { WordTiles } from './WordTiles'
@@ -865,6 +865,13 @@ function RailLedger(props: LedgerViewProps) {
           className="absolute inset-y-0 left-0 w-9 z-[5] pointer-events-none bg-gradient-to-r from-board to-transparent"
         />
       )}
+      {/* The table's edge: every letter key just went dead, so say why —
+          same furniture slot as the fan nudge (they never coexist). */}
+      {composer && composer.typed.length >= MAX_WORD_LENGTH && pinned && (
+        <p className="absolute inset-x-0 bottom-[28px] text-center text-[10px] font-extrabold text-dim uppercase tracking-wider pointer-events-none draft-in">
+          {MAX_WORD_LENGTH} letters — that's the whole table. Play it or trim it
+        </p>
+      )}
       {/* The nudge is screen furniture, not a board object: centered so a
           long word's far-right fan can't drag it off the edge. */}
       {fanShowing && pinned && (
@@ -1066,6 +1073,11 @@ function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: 
             <PlayChipFlat composer={composer} onPlay={onPlay} />
           </span>
         </div>
+      )}
+      {composer && composer.typed.length >= MAX_WORD_LENGTH && (
+        <p className="text-[10px] font-extrabold text-dim uppercase tracking-wider py-1">
+          {MAX_WORD_LENGTH} letters — that's the whole table. Play it or trim it
+        </p>
       )}
     </div>
   )
