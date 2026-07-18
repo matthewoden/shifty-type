@@ -869,7 +869,7 @@ function RailLedger(props: LedgerViewProps) {
           same furniture slot as the fan nudge (they never coexist). */}
       {composer && composer.typed.length >= MAX_WORD_LENGTH && pinned && (
         <p className="absolute inset-x-0 bottom-[28px] text-center text-[10px] font-extrabold text-dim uppercase tracking-wider pointer-events-none draft-in">
-          {MAX_WORD_LENGTH} letters — that's the whole table. Play it or trim it
+          {MAX_WORD_LENGTH} letters — that's the max. Play it or trim it.
         </p>
       )}
       {/* The nudge is screen furniture, not a board object: centered so a
@@ -1076,7 +1076,7 @@ function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: 
       )}
       {composer && composer.typed.length >= MAX_WORD_LENGTH && (
         <p className="text-[10px] font-extrabold text-dim uppercase tracking-wider py-1">
-          {MAX_WORD_LENGTH} letters — that's the whole table. Play it or trim it
+          {MAX_WORD_LENGTH} letters — that's the max. Play it or trim it.
         </p>
       )}
     </div>
