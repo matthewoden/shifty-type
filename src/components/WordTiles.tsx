@@ -15,9 +15,9 @@ interface WordTilesProps {
   typeinFrom?: number
   /**
    * Fold a long word onto more lines. ONLY for width-constrained surfaces
-   * (the detail card, the flat ledger) — never on the rail, where a row
-   * placed near the canvas edge would shrink-to-fit and fold every tile
-   * onto its own line. The y-gap clears the tiles' lip shadow.
+   * (the flat ledger) — never on the rail, where a row placed near the
+   * canvas edge would shrink-to-fit and fold every tile onto its own line.
+   * The y-gap clears the tiles' lip shadow.
    */
   wrap?: boolean
 }
@@ -47,10 +47,9 @@ interface TileRailProps {
 /**
  * One line of tiles that rides sideways when the word outgrows its card —
  * the board's camera gesture in miniature (scoreboard rows, the invite's
- * "you opened with" card). Words that fit render exactly as a plain row:
- * no fades, no scroll. Reading surfaces where a ruling gets decided (the
- * detail card, the flat ledger) fold with WordTiles instead — every letter
- * stays visible there.
+ * "you opened with" card, the detail card, the challenge sheet). Words that
+ * fit render exactly as a plain row: no fades, no scroll. The flat ledger
+ * (reduced motion) folds with WordTiles instead.
  */
 export function TileRail({
   word,

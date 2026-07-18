@@ -63,10 +63,13 @@ export function VerdictStamp({
 }
 
 export function ConfirmChallengeSheet({
+  word,
   whisper,
   onConfirm,
   onCancel,
 }: {
+  /** The word on trial — always the friend's (you can't challenge your own). */
+  word: string
   /** Tutorial-only: one italic line under the buttons. */
   whisper?: string
   onConfirm: () => void
@@ -78,6 +81,8 @@ export function ConfirmChallengeSheet({
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* The word on trial rides a rail — a long one swipes to read. */}
+        <TileRail word={word} side="them" />
         <p className="font-bold text-ink text-[15px]">
           Challenge this word? Incorrect answers lose a life.
         </p>

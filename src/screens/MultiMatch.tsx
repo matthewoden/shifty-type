@@ -273,6 +273,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
 
       {confirmingChallenge && newest && (
         <ConfirmChallengeSheet
+          word={newest.word}
           onConfirm={() => {
             setConfirmingChallenge(false)
             void m.send({ type: 'challenge' })

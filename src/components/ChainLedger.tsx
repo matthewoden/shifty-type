@@ -15,7 +15,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { MAX_WORD_LENGTH, opponentOf, type ChainLink, type Player, type PlayerId } from '../game'
 import { FlagIcon } from './icons'
 import { playerTextClass, sideOf } from './tiles'
-import { WordTiles } from './WordTiles'
+import { TileRail, WordTiles } from './WordTiles'
 
 const TILE_W = 23
 const GAP = 3
@@ -697,7 +697,11 @@ function RailLedger(props: LedgerViewProps) {
               // A word longer than the frame: while locked, the meta can't
               // ride past the tail (it would be off-screen) — it tucks under
               // the word's head instead, which the lock pins at the anchor.
+              // The glow panel grows a caption apron (pb-4) so the tucked
+              // line sits inside it, clear of the ring — there's no room in
+              // the 49px row pitch otherwise.
               const overflows = row.link.word.length * STEP + FLAG_ROOM > availRef.current
+              const tucked = locked && overflows
               const glow = !locked
                 ? ''
                 : side === 'you'
@@ -725,7 +729,7 @@ function RailLedger(props: LedgerViewProps) {
                   // pb-2.5 (not 1.5): the tiles' 4px lip shadow hangs below their
                   // layout box, so the glow panel needs the extra bottom room to
                   // read as vertically centered around the word.
-                  className={`flex items-center gap-2 -m-1.5 pt-1.5 px-1.5 pb-2.5 rounded-xl active:bg-board-lo ${revealing ? '' : 'row-settle '}transition-shadow duration-150${glow}`}
+                  className={`flex items-center gap-2 -m-1.5 pt-1.5 px-1.5 ${tucked ? 'pb-4' : 'pb-2.5'} rounded-xl active:bg-board-lo ${revealing ? '' : 'row-settle '}transition-shadow duration-150${glow}`}
                   style={common}
                   aria-label={
                     challengeable
@@ -745,7 +749,7 @@ function RailLedger(props: LedgerViewProps) {
                   )}
                   <span
                     className={`text-[10px] font-extrabold text-dim whitespace-nowrap${trim.className}${
-                      locked && overflows ? ' absolute left-1.5 top-[44px]' : ''
+                      tucked ? ' absolute left-1.5 top-[43px] leading-none' : ''
                     }`}
                     style={trim.style}
                   >
@@ -1130,7 +1134,7 @@ function DetailCard({
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-9 flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <WordTiles word={link.word} side={side} wrap />
+        <TileRail word={link.word} side={side} />
         <p className="font-bold text-ink text-[14px]">
           <span className={`font-extrabold ${playerTextClass(side)}`}>
             {players[link.owner].name}

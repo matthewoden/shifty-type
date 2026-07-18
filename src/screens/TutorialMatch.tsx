@@ -205,6 +205,7 @@ export function TutorialMatch({
 
       {confirmingChallenge && newest && (
         <ConfirmChallengeSheet
+          word={newest.word}
           whisper={beat === 'smell' ? WHISPER : undefined}
           onConfirm={() => {
             setConfirmingChallenge(false)

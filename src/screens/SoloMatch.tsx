@@ -104,6 +104,7 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
 
       {confirmingChallenge && newest && (
         <ConfirmChallengeSheet
+          word={newest.word}
           onConfirm={() => {
             setConfirmingChallenge(false)
             void m.challengeBot()
