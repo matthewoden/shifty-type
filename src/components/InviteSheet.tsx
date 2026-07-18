@@ -4,8 +4,12 @@
 // raw code on anything without navigator.share (desktop, mostly).
 
 import { useState, type ReactNode } from 'react'
-import { WordTiles } from './WordTiles'
+import { TileRail } from './WordTiles'
 import { ShareIcon, ClipboardIcon } from './icons'
+
+/** Openers longer than this get the hat-tip headline — saying a 28-letter
+ *  word in the h2 costs three lines; the tiles below still say it exactly. */
+const MOUTHFUL = 15
 
 interface InviteSheetProps {
   code: string
@@ -59,18 +63,24 @@ export function InviteSheet({ code, openingWord, bell, onClose }: InviteSheetPro
       >
         <div className="w-11 h-1.5 rounded-full bg-board-lo -mt-2" aria-hidden />
         <h2 className="font-extrabold text-xl text-ink-strong text-balance">
-          {word ? `Nice — ${word}'s on the table` : 'Invite your friend'}
+          {!word
+            ? 'Invite your friend'
+            : word.length >= MOUTHFUL
+              ? "Nice — that's a whole mouthful on the table"
+              : `Nice — ${word}'s on the table`}
         </h2>
         <p className="font-semibold text-[13.5px] text-ink -mt-1 max-w-[16rem]">
           Send the invite. Your friend opens it and it's their move.
         </p>
 
         {openingWord && (
-          <div className="bg-board rounded-2xl px-4 py-3 flex flex-col items-center gap-2 shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
+          <div className="bg-board rounded-2xl py-3 w-full flex flex-col items-center gap-2 shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-p1-lip">
               You opened with
             </span>
-            <WordTiles word={openingWord} side="you" />
+            {/* A long opener rides the rail — one proud line, swipe to read;
+                the peek glide advertises the swipe as the sheet opens. */}
+            <TileRail word={openingWord} side="you" align="center" peek className="w-full" />
           </div>
         )}
 

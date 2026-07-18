@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import type { PreviewResponse } from '../lib/protocol'
 import { getSavedName, saveMatchAuth, saveName } from '../multi/storage'
-import { WordTiles } from '../components/WordTiles'
+import { TileRail } from '../components/WordTiles'
 import { Logo } from '../components/Logo'
 import { NameSheet } from '../components/NameSheet'
 
@@ -108,13 +108,14 @@ export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack 
 
       {preview.openingWord && (
         <div
-          className="invite-in bg-white rounded-2xl px-4 py-3 flex flex-col items-center gap-2 shadow-[0_3px_0_#E2DDD3]"
+          className="invite-in bg-white rounded-2xl py-3 w-full max-w-xs flex flex-col items-center gap-2 shadow-[0_3px_0_#E2DDD3]"
           style={{ animationDelay: '1650ms' }}
         >
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-p2-lip">
             {inviter} opened with
           </span>
-          <WordTiles word={preview.openingWord} side="them" />
+          {/* Same rail as the opener's share card, in the friend's coral. */}
+          <TileRail word={preview.openingWord} side="them" align="center" peek className="w-full" />
         </div>
       )}
 

@@ -20,7 +20,7 @@ export function LastCallBar({ finisherName, word, busy = false, onShake }: LastC
       <p className="font-extrabold text-[15px] text-ink-strong">
         Last call — {finisherName} played the final word.
       </p>
-      <p className="font-semibold text-xs text-dim mt-1">
+      <p className="font-semibold text-xs text-dim mt-1 break-words">
         Shake on it to end the match, or tap {word.toUpperCase()} to challenge it.
       </p>
       <button

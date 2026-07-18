@@ -68,7 +68,8 @@ export function useComposer(prevWord: string | null, active: boolean): Composer 
     },
     backspace: () => setTyped((t) => t.slice(0, -1)),
     seed: (letters) => {
-      if (active) setTyped(letters.toLowerCase())
+      // Sliced for the paste path — a pasted novel can't outgrow the board.
+      if (active) setTyped(letters.toLowerCase().slice(0, MAX_WORD_LENGTH))
     },
     clear: () => setTyped(''),
   }

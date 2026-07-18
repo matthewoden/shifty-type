@@ -2,10 +2,10 @@
 // confirm sheet, the STANDS/REJECTED verdict stamp, and the game-over panel
 // with its points count-up.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { opponentOf, type MatchState, type PlayerId } from '../game'
 import { playerTextClass, sideOf, tileClass, type Side } from './tiles'
-import { WordTiles } from './WordTiles'
+import { TileRail } from './WordTiles'
 import { FlagIcon } from './icons'
 
 export function Overlay({ children }: { children: React.ReactNode }) {
@@ -51,7 +51,7 @@ export function VerdictStamp({
       >
         {stamp}
       </div>
-      <p className="text-ink font-bold max-w-xs">{copy}</p>
+      <p className="text-ink font-bold max-w-xs break-words">{copy}</p>
       <button
         onClick={onDismiss}
         className="h-13 px-8 rounded-2xl font-extrabold bg-ink-strong text-white shadow-[0_4px_0_#262E38] active:translate-y-0.5"
@@ -101,10 +101,9 @@ export function ConfirmChallengeSheet({
 /** Counts 0 → target once on mount; jumps straight there under reduced motion. */
 function useCountUp(target: number): number {
   const [value, setValue] = useState(0)
-  const done = useRef(false)
   useEffect(() => {
-    if (done.current) return
-    done.current = true
+    // No run-once ref: the rAF cleanup already handles re-runs, and a ref
+    // guard left the count stuck at 0 under StrictMode's double effect.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || target === 0) {
       setValue(target)
       return
@@ -147,7 +146,11 @@ function PointsBar({
         <span className={playerTextClass(side)}>{name}</span>
         <span className="text-ink-strong">{shown} pts</span>
       </div>
-      <div className="h-4 bg-board-lo rounded-full mt-1 overflow-hidden">
+      {/* No overflow-hidden: it sheared off the fill's lip shadow, leaving
+          the bars flat next to everything else on the table. Track and fill
+          wear lips like the HUD's life pips — grey where empty, colored
+          where filled, both hanging 3px below the same bottom edge. */}
+      <div className="h-4 bg-board-lo rounded-full mt-1 shadow-[0_3px_0_#DDD8CE]">
         <div
           className={`h-full rounded-full ${fill} motion-safe:transition-[width] motion-safe:duration-1000 points-bar`}
           style={{ ['--points-w' as string]: `${pct}%` }}
@@ -208,15 +211,19 @@ export function GameOverPanel({
         <PointsBar name={me.name} points={me.points} maxPoints={maxPoints} side="you" />
         <PointsBar name={them.name} points={them.points} maxPoints={maxPoints} side="them" />
       </div>
-      <div className="flex flex-col items-start gap-2 max-h-44 overflow-y-auto px-2 py-1">
+      {/* The chain recap: one row per word. Long words ride a rail under
+          edge fades (swipe to read) instead of folding — the match is over,
+          nothing is being ruled on here, and the column stays scannable. */}
+      <div className="flex flex-col items-start gap-2 max-h-44 overflow-y-auto px-2 py-1 w-full">
         {state.chain.map((link, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <WordTiles
+          <div key={i} className="flex items-center gap-2 w-full">
+            <TileRail
               word={link.word}
               side={sideOf(link.owner, you)}
               headTint={link.overlap}
               tailTint={state.chain[i + 1]?.overlap ?? 0}
               small
+              className="flex-1 min-w-0"
             />
             <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
               {i === 0 ? 'opener' : `+${link.points}`}

@@ -26,6 +26,13 @@ const ANCHOR_BOTTOM = 86 // …and from the container bottom — roomy enough th
 // fan's hint floats clear of the deck (the reclaimed slack, split below)
 const BOTTOM_SNAP = 40 // within this of the end counts as "at latest"
 const REVEAL_MS = 300 // unseen-word type-in starts as the camera ride lands
+// Words may outgrow the frame (MAX_WORD_LENGTH is 40): the camera follows
+// the business end. While typing, the caret stays pinned near the right
+// edge and the spent grip slides off-left; the fan pins the tip word's tail
+// (the letters being gripped) plus the challenge flag. Links keep the head
+// pin — scroll-back reads a word from its start.
+const CARET_ROOM = 34 // caret + a breath of room past the newest tile
+const FLAG_ROOM = 44 // the challenge flag stays reachable past a long tail
 
 /** How long a reveal owns the stage: the last tile landed, plus a beat. */
 function revealSpan(word: string): number {
@@ -295,14 +302,16 @@ function DraftRow({
   )
 }
 
-/** Draft tiles: grip letters tinted, the rest solid, caret after. */
-function DraftTiles({ composer }: { composer: LedgerComposer }) {
+/** Draft tiles: grip letters tinted, the rest solid, caret after.
+ *  `wrap` is the flat ledger's — the rail draft rides the camera instead. */
+function DraftTiles({ composer, wrap }: { composer: LedgerComposer; wrap?: boolean }) {
   return (
     <>
       <WordTiles
         word={composer.typed}
         side="you"
         headTint={Math.min(composer.grip, composer.typed.length)}
+        wrap={wrap}
       />
       {composer.hintTail && (
         <span className="flex gap-[3px] ml-[3px]">
@@ -414,6 +423,9 @@ function RailLedger(props: LedgerViewProps) {
     const sc = scrollerRef.current
     const cv = canvasRef.current
     if (!sc || !cv) return
+    // A newer glide owns the commit — a stale one must not cut its
+    // transition short (typing past the fold re-glides every keystroke).
+    clearTimeout(seedTimer.current)
     seedingRef.current = true // sync — scroll events land before the re-render
     animatingRef.current = true
     cv.style.transition = 'transform 0.35s cubic-bezier(0.2, 0.8, 0.3, 1.12)'
@@ -446,22 +458,84 @@ function RailLedger(props: LedgerViewProps) {
     })
   }
 
+  // A long unseen word rides the camera as it types in: head-pinned for the
+  // first screenful, then the rail slides so each landing tile stays in
+  // frame, finishing exactly where the fan's tail anchor takes over.
+  const rideTimer = useRef(0)
+  useEffect(() => () => clearTimeout(rideTimer.current), [])
+  useEffect(() => {
+    if (!fanHold) return
+    const sc = scrollerRef.current
+    const cv = canvasRef.current
+    const last = props.chain[props.chain.length - 1]
+    if (!sc || !cv || !last) return
+    const avail = sc.clientWidth - ANCHOR_X
+    const over = last.word.length * STEP + FLAG_ROOM - avail
+    if (over <= 0 || !atBottomRef.current) return
+    const lastLink = rowsRef.current.filter((r) => r.kind === 'link').pop()
+    if (!lastLink) return
+    const fit = Math.floor((avail - FLAG_ROOM) / STEP)
+    const start = window.setTimeout(() => {
+      if (!atBottomRef.current) return // they scrolled off — don't fight them
+      const dur = (last.word.length - fit) * 60
+      seedingRef.current = true
+      cv.style.transition = `transform ${dur}ms linear`
+      cv.style.transform = `translate3d(${Math.round(ANCHOR_X - (lastLink.anchorX + over))}px, 0, 0)`
+      rideTimer.current = window.setTimeout(() => {
+        cv.style.transition = ''
+        seedingRef.current = false
+        // No applyCamera here: the ghost anchor stays head-pinned until
+        // fanHold clears, so reconciling now would yank the ride back to
+        // the head. The canvas holds the ride's park; the fanHold-clear
+        // effect below reconciles once the adjusted anchor takes over.
+      }, dur + 60)
+    }, REVEAL_MS + fit * 60)
+    return () => clearTimeout(start)
+  }, [fanHold, props.chain])
+  // The moment the reveal's hold lifts, the fan anchor flips from head-pin
+  // to tail-pin — re-aim the camera so the two always agree (a no-op when
+  // the ride already parked there, a clean glide-free sync otherwise).
+  useEffect(() => {
+    if (!fanHold) applyCameraRef.current()
+  }, [fanHold])
+
   const scrollRange = Math.max(0, rows.length - 1) * ROW_H
+
+  // Horizontal room right of the anchor — measured, since the column runs
+  // 375–430px wide. Refreshed by applyCamera (scrolls and resizes).
+  const availRef = useRef(360)
+
+  /** A row's anchor with the caret-follow rule applied (see CARET_ROOM).
+   *  Ghost rows stay head-pinned while a reveal holds them (fanHold): the
+   *  type-in starts from the word's head and the ride ends exactly where
+   *  the adjusted fan anchor takes over — no jump when the ghosts deal in. */
+  const anchorOf = (row: DisplayRow): number => {
+    const avail = availRef.current
+    if (row.kind === 'draft' && composer?.typed)
+      return row.anchorX + Math.max(0, composer.typed.length * STEP + CARET_ROOM - avail)
+    if (row.kind === 'ghost' && !fanHold) {
+      const last = props.chain[props.chain.length - 1]
+      if (last)
+        return row.anchorX + Math.max(0, last.word.length * STEP + FLAG_ROOM - avail)
+    }
+    return row.anchorX
+  }
 
   /** Camera x at fractional row position t, following per-row anchors. */
   const xAt = (t: number): number => {
     const r = rowsRef.current
     if (r.length === 0) return 0
-    if (t <= 0) return r[0].anchorX
-    if (t >= r.length - 1) return r[r.length - 1].anchorX
+    if (t <= 0) return anchorOf(r[0])
+    if (t >= r.length - 1) return anchorOf(r[r.length - 1])
     const i = Math.floor(t)
-    return r[i].anchorX + (r[i + 1].anchorX - r[i].anchorX) * (t - i)
+    return anchorOf(r[i]) + (anchorOf(r[i + 1]) - anchorOf(r[i])) * (t - i)
   }
 
   const applyCamera = () => {
     const sc = scrollerRef.current
     const cv = canvasRef.current
     if (!sc || !cv) return
+    availRef.current = sc.clientWidth - ANCHOR_X
     const t = sc.scrollTop / ROW_H
     // During the seed ride the canvas pans on its own CSS transition.
     if (!seedingRef.current) cv.style.transform = `translate3d(${Math.round(ANCHOR_X - xAt(t))}px, 0, 0)`
@@ -507,6 +581,7 @@ function RailLedger(props: LedgerViewProps) {
   }
 
   // Follow new rows when pinned to the latest; never yank when scrolled back.
+  const bottomAnchorRef = useRef(0)
   useLayoutEffect(() => {
     const sc = scrollerRef.current
     if (!sc) return
@@ -517,6 +592,9 @@ function RailLedger(props: LedgerViewProps) {
     // already framed the draft, tiles-first).
     const enteringDraft = !!draftRow && !hadDraftRef.current
     hadDraftRef.current = !!draftRow
+    const bottomAnchor = rows.length ? anchorOf(rows[rows.length - 1]) : 0
+    const anchorMoved = bottomAnchor !== bottomAnchorRef.current
+    bottomAnchorRef.current = bottomAnchor
     if (firstRef.current) {
       firstRef.current = false
       sc.scrollTop = scrollRange
@@ -526,7 +604,18 @@ function RailLedger(props: LedgerViewProps) {
       !seededRef.current &&
       !seedingRef.current
     ) {
-      glideCamera(draftRow!.x, scrollRange, () => applyCameraRef.current())
+      glideCamera(bottomAnchor, scrollRange, () => applyCameraRef.current())
+      return
+    } else if (
+      anchorMoved &&
+      atBottomRef.current &&
+      !seedingRef.current &&
+      Math.abs(sc.scrollTop - scrollRange) < 1
+    ) {
+      // The parked anchor moved without any scroll to carry the camera —
+      // the caret crossed the fold mid-word, or a long draft just became a
+      // head-pinned link. Ride the rail, don't snap.
+      glideCamera(bottomAnchor, scrollRange, () => applyCameraRef.current())
       return
     } else if (atBottomRef.current && !seedingRef.current) {
       animatingRef.current = true
@@ -605,6 +694,10 @@ function RailLedger(props: LedgerViewProps) {
             }
             if (row.kind === 'link') {
               const side = sideOf(row.link.owner, you)
+              // A word longer than the frame: while locked, the meta can't
+              // ride past the tail (it would be off-screen) — it tucks under
+              // the word's head instead, which the lock pins at the anchor.
+              const overflows = row.link.word.length * STEP + FLAG_ROOM > availRef.current
               const glow = !locked
                 ? ''
                 : side === 'you'
@@ -650,7 +743,12 @@ function RailLedger(props: LedgerViewProps) {
                   {challengeable && (
                     <span className={`bg-white text-p2-lip rounded-full w-7 h-7 flex items-center justify-center shadow-[0_3px_0_#E2DDD3]${trim.className}`} style={trim.style}><FlagIcon className="w-4 h-4" /></span>
                   )}
-                  <span className={`text-[10px] font-extrabold text-dim whitespace-nowrap${trim.className}`} style={trim.style}>
+                  <span
+                    className={`text-[10px] font-extrabold text-dim whitespace-nowrap${trim.className}${
+                      locked && overflows ? ' absolute left-1.5 top-[44px]' : ''
+                    }`}
+                    style={trim.style}
+                  >
                     {locked
                       ? `word ${row.index + 1} of ${props.chain.length} · ${linkMeta(row.link, row.index)}`
                       : isChainTip && composer?.typed && !props.freshStart
@@ -705,6 +803,20 @@ function RailLedger(props: LedgerViewProps) {
 
   const fanShowing = rows.some((r) => r.kind === 'ghost')
 
+  // The head of an overflowing word dissolves at the left edge rather than
+  // cutting hard — while typing past the fold, and under the fan when the
+  // tip word is longer than the frame. Only while pinned to the latest:
+  // scroll-back is head-pinned, nothing bleeds left there by this rule.
+  const lastWord = props.chain[props.chain.length - 1]
+  const bleedsLeft =
+    pinned &&
+    (composer?.typed
+      ? composer.typed.length * STEP + CARET_ROOM > availRef.current
+      : fanShowing &&
+        !fanHold &&
+        !!lastWord &&
+        lastWord.word.length * STEP + FLAG_ROOM > availRef.current)
+
   return (
     <>
       <div
@@ -747,6 +859,12 @@ function RailLedger(props: LedgerViewProps) {
           {rowNodes}
         </div>
       </div>
+      {bleedsLeft && (
+        <div
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-9 z-[5] pointer-events-none bg-gradient-to-r from-board to-transparent"
+        />
+      )}
       {/* The nudge is screen furniture, not a board object: centered so a
           long word's far-right fan can't drag it off the edge. */}
       {fanShowing && pinned && (
@@ -886,6 +1004,7 @@ function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: 
                 side={sideOf(link.owner, you)}
                 headTint={link.overlap}
                 tailTint={next?.overlap ?? liveTint}
+                wrap
               />
               {challengeable && (
                 <span className="bg-white text-p2-lip rounded-full w-7 h-7 flex items-center justify-center shadow-[0_3px_0_#E2DDD3]"><FlagIcon className="w-4 h-4" /></span>
@@ -942,7 +1061,7 @@ function FlatLedger(props: LedgerViewProps & { initialRow?: number; pinBottom?: 
       )}
       {composer?.typed && (
         <div className="flex items-center gap-3 min-h-11 py-1">
-          <DraftTiles composer={composer} />
+          <DraftTiles composer={composer} wrap />
           <span className="ml-auto">
             <PlayChipFlat composer={composer} onPlay={onPlay} />
           </span>
@@ -999,7 +1118,7 @@ function DetailCard({
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-9 flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <WordTiles word={link.word} side={side} />
+        <WordTiles word={link.word} side={side} wrap />
         <p className="font-bold text-ink text-[14px]">
           <span className={`font-extrabold ${playerTextClass(side)}`}>
             {players[link.owner].name}

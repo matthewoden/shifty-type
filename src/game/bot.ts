@@ -4,7 +4,15 @@
 
 import { gripTargetOf, isChainBroken, overlapOf } from './engine'
 import { WORD_LIST } from './wordlist'
-import { MAX_WORD_LENGTH, type MatchState, type Move, type PlayerId } from './types'
+import type { MatchState, Move, PlayerId } from './types'
+
+/**
+ * Lloyd keeps his words on screen: never longer than fits the board without
+ * the caret-follow camera kicking in (12 tiles + the flag at 375px). Players
+ * may go to MAX_WORD_LENGTH (40) — the monster plays are theirs to make.
+ * The full list, long words included, still powers his challenge knowledge.
+ */
+export const BOT_MAX_WORD_LENGTH = 12
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -97,7 +105,12 @@ export function pickPlayWord(
   const used = new Set(state.usedWords)
   const candidates = list
     .map((word) => ({ word, overlap: last ? overlapOf(last.word, word) : 0 }))
-    .filter((c) => !used.has(c.word) && (!last || c.overlap >= 2))
+    .filter(
+      (c) =>
+        c.word.length <= BOT_MAX_WORD_LENGTH &&
+        !used.has(c.word) &&
+        (!last || c.overlap >= 2),
+    )
   if (candidates.length === 0) return null
   return pickByGreed(candidates, difficulty, rng, !last)
 }
@@ -141,13 +154,13 @@ function makeBluff(
   list: readonly string[],
   used: Set<string>,
 ): string | null {
-  for (let k = Math.min(currentWord.length, MAX_WORD_LENGTH - 2); k >= 2; k--) {
+  for (let k = Math.min(currentWord.length, BOT_MAX_WORD_LENGTH - 2); k >= 2; k--) {
     const suffix = currentWord.slice(-k)
     for (const word of list) {
       if (!word.startsWith(suffix)) continue
       for (const ending of BLUFF_ENDINGS) {
         const fake = word + ending
-        if (fake.length <= MAX_WORD_LENGTH && !used.has(fake)) return fake
+        if (fake.length <= BOT_MAX_WORD_LENGTH && !used.has(fake)) return fake
       }
     }
   }

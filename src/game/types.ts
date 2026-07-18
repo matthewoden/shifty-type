@@ -17,7 +17,7 @@ export interface ChainLink {
   /** Letters shared with the previous word (0 for the opener — the match's
    *  or, after a snap, a fresh chain's). */
   overlap: number
-  /** Points earned by this word: overlap² + max(0, length − 6). 0 for the opener. */
+  /** Points earned by this word: overlap² + 1 per non-overlapped letter. 0 for the opener. */
   points: number
   /** Set once the word has survived a challenge. */
   challengeSurvived?: boolean
@@ -85,7 +85,10 @@ export interface MatchState {
 export const STARTING_LIVES = 3
 export const CHAIN_LIMIT = 20
 export const MIN_WORD_LENGTH = 3
-export const MAX_WORD_LENGTH = 12
+/** Roomy on purpose: no real word gets here, but creative nonsense might.
+ *  The board copes via the caret-follow camera, and a big word simply keeps
+ *  its big length bonus — they spelled it, they earned it. */
+export const MAX_WORD_LENGTH = 40
 export const MIN_OVERLAP = 2
 /** New letters a word must add past its overlap — pluralizing the tip is not a play. */
 export const MIN_EXTENSION = 2

@@ -2,7 +2,7 @@
 // verdict list for challenges, and the offline dictionary fallback.
 //
 // Pipeline: google-10000-english-usa-no-swears (web-frequency order, swears
-// already dropped) → keep 3–12 letter lowercase a–z words that also appear in
+// already dropped) → keep 3–40 letter lowercase a–z words that also appear in
 // /usr/share/dict/words (drops web junk and abbreviations) → all survivors,
 // frequency order preserved.
 //
@@ -32,7 +32,7 @@ async function loadSource() {
 
 const dict = new Set(fs.readFileSync(DICT_PATH, 'utf8').split('\n'))
 const source = (await loadSource()).split('\n').map((w) => w.trim())
-const words = source.filter((w) => /^[a-z]{3,12}$/.test(w) && dict.has(w))
+const words = source.filter((w) => /^[a-z]{3,40}$/.test(w) && dict.has(w))
 
 const lines = []
 for (let i = 0; i < words.length; i += WORDS_PER_LINE) {
@@ -43,7 +43,7 @@ for (let i = 0; i < words.length; i += WORDS_PER_LINE) {
 const banner = `// ${words.length.toLocaleString('en-US')} common English words: the bot's vocabulary, the instant-real
 // verdict list for challenges, and the offline dictionary fallback.
 // Generated from the google-10000-english-usa-no-swears frequency list,
-// filtered to 3–12 letter lowercase words that also appear in
+// filtered to 3–40 letter lowercase words that also appear in
 // /usr/share/dict/words (drops web junk and abbreviations); all survivors
 // kept in frequency order. Regenerate with scripts/generate-wordlist.mjs.
 

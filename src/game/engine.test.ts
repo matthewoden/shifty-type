@@ -167,11 +167,20 @@ describe("playing a word", () => {
     });
 
     it("rejects malformed words", () => {
-        const msg = "Words are 3–12 letters, a–z only.";
+        const msg = "Words are 3–40 letters, a–z only.";
         expectError(applyMove(fresh(), "p1", play("ab")), msg);
-        expectError(applyMove(fresh(), "p1", play("abcdefghijklm")), msg);
+        expectError(applyMove(fresh(), "p1", play("a".repeat(41))), msg);
         expectError(applyMove(fresh(), "p1", play("don't")), msg);
         expectError(applyMove(fresh(), "p1", play("abc1")), msg);
+    });
+
+    it("accepts the 28-letter showpiece", () => {
+        const state = run(fresh(), [
+            ["p1", play("elephant")],
+            ["p2", play("antidisestablishmentarianism")],
+        ]);
+        // overlap ANT (3²) + one per non-overlapped letter (28 − 3)
+        expect(state.chain[1].points).toBe(34);
     });
 
     it("rejects repeats, case-insensitively", () => {
