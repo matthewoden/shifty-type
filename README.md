@@ -2,9 +2,9 @@
 
 An async two-player word game about overlapping words and sneaky typos. Play it at **https://shifty-type.heymatthewoden.workers.dev** — no account, no install required (though the full feature set comes when you do the PWA install). Developed with claude while recovering in the hospital.
 
-<img src="docs/demo.gif" width="320" alt="A solo match against Lloyd the llama at phone size: typing words on the key deck, the chain climbing the staircase board">
+https://github.com/user-attachments/assets/4dac3249-922a-4df2-b6ff-3695ea8e9876
 
-_A solo match against Lloyd ([higher-quality MP4](docs/demo.mp4))._
+_A solo match against Lloyd ([source video](docs/demo.mp4))._
 
 You and a friend build one chain of words across the table. Each word must **start with the last 2+ letters of the word before it**:
 
