@@ -18,7 +18,7 @@ The shared letters are the overlap, which is where most of your points come from
 
 ## What's with the llamas?
 
-An earlier iteration of this game at one point was called "Spell Llamas". But after a while, I gave up trying to land a "wizardly llama" aesthetic, and changed the name. art style.
+An earlier iteration of this game at one point was called "Spell Llamas". But after a while, I gave up trying to land a "wizardly llama" aesthetic, and changed the name.
 
 The llamas were created for that, and I couldn't bring myself to rename them.
 
