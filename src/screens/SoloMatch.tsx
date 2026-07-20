@@ -3,6 +3,7 @@ import { ChainLedger } from '../components/ChainLedger'
 import { Deck, PassButton } from '../components/Deck'
 import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
+import { PresenceDot } from '../components/PresenceDot'
 import { useComposer } from '../components/useComposer'
 import { gripOptions, gripTargetOf, isChainBroken, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
@@ -26,6 +27,11 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
   const playerTurn = state.phase === 'P1_TURN'
   // The bot played the final word; the player answers last call.
   const playerLastCall = state.phase === 'LAST_CALL' && lastCallActorOf(state) === 'p1'
+  // The player played the final word; the bot is eyeing it.
+  const botLastCall = state.phase === 'LAST_CALL' && lastCallActorOf(state) === 'p2'
+  // The bot has the move — the deck gives way to the table-side note, same
+  // as waiting on a friend in multiplayer, so the llama visibly "thinks".
+  const botTurn = state.phase === 'P2_TURN' || botLastCall
   // Both passed on the tip: the chain snapped, and the next word opens fresh —
   // no grip to compose against, no fan, and the sealed tip is unchallengeable.
   const broken = isChainBroken(state)
@@ -93,6 +99,15 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
       )}
       {playerLastCall && newest ? (
         <LastCallBar finisherName={botName} word={newest.word} onShake={m.shake} />
+      ) : botTurn ? (
+        <div className="px-5 pb-10 pt-2 text-center">
+          <p className="font-extrabold text-[15px] text-ink-strong">
+            <PresenceDot />{' '}
+            {botLastCall
+              ? `${botName}'s eyeing your last word…`
+              : `${botName}'s at the table, mulling it over…`}
+          </p>
+        </div>
       ) : (
         <Deck
           disabled={!playerTurn}

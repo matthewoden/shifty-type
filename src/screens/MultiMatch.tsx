@@ -3,6 +3,7 @@ import { ChainLedger } from '../components/ChainLedger'
 import { Deck, PassButton } from '../components/Deck'
 import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
+import { PresenceDot } from '../components/PresenceDot'
 import { useComposer } from '../components/useComposer'
 import { gripOptions, isChainBroken, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
@@ -343,16 +344,6 @@ function BellButton({
       <CallBellIcon className={`w-4 h-4 ${denied ? 'text-dim' : 'text-p1-lip'}`} />
       {denied ? "The bell's off — turn it back on" : status === 'pending' ? 'Asking…' : label}
     </button>
-  )
-}
-
-/** The little "seat's warm" lamp next to a present opponent. */
-function PresenceDot() {
-  return (
-    <span
-      aria-hidden
-      className="inline-block w-2 h-2 rounded-full bg-p2 align-middle mr-0.5 -mt-0.5 animate-pulse motion-reduce:animate-none"
-    />
   )
 }
 
