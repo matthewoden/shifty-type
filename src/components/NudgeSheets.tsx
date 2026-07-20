@@ -40,10 +40,10 @@ export function SoftAskSheet({ onConfirm, onClose }: { onConfirm: () => void; on
   return (
     <Sheet onClose={onClose}>
       <h2 className="font-extrabold text-lg text-ink-strong flex items-center gap-2">
-        <CallBellIcon className="w-5.5 h-5.5 text-p1-lip" /> Hear the bell?
+        <CallBellIcon className="w-5.5 h-5.5 text-p1-lip" /> Turn on notifications?
       </h2>
       <p className="text-[13px] font-semibold text-ink -mt-2">
-        We'll ring your phone when the game needs you — a word played, a challenge thrown, a friend
+        We'll notify you when the game needs you — a word played, a challenge thrown, a friend
         taking their seat. Nothing else, ever.
       </p>
       <p className="text-[13px] font-semibold text-dim -mt-1">
@@ -53,7 +53,7 @@ export function SoftAskSheet({ onConfirm, onClose }: { onConfirm: () => void; on
         onClick={onConfirm}
         className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5"
       >
-        Ring the bell
+        Turn them on
       </button>
       <button onClick={onClose} className="h-11 rounded-xl font-extrabold text-dim">
         Not now
@@ -110,7 +110,7 @@ export function BellOffSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet onClose={onClose}>
       <h2 className="font-extrabold text-lg text-ink-strong flex items-center gap-2">
-        <CallBellIcon className="w-5.5 h-5.5 text-dim" /> The bell's switched off
+        <CallBellIcon className="w-5.5 h-5.5 text-dim" /> Notifications are switched off
       </h2>
       <p className="text-[13px] font-semibold text-ink -mt-2">
         Your phone said no to notifications a while back, and it won't let us ask twice. Flipping

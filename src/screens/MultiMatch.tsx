@@ -213,7 +213,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           </p>
           <p className="font-semibold text-xs text-dim mt-1">
             {nudge.status === 'on'
-              ? "we'll ring your phone's bell when they sit down"
+              ? "we'll notify you when they sit down"
               : 'share the invite and they drop straight into their turn'}
           </p>
           <button
@@ -240,7 +240,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           <div className="mt-3 flex flex-col items-center gap-2">
             <BellButton
               status={nudge.status}
-              label="Ring me when they answer"
+              label="Notify me when they answer"
               onAsk={() => setBellSheet('ask')}
               onFix={() => setBellSheet('fix')}
             />
@@ -262,7 +262,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           </p>
           <p className="font-semibold text-xs text-dim mt-1">
             {nudge.status === 'on'
-              ? "we'll ring your phone's bell the moment they play"
+              ? "we'll notify you the moment they play"
               : m.live
                 ? 'their word lands right here the moment they play it'
                 : 'checks for their word every few seconds while you watch'}
@@ -270,7 +270,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           <div className="mt-3 flex flex-col items-center gap-2">
             <BellButton
               status={nudge.status}
-              label="Ring me when they play"
+              label="Notify me when they play"
               onAsk={() => setBellSheet('ask')}
               onFix={() => setBellSheet('fix')}
             />
@@ -296,7 +296,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           bell={
             <BellButton
               status={nudge.status}
-              label="Ring me when they sit down"
+              label="Notify me when they sit down"
               onAsk={() => setBellSheet('ask')}
               onFix={() => setBellSheet('fix')}
             />
@@ -372,7 +372,7 @@ function BellButton({
       className={`h-11 px-4 rounded-full bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 inline-flex items-center gap-2 font-extrabold text-[13px] disabled:opacity-60 ${denied ? 'text-dim' : 'text-ink'} ${className}`}
     >
       <CallBellIcon className={`w-4 h-4 ${denied ? 'text-dim' : 'text-p1-lip'}`} />
-      {denied ? "The bell's off — turn it back on" : status === 'pending' ? 'Asking…' : label}
+      {denied ? "Notifications are off — turn them back on" : status === 'pending' ? 'Asking…' : label}
     </button>
   )
 }

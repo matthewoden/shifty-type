@@ -85,7 +85,7 @@ export function Settings({ onBack }: SettingsProps) {
         ? "Switched off for Shifty Type in your phone's settings. Turn notifications back on there."
         : nstat === 'on'
           ? 'On — every game notifies you when it’s your move.'
-          : 'Get notified when a game needs you. The per-game bell flips this same switch.'
+          : 'Get notified when a game needs you. The in-game button flips this same switch.'
 
   const kind = useInstallKind()
   const standalone = isStandalone()

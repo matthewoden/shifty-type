@@ -30,7 +30,7 @@ export function IosHowToSheet({ onClose }: { onClose: () => void }) {
       >
         <h2 className="font-extrabold text-lg text-ink-strong">Put it on your phone</h2>
         <p className="text-[13px] font-semibold text-ink -mt-2">
-          Safari can pin Shifty Type to your home screen — it opens like an app, can ring a bell
+          Safari can pin Shifty Type to your home screen — it opens like an app, notifies you
           when it's your move, and llama games work with no wifi.
         </p>
         {steps.map(([n, copy, glyph]) => (
@@ -118,7 +118,7 @@ function InstallCard({ onAdd, onDismiss }: { onAdd: () => void; onDismiss: () =>
             Put it on your phone
           </p>
           <p className="text-xs font-semibold text-ink leading-snug mt-0.5">
-            No app store. Your phone rings a bell when it's your move — and llama games need no
+            No app store. It notifies you when it's your move — and llama games need no
             wifi at all.
           </p>
         </div>
