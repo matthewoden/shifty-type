@@ -18,7 +18,8 @@ import { useMultiMatch, type StampEvent } from '../multi/useMultiMatch'
 import { useClearBadge, useNudge, type NudgeStatus } from '../multi/useNudge'
 import { BellOffSheet, SoftAskSheet } from '../components/NudgeSheets'
 import { InviteSheet } from '../components/InviteSheet'
-import { CallBellIcon, ShareIcon } from '../components/icons'
+import { NoteSheet } from '../components/NoteSheet'
+import { CallBellIcon, PaperPlaneTiltIcon, ShareIcon } from '../components/icons'
 import { LastCallBar } from '../components/LastCallBar'
 
 interface MultiMatchProps {
@@ -72,6 +73,8 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   // 'ask' = our friendly pre-prompt (guards the one-shot OS dialog);
   // 'fix' = the way back after a denied permission.
   const [bellSheet, setBellSheet] = useState<'ask' | 'fix' | null>(null)
+  // The note sheet — the nudge that rides a regular text instead of push.
+  const [noteOpen, setNoteOpen] = useState(false)
   const bellSheets = bellSheet && (
     bellSheet === 'ask' ? (
       <SoftAskSheet
@@ -234,13 +237,15 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           <p className="font-semibold text-xs text-dim mt-1">
             {oppName} ends the match by shaking on it — or challenging it
           </p>
-          <BellButton
-            status={nudge.status}
-            label="Ring me when they answer"
-            className="mt-3"
-            onAsk={() => setBellSheet('ask')}
-            onFix={() => setBellSheet('fix')}
-          />
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <BellButton
+              status={nudge.status}
+              label="Ring me when they answer"
+              onAsk={() => setBellSheet('ask')}
+              onFix={() => setBellSheet('fix')}
+            />
+            {!oppHere && <NotePill onOpen={() => setNoteOpen(true)} />}
+          </div>
         </div>
       ) : (
         <div className="px-5 pb-10 pt-2 text-center">
@@ -262,13 +267,15 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
                 ? 'their word lands right here the moment they play it'
                 : 'checks for their word every few seconds while you watch'}
           </p>
-          <BellButton
-            status={nudge.status}
-            label="Ring me when they play"
-            className="mt-3"
-            onAsk={() => setBellSheet('ask')}
-            onFix={() => setBellSheet('fix')}
-          />
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <BellButton
+              status={nudge.status}
+              label="Ring me when they play"
+              onAsk={() => setBellSheet('ask')}
+              onFix={() => setBellSheet('fix')}
+            />
+            {!oppHere && <NotePill onOpen={() => setNoteOpen(true)} />}
+          </div>
         </div>
       )}
 
@@ -297,6 +304,14 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           onClose={() => setInviteOpen(false)}
         />
       )}
+      {noteOpen && (
+        <NoteSheet
+          code={code}
+          friendName={oppName}
+          tableWord={newestWord}
+          onClose={() => setNoteOpen(false)}
+        />
+      )}
       {m.stamp && <MultiVerdict stamp={m.stamp} you={you} oppName={oppName} onDismiss={m.clearStamp} />}
       {terminal && !m.stamp && (
         <GameOverPanel
@@ -314,6 +329,21 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
       )}
       {bellSheets}
     </div>
+  )
+}
+
+/** The nudge that needs no permission: opens the note sheet. Callers hide it
+ *  while the friend is actually at the table — you don't slide a note to
+ *  someone sitting across from you. */
+function NotePill({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button
+      onClick={onOpen}
+      className="h-11 px-4 rounded-full bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 inline-flex items-center gap-2 font-extrabold text-[13px] text-ink"
+    >
+      <PaperPlaneTiltIcon className="w-4 h-4 text-p2-lip" />
+      Slide them a note
+    </button>
   )
 }
 
