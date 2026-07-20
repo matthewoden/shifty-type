@@ -1,13 +1,15 @@
 # Shifty Type
 
-Async two-player word game (plus solo vs the llama bot). Renamed 2026-07 from "Word Chain" to "Spell Llama", then to **Shifty Type** — the name plays the game's own move (SHIFTY → TYPE, overlap TY; fused: SHIFTYPE) and means the sneak across the table. The bot remains Lloyd the llama. Full de-heist of all copy at the same time: the voice is silly card-table, never crime (no vault/heist/thieves/stash/hideout). The other player is always a **friend** — never "rival"/"rivals" (or opponent-hostile framing) anywhere in user-facing copy, notifications included. Deployed at **https://shifty-type.heymatthewoden.workers.dev** (Worker renamed 2026-07-12; the old word-chain Worker and its matches were deleted). Mobile-first web app. The player is currently in the hospital and will play primarily on a phone, in short sessions, possibly on flaky wifi — treat mobile performance, resumability, and offline-tolerance as first-class requirements.
+Async two-player word game (plus solo vs the llama bot). Renamed 2026-07 from "Word Chain" to "Spell Llama", then to **Shifty Type** — the name plays the game's own move (SHIFTY → TYPE, overlap TY; fused: SHIFTYPE) and means the sneak across the table. The bot remains Lloyd the llama. The voice is silly card-table, never crime (no vault/heist/thieves/stash/hideout). The other player is always a **friend** — never "rival"/"rivals" (or opponent-hostile framing) anywhere in user-facing copy, notifications included. Deployed at **https://shifty-type.heymatthewoden.workers.dev** (Worker renamed 2026-07-12; the old word-chain Worker and its matches were deleted). Mobile-first web app.
 
 ## Read these first
+
 - `GAME_DESIGN.md` — rules, scoring, challenge mechanic, bot behavior, visual direction. The rules are settled; do not redesign them without asking.
 - `IMPLEMENTATION_PLAN.md` — phased milestones with acceptance criteria. Build in order; each phase should be playable.
 - `mockups/threes-v2-rail.html` — the visual reference for Phase 4. This is the chosen direction (Threes-inspired chiclets, indigo/coral player coding, tint joints, camera rail); match it. `mockups/keyboard-deck.html` is the newer reference for the input interaction (custom key deck, inline play, parked camera, grip fan) — it supersedes the input-bar spec. `mockups/explorations/` is rejected history — do not draw from it.
 
 ## Stack
+
 - React + Vite + TypeScript
 - Tailwind for styling
 - Cloudflare Workers (free tier) for the multiplayer backend, deployed with wrangler. One Worker serves both the static frontend (Workers Assets) and a small JSON API. Match state lives in a **Durable Object per match** (SQLite-backed, available on the free plan) — NOT Workers KV, whose eventual consistency can lose alternating-turn writes. See GAME_DESIGN.md §Multiplayer.
@@ -16,6 +18,7 @@ Async two-player word game (plus solo vs the llama bot). Renamed 2026-07 from "W
 - Free Dictionary API (`https://api.dictionaryapi.dev/api/v2/entries/en/{word}`) for challenge resolution (called from the Worker, not the client), with the embedded word list as fallback
 
 ## Conventions
+
 - All game logic (chain validation, scoring, challenge resolution, bot) lives in `src/game/` as pure functions with unit tests. No game rules inside React components. The same module is imported by both the React client (solo mode, optimistic UI) and the Durable Object (authoritative multiplayer moves) — keep it dependency-free so it runs in both runtimes.
 - The embedded word list lives in `src/game/wordlist.ts` (~5,800 common English words, lowercase, frequency order). Bot plays only from this list. Regenerate with `scripts/generate-wordlist.mjs` — never hand-edit.
 - State machine for a match is explicit (see GAME_DESIGN.md §States). Never mutate match state ad hoc — every transition goes through `applyMove()`.
@@ -23,11 +26,13 @@ Async two-player word game (plus solo vs the llama bot). Renamed 2026-07 from "W
 - Keep the bundle small; no heavy dependencies for animation (CSS transitions are fine).
 
 ## Commands
+
 - `npm run dev` — local dev (`wrangler dev` for the Worker + Vite for the client, wired together)
 - `npm run test` — vitest (game logic must stay green)
 - `npm run deploy` — build client + `wrangler deploy`
 
 ## Known constraints / decisions already made
+
 - No login. Players are identified by a per-device ID stored in localStorage + a display name. Matches are joined by 4-character code. Each player gets a random secret token on join; the Durable Object rejects moves without the right token, so knowing a match code alone doesn't let strangers play your turns.
 - The Durable Object is the referee: it runs `applyMove()` and is the only writer of match state. The client never writes state directly.
 - Words played are NOT auto-validated against a dictionary — bluffing is a core mechanic. The dictionary is only consulted when a word is challenged.
