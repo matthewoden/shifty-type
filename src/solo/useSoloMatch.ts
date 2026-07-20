@@ -1,6 +1,6 @@
 // Solo match orchestration: the player is always p1 (blue), the bot p2.
 // Owns the bot's thinking delay, challenge resolution, transient UI events,
-// and localStorage persistence so a hospital session can stop and resume
+// and localStorage persistence so a flakey wifi session can stop and resume
 // at any point — mid-challenge included.
 
 import { useEffect, useState } from 'react'

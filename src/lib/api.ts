@@ -1,4 +1,4 @@
-// Thin client for the match API. Every call can fail on hospital wifi, so
+// Thin client for the match API. Every call can fail on wifi, so
 // network errors resolve to a friendly ApiError instead of throwing.
 
 import type {

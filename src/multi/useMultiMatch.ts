@@ -1,7 +1,7 @@
 // Multiplayer match state driven by the Durable Object. A hibernating
 // WebSocket is the primary line — the DO pushes a fresh view the moment
 // anything happens. Polling (8s, visible tab, not our move) survives as the
-// fallback for hospital wifi, and both paths dedupe on `revision`.
+// fallback for flakey wifi, and both paths dedupe on `revision`.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { lastCallActorOf } from '../game'

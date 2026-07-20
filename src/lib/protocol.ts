@@ -94,7 +94,7 @@ export type PreviewResponse =
 /**
  * A compact, redacted snapshot of one match for the lobby list — everything a
  * row needs to render without pulling the whole state (small payloads matter
- * on hospital wifi). `opponentName` is null while the second seat is still
+ * on flakey wifi). `opponentName` is null while the second seat is still
  * empty; `lastMoveAt` is ms-epoch of the last activity (create/join/move).
  */
 export interface MatchSummary {
