@@ -9,6 +9,7 @@ import { useDeckKeyboard } from '../components/useDeckKeyboard'
 import { gripOptions, gripTargetOf, isChainBroken, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { LastCallBar } from '../components/LastCallBar'
+import { Button } from '../components/ui/Button'
 import { useSoloMatch, type SoloEvent, type SoloSave } from '../solo/useSoloMatch'
 
 interface SoloMatchProps {
@@ -74,9 +75,9 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
-        <button onClick={onExit} className="h-11 px-2 font-extrabold text-[13px] text-dim">
+        <Button variant="text" size="sm" onClick={onExit}>
           ← {backLabel}
-        </button>
+        </Button>
         <PassButton disabled={!playerTurn} onPass={m.pass} />
       </div>
       <Hud state={state} you="p1" active={active} pulse={m.botThinking} />
@@ -107,7 +108,7 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
         }
       />
       {m.error && (
-        <div className="mx-3.5 mb-2 text-center text-[13px] font-bold text-p2-lip bg-white rounded-xl px-4 py-2.5 shadow-[0_3px_0_#E2DDD3]">
+        <div className="mx-3.5 mb-2 text-center text-body font-bold text-p2-lip bg-white rounded-xl px-4 py-2.5 shadow-[0_3px_0_#E2DDD3]">
           {m.error}
         </div>
       )}
@@ -115,7 +116,7 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
         <LastCallBar finisherName={botName} word={newest.word} onShake={m.shake} />
       ) : botTurn ? (
         <div className="px-5 pb-10 pt-2 text-center">
-          <p className="font-extrabold text-[15px] text-ink-strong">
+          <p className="font-extrabold text-status text-ink-strong">
             <PresenceDot />{' '}
             {botLastCall
               ? `${botName}'s eyeing your last word…`

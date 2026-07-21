@@ -1,5 +1,6 @@
 import type { Difficulty } from '../game'
-import { tileClass } from '../components/tiles'
+import { TileLockup } from '../components/TileLockup'
+import { Button } from '../components/ui/Button'
 
 const OPTIONS: Array<{ difficulty: Difficulty; label: string; blurb: string }> = [
   { difficulty: 'easy', label: 'Lloyd · Mellow', blurb: 'New llama in town, trusting.' },
@@ -25,32 +26,8 @@ export function SoloSetup({ onStart, onBack }: SoloSetupProps) {
   return (
     <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-6 p-6">
       <div className="flex flex-col items-center gap-2.5">
-        <p className="text-dim font-extrabold text-[11px] uppercase tracking-[2px]">Meet these</p>
-        <div className="flex flex-col items-start gap-1.5" aria-label="Swell Llamas">
-          <span className="flex gap-[3px]">
-            {['s', 'w', 'e', 'l', 'l'].map((ch, i) => (
-              <span
-                key={i}
-                className={`${tileClass('you', i >= 3)} logo-pop ${i >= 3 ? 'logo-spend' : ''}`}
-                style={{ animationDelay: i >= 3 ? `${i * 60}ms, 520ms` : `${i * 60}ms` }}
-              >
-                {ch}
-              </span>
-            ))}
-          </span>
-          <span className="flex gap-[3px]" style={{ marginLeft: 78 }}>
-            {['l', 'l', 'a', 'm', 'a', 's'].map((ch, i) => (
-              <span
-                key={i}
-                className={`${tileClass('them', i < 2)} logo-typein`}
-                style={{ animationDelay: `${420 + i * 60}ms` }}
-              >
-                {ch}
-              </span>
-            ))}
-          </span>
-        </div>
-        <p className="text-ink font-bold text-[15px] mt-6 setup-fade">Pick a llama to play against.</p>
+        <TileLockup top="swell" bottom="llamas" pace="quick" kicker="Meet these" />
+        <p className="text-ink font-bold text-status mt-6 setup-fade">Pick a llama to play against.</p>
       </div>
       <div className="flex flex-col gap-3.5 w-full max-w-xs setup-fade">
         {OPTIONS.map((o) => (
@@ -60,13 +37,13 @@ export function SoloSetup({ onStart, onBack }: SoloSetupProps) {
             className="text-left bg-white rounded-2xl px-5 py-4 shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 active:shadow-[0_2px_0_#E2DDD3]"
           >
             <span className="font-extrabold text-lg text-ink-strong">{o.label}</span>
-            <span className="block text-[13px] font-semibold text-ink">{o.blurb}</span>
+            <span className="block text-body font-semibold text-ink">{o.blurb}</span>
           </button>
         ))}
       </div>
-      <button onClick={onBack} className="h-11 px-4 font-extrabold text-dim setup-fade">
+      <Button variant="text" onClick={onBack} className="setup-fade">
         ← Back
-      </button>
+      </Button>
     </div>
   )
 }

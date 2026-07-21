@@ -16,6 +16,7 @@ import {
 import { InviteSheet } from '../components/InviteSheet'
 import { ShareIcon } from '../components/icons'
 import { tileClass } from '../components/tiles'
+import { Button } from '../components/ui/Button'
 import type { PlayerId } from '../game'
 import { api } from '../lib/api'
 import type { MatchSummary } from '../lib/protocol'
@@ -46,7 +47,7 @@ function resultPill(winner: PlayerId | null, you: PlayerId): ReactNode {
 /** The two scores, colored by side: you are always indigo, the friend coral. */
 function Score({ you, them }: { you: number; them: number }) {
   return (
-    <span className="font-bold text-[13px]">
+    <span className="font-bold text-ui">
       <span className="text-p1-lip">{you}</span>
       <span className="text-dim"> – </span>
       <span className="text-p2-lip">{them}</span>
@@ -60,7 +61,7 @@ function RemoveButton({ onDelete }: { onDelete: () => void }) {
   return (
     <button
       onClick={onDelete}
-      className="shrink-0 h-10 px-3.5 rounded-xl bg-[#FBEAEA] text-[#C8372E] font-extrabold text-[13px] active:translate-y-0.5"
+      className="shrink-0 h-10 px-3.5 rounded-xl bg-[#FBEAEA] text-[#C8372E] font-extrabold text-ui active:translate-y-0.5"
     >
       Remove
     </button>
@@ -258,7 +259,7 @@ function PendingRow({
       </span>
       <span className="min-w-0">
         <span className="block font-extrabold text-ink-strong truncate">Waiting to join</span>
-        <span className="block mt-0.5 text-[12px] font-semibold text-dim truncate">
+        <span className="block mt-0.5 text-caption font-semibold text-dim truncate">
           {word ? (
             <>
               Opened with <b className="text-ink">{word}</b>
@@ -286,7 +287,7 @@ function PendingRow({
           e.stopPropagation() // Share, not open — and not a swipe
           onShare()
         }}
-        className="shrink-0 h-10 px-3.5 rounded-xl bg-p2 text-white font-extrabold text-[13px] shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center gap-1.5"
+        className="shrink-0 h-10 px-3.5 rounded-xl bg-p2 text-white font-extrabold text-ui shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center gap-1.5"
       >
         <ShareIcon className="w-4 h-4 text-white" /> Share
       </button>
@@ -298,8 +299,8 @@ function Section({ title, count, children }: { title: string; count: number; chi
   return (
     <section className="flex flex-col gap-2.5">
       <div className="flex items-center gap-2 px-1">
-        <span className="text-[12px] font-extrabold tracking-wider uppercase text-dim">{title}</span>
-        <span className="text-[12px] font-extrabold text-dim">{count}</span>
+        <span className="text-label font-extrabold tracking-wider uppercase text-dim">{title}</span>
+        <span className="text-label font-extrabold text-dim">{count}</span>
       </div>
       {children}
     </section>
@@ -413,17 +414,17 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel }: LobbyPro
   return (
     <div className="min-h-dvh bg-board flex flex-col">
       <div className="px-5 pt-7 pb-2 max-w-[430px] w-full mx-auto">
-        <button onClick={onBack} className="h-11 -ml-2 px-2 font-extrabold text-[13px] text-dim">
+        <Button variant="text" size="sm" onClick={onBack} className="-ml-3">
           ← Back
-        </button>
+        </Button>
         {/* Top bar: title + the Edit pill (→ filled Done while active).
             Joining by code lives on Home, so it's not duplicated here. */}
         <div className="flex items-center justify-between gap-3 mt-1">
-          <h1 className="text-2xl font-extrabold text-ink-strong">Your games</h1>
+          <h1 className="text-title font-extrabold text-ink-strong">Your games</h1>
           {!empty && (
             <button
               onClick={() => setEditing((v) => !v)}
-              className={`shrink-0 h-9 px-4 rounded-full font-extrabold text-[13px] active:translate-y-0.5 ${
+              className={`shrink-0 h-9 px-4 rounded-full font-extrabold text-ui active:translate-y-0.5 ${
                 editing
                   ? 'bg-p1 text-white shadow-[0_3px_0_var(--color-p1-lip)]'
                   : 'bg-white text-ink-strong shadow-[0_3px_0_#E2DDD3]'
@@ -439,14 +440,14 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel }: LobbyPro
         {empty ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-20">
             <p className="font-extrabold text-ink-strong text-lg">No games yet</p>
-            <p className="font-semibold text-dim text-[13.5px] max-w-[15rem]">
+            <p className="font-semibold text-dim text-body max-w-[15rem]">
               Challenge a friend or play a llama, and your games will gather here.
             </p>
           </div>
         ) : (
           <>
             {loading && summaries.length === 0 && (
-              <p className="text-center font-extrabold text-dim text-[13px] py-8 animate-pulse motion-reduce:animate-none">
+              <p className="text-center font-extrabold text-dim text-body py-8 animate-pulse motion-reduce:animate-none">
                 Gathering your games…
               </p>
             )}
@@ -482,12 +483,9 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel }: LobbyPro
 
             {finishedCount > 0 && (
               <div className="flex flex-col gap-2.5">
-                <button
-                  onClick={() => setShowFinished((v) => !v)}
-                  className="self-center h-11 px-4 font-extrabold text-[13px] text-dim"
-                >
+                <Button variant="text" size="sm" onClick={() => setShowFinished((v) => !v)} className="self-center">
                   {showFinished ? 'Hide' : 'Finished games'} ({finishedCount}) {showFinished ? '▲' : '▸'}
-                </button>
+                </Button>
                 {showFinished && (
                   <div className="flex flex-col gap-2.5">
                     {finished.map(summaryRow)}
@@ -502,12 +500,9 @@ export function Lobby({ onBack, onOpenMatch, onResumeSolo, onNewDuel }: LobbyPro
         {/* The lobby is also the launch pad — start a new game right here.
             Joining by code lives up in the header ("Have a code?"). */}
         <div className="mt-auto pt-4">
-          <button
-            onClick={onNewDuel}
-            className="w-full h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5"
-          >
+          <Button variant="cta" accent="p2" size="lg" onClick={onNewDuel} className="w-full">
             Challenge a friend
-          </button>
+          </Button>
         </div>
       </div>
 

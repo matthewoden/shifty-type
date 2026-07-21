@@ -1,8 +1,10 @@
 import { useReducer } from 'react'
 import { InstallBadge } from '../components/InstallBadge'
 import { GearIcon } from '../components/icons'
+import { LlamaMark } from '../components/LlamaMark'
 import { Logo } from '../components/Logo'
 import { PasteBadge } from '../components/PasteBadge'
+import { Button } from '../components/ui/Button'
 import { needsYouCount } from '../multi/lobby'
 import { listSeats, loadLobbyCache } from '../multi/storage'
 import { isTutorialDone } from '../solo/tutorial'
@@ -61,15 +63,8 @@ export function Home({
             onClick={onTutorial}
             className="bg-white rounded-2xl px-4 py-3.5 shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 flex items-center gap-3 text-left"
           >
-            <span className="flex gap-[2px]">
-              <span className="w-5 h-5 rounded-[5px] bg-p2 text-white text-[13px] font-extrabold flex items-center justify-center shadow-[0_3px_0_var(--color-p2-lip)]">
-                L
-              </span>
-              <span className="w-5 h-5 rounded-[5px] bg-p2 text-white text-[13px] font-extrabold flex items-center justify-center shadow-[0_3px_0_var(--color-p2-lip)]">
-                L
-              </span>
-            </span>
-            <span className="flex-1 font-extrabold text-[14px] text-ink-strong leading-snug">
+            <LlamaMark />
+            <span className="flex-1 font-extrabold text-small text-ink-strong leading-snug">
               New here? Try the tutorial!
             </span>
             <span className="text-lg font-extrabold text-dim">›</span>
@@ -84,45 +79,36 @@ export function Home({
               <span className="w-2.5 h-2.5 rounded-full bg-p1 shadow-[0_2px_0_var(--color-p1-lip)]" />
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block font-extrabold text-[16px] text-ink-strong">Your games</span>
-              <span className="block font-bold text-[12px] text-dim">{gamesSubtitle}</span>
+              <span className="block font-extrabold text-base text-ink-strong">Your games</span>
+              <span className="block font-bold text-caption text-dim">{gamesSubtitle}</span>
             </span>
             {needsYou > 0 && (
-              <span className="min-w-6 h-6 px-1.5 rounded-full bg-p2 text-white font-extrabold text-[13px] flex items-center justify-center shadow-[0_2px_0_var(--color-p2-lip)]">
+              <span className="min-w-6 h-6 px-1.5 rounded-full bg-p2 text-white font-extrabold text-ui flex items-center justify-center shadow-[0_2px_0_var(--color-p2-lip)]">
                 {needsYou}
               </span>
             )}
             <span className="text-lg font-extrabold text-dim">›</span>
           </button>
         )}
-        <button
-          onClick={onDuel}
-          className="h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5"
-        >
+        <Button variant="cta" accent="p2" size="lg" onClick={onDuel}>
           Challenge a friend
-        </button>
-        <button
-          onClick={onSolo}
-          className="h-14 rounded-2xl font-extrabold text-lg bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5"
-        >
+        </Button>
+        <Button variant="cta" accent="p1" size="lg" onClick={onSolo}>
           Play against a local llama
-        </button>
-        <button
-          onClick={onJoinCode}
-          className="h-12 rounded-2xl font-extrabold bg-white text-ink shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5"
-        >
+        </Button>
+        <Button variant="cta" accent="white" size="sm" onClick={onJoinCode}>
           Join with a code
-        </button>
+        </Button>
         <div className="flex justify-center gap-1 items-center">
-          <button onClick={onHowTo} className="h-11 px-2 font-extrabold text-[13px] text-dim">
+          <Button variant="text" size="sm" onClick={onHowTo}>
             How to play
-          </button>
+          </Button>
           {isTutorialDone() && (
             <>
-              <span className="text-dim text-[13px] font-extrabold">·</span>
-              <button onClick={onTutorial} className="h-11 px-2 font-extrabold text-[13px] text-dim">
+              <span className="text-dim text-ui font-extrabold">·</span>
+              <Button variant="text" size="sm" onClick={onTutorial}>
                 Tutorial
-              </button>
+              </Button>
             </>
           )}
         </div>

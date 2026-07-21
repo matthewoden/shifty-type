@@ -6,6 +6,8 @@
 import { useState, type ReactNode } from 'react'
 import { TileRail } from './WordTiles'
 import { ShareIcon, ClipboardIcon } from './icons'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 
 /** Openers longer than this get the hat-tip headline — saying a 28-letter
  *  word in the h2 costs three lines; the tiles below still say it exactly. */
@@ -56,64 +58,55 @@ export function InviteSheet({ code, openingWord, bell, onClose }: InviteSheetPro
   }
 
   return (
-    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col items-center gap-4 text-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-11 h-1.5 rounded-full bg-board-lo -mt-2" aria-hidden />
-        <h2 className="font-extrabold text-xl text-ink-strong text-balance">
-          {!word
-            ? 'Invite your friend'
-            : word.length >= MOUTHFUL
-              ? "Nice — that's a whole mouthful to open with"
-              : `Nice — ${word}'s in play`}
-        </h2>
-        <p className="font-semibold text-[13.5px] text-ink -mt-1 max-w-[16rem]">
-          Send the invite. Your friend opens it and it's their move.
-        </p>
+    <Sheet onClose={onClose} grabber cardClass="items-center gap-4 text-center">
+      <h2 className="font-extrabold text-headline text-ink-strong text-balance">
+        {!word
+          ? 'Invite your friend'
+          : word.length >= MOUTHFUL
+            ? "Nice — that's a whole mouthful to open with"
+            : `Nice — ${word}'s in play`}
+      </h2>
+      <p className="font-semibold text-body text-ink -mt-1 max-w-[16rem]">
+        Send the invite. Your friend opens it and it's their move.
+      </p>
 
-        {openingWord && (
-          <div className="bg-board rounded-2xl py-3 w-full flex flex-col items-center gap-2 shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-p1-lip">
-              You opened with
-            </span>
-            {/* A long opener rides the rail — one proud line, swipe to read;
-                the peek glide advertises the swipe as the sheet opens. */}
-            <TileRail word={openingWord} side="you" align="center" peek className="w-full" />
-          </div>
-        )}
-
-        <button
-          onClick={share}
-          className="h-13 w-full rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center justify-center gap-2"
-        >
-          <ShareIcon className="w-5 h-5 text-white" /> Share the invite
-        </button>
-
-        <div className="flex gap-2.5 w-full">
-          <button
-            onClick={() => copy(inviteLink(code))}
-            className="flex-1 h-12 rounded-xl font-extrabold text-[13px] text-ink bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center justify-center gap-2"
-          >
-            <ClipboardIcon className="w-4 h-4 text-dim" />
-            {copied ? 'Copied!' : 'Copy link'}
-          </button>
-          <button
-            onClick={() => copy(code)}
-            aria-label={`Match code ${code}, tap to copy`}
-            className="h-12 px-4 rounded-xl font-extrabold text-ink-strong bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 tracking-[0.2em]"
-          >
-            {code}
-          </button>
+      {openingWord && (
+        <div className="bg-board rounded-2xl py-3 w-full flex flex-col items-center gap-2 shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
+          <span className="text-label font-extrabold uppercase tracking-wider text-p1-lip">
+            You opened with
+          </span>
+          {/* A long opener rides the rail — one proud line, swipe to read;
+              the peek glide advertises the swipe as the sheet opens. */}
+          <TileRail word={openingWord} side="you" align="center" peek className="w-full" />
         </div>
+      )}
 
-        {bell}
+      <Button variant="cta" accent="p2" onClick={share} className="w-full text-lg">
+        <ShareIcon className="w-5 h-5 text-white" /> Share the invite
+      </Button>
 
-        <button onClick={onClose} className="h-11 px-4 font-extrabold text-dim -mb-1">
-          Show the board
+      <div className="flex gap-2.5 w-full">
+        <button
+          onClick={() => copy(inviteLink(code))}
+          className="flex-1 h-12 rounded-xl font-extrabold text-ui text-ink bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center justify-center gap-2"
+        >
+          <ClipboardIcon className="w-4 h-4 text-dim" />
+          {copied ? 'Copied!' : 'Copy link'}
+        </button>
+        <button
+          onClick={() => copy(code)}
+          aria-label={`Match code ${code}, tap to copy`}
+          className="h-12 px-4 rounded-xl font-extrabold text-ink-strong bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 tracking-[0.2em]"
+        >
+          {code}
         </button>
       </div>
-    </div>
+
+      {bell}
+
+      <Button variant="text" onClick={onClose} className="-mb-1">
+        Show the board
+      </Button>
+    </Sheet>
   )
 }

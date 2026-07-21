@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { getSavedName, saveMatchAuth, saveName } from '../multi/storage'
+import { Button } from '../components/ui/Button'
 
 interface JoinByCodeProps {
   onEnterMatch: (code: string) => void
@@ -77,14 +78,14 @@ export function JoinByCode({ onEnterMatch, onBack }: JoinByCodeProps) {
   return (
     <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-6 p-6">
       <div className="text-center">
-        <h2 className="text-2xl font-extrabold text-ink-strong">Join a friend's match</h2>
-        <p className="mt-1.5 text-[13.5px] font-semibold text-ink max-w-[15rem] mx-auto">
+        <h2 className="text-title font-extrabold text-ink-strong">Join a friend's match</h2>
+        <p className="mt-1.5 text-body font-semibold text-ink max-w-[15rem] mx-auto">
           Got a 4-letter code from a friend? Pop it in.
         </p>
       </div>
 
       <div className="flex flex-col gap-5 w-full max-w-xs items-stretch">
-        <label className="text-[13px] font-bold text-ink">
+        <label className="text-body font-bold text-ink">
           Your name
           <input
             value={name}
@@ -96,31 +97,27 @@ export function JoinByCode({ onEnterMatch, onBack }: JoinByCodeProps) {
         </label>
 
         <div>
-          <span className="text-[13px] font-bold text-ink">Their code</span>
+          <span className="text-body font-bold text-ink">Their code</span>
           <div className="mt-2">
             <CodeCells value={code} onChange={setCode} />
           </div>
         </div>
 
-        <button
-          onClick={join}
-          disabled={pending}
-          className="h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 disabled:opacity-50"
-        >
+        <Button variant="cta" accent="p2" size="lg" onClick={join} disabled={pending}>
           Join the match
-        </button>
-        {error && <p className="text-[13px] font-bold text-p2-lip text-center">{error}</p>}
+        </Button>
+        {error && <p className="text-body font-bold text-p2-lip text-center">{error}</p>}
         {pending && (
-          <p className="text-[13px] font-bold text-dim text-center animate-pulse">Joining…</p>
+          <p className="text-body font-bold text-dim text-center animate-pulse">Joining…</p>
         )}
-        <p className="text-center text-[12.5px] font-semibold text-dim">
+        <p className="text-center text-caption font-semibold text-dim">
           Sent a <b className="text-ink">link</b> instead? Just tap it — no code needed.
         </p>
       </div>
 
-      <button onClick={onBack} className="h-11 px-4 font-extrabold text-dim">
+      <Button variant="text" onClick={onBack}>
         ← Back
-      </button>
+      </Button>
     </div>
   )
 }

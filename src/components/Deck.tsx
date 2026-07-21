@@ -118,21 +118,21 @@ export function PassButton({ disabled, onPass }: { disabled: boolean; onPass: ()
   if (confirm)
     return (
       <div className="fixed inset-x-0 top-0 z-20 max-w-[430px] mx-auto bg-board px-3.5 py-2 flex items-center gap-2.5 shadow-[0_3px_0_#E2DDD3]">
-        <span className="text-[13px] font-bold text-ink">Pass and lose a life?</span>
+        <span className="text-ui font-bold text-ink">Pass and lose a life?</span>
         <button
           type="button"
           onClick={() => {
             setConfirm(false)
             onPass()
           }}
-          className="ml-auto h-10 px-3.5 rounded-xl font-extrabold text-[13px] bg-p2 text-white shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5"
+          className="ml-auto h-10 px-3.5 rounded-xl font-extrabold text-ui bg-p2 text-white shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5"
         >
           Yes, Pass
         </button>
         <button
           type="button"
           onClick={() => setConfirm(false)}
-          className="h-10 px-3.5 rounded-xl font-extrabold text-[13px] bg-white text-ink shadow-[0_3px_0_#DDD8CE] active:translate-y-0.5"
+          className="h-10 px-3.5 rounded-xl font-extrabold text-ui bg-white text-ink shadow-[0_3px_0_#DDD8CE] active:translate-y-0.5"
         >
           Wait, no
         </button>
@@ -143,7 +143,7 @@ export function PassButton({ disabled, onPass }: { disabled: boolean; onPass: ()
       type="button"
       disabled={disabled}
       onClick={() => setConfirm(true)}
-      className="h-11 px-4 rounded-[13px] font-extrabold text-[13px] bg-white text-ink shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 active:shadow-[0_2px_0_#E2DDD3] disabled:opacity-40 disabled:active:translate-y-0"
+      className="h-11 px-4 rounded-[13px] font-extrabold text-ui bg-white text-ink shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 active:shadow-[0_2px_0_#E2DDD3] disabled:opacity-40 disabled:active:translate-y-0"
     >
       Pass?
     </button>

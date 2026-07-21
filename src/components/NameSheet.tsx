@@ -4,6 +4,8 @@
 // you then have to reach back to. Confirm is disabled until something's typed.
 
 import { useState } from 'react'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 
 interface NameSheetProps {
   title: string
@@ -33,38 +35,25 @@ export function NameSheet({
     if (trimmed) onSubmit(trimmed)
   }
   const ring = accent === 'p2' ? 'focus-within:ring-p2' : 'focus-within:ring-p1'
-  const btn =
-    accent === 'p2'
-      ? 'bg-p2 shadow-[0_4px_0_var(--color-p2-lip)]'
-      : 'bg-p1 shadow-[0_4px_0_var(--color-p1-lip)]'
 
   return (
-    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-30" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-3.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="font-extrabold text-lg text-ink-strong">{title}</h2>
-        {subtitle && <p className="text-[13px] font-semibold text-dim -mt-2">{subtitle}</p>}
-        <div className={`rounded-xl ${ring} focus-within:ring-2`}>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submit()}
-            maxLength={20}
-            placeholder="Your name"
-            autoFocus
-            className="w-full h-13 bg-board rounded-xl px-4 font-extrabold text-lg text-ink-strong outline-none placeholder:text-dim placeholder:font-bold text-center"
-          />
-        </div>
-        <button
-          onClick={submit}
-          disabled={pending || !trimmed}
-          className={`h-14 rounded-2xl font-extrabold text-lg text-white active:translate-y-0.5 disabled:opacity-40 disabled:active:translate-y-0 ${btn}`}
-        >
-          {pending ? 'One sec…' : cta}
-        </button>
+    <Sheet onClose={onClose} z={30} cardClass="gap-3.5">
+      <h2 className="font-extrabold text-lg text-ink-strong">{title}</h2>
+      {subtitle && <p className="text-body font-semibold text-dim -mt-2">{subtitle}</p>}
+      <div className={`rounded-xl ${ring} focus-within:ring-2`}>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && submit()}
+          maxLength={20}
+          placeholder="Your name"
+          autoFocus
+          className="w-full h-13 bg-board rounded-xl px-4 font-extrabold text-lg text-ink-strong outline-none placeholder:text-dim placeholder:font-bold text-center"
+        />
       </div>
-    </div>
+      <Button variant="cta" accent={accent} size="lg" onClick={submit} disabled={pending || !trimmed}>
+        {pending ? 'One sec…' : cta}
+      </Button>
+    </Sheet>
   )
 }

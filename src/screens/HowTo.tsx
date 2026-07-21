@@ -1,5 +1,6 @@
 import { tileClass } from '../components/tiles'
 import { FlagIcon } from '../components/icons'
+import { Button } from '../components/ui/Button'
 
 const GHOST =
   'w-[23px] h-8 shrink-0 rounded-[7px] border-2 border-dashed border-[#C9CFD8] text-dim flex items-center justify-center font-extrabold text-lg uppercase select-none'
@@ -26,7 +27,7 @@ function Ghosts({ letters, take }: { letters: string; take: string }) {
           </span>
         ))}
       </span>
-      <span className="text-[10px] font-extrabold text-dim">· {take}</span>
+      <span className="text-note font-extrabold text-dim">· {take}</span>
     </div>
   )
 }
@@ -49,22 +50,22 @@ export function HowTo({
       {/* Same slim top bar as Settings and the match screens — the back
           button rides at the same height everywhere. */}
       <div className="flex items-center px-3.5 pt-2 pb-2.5">
-        <button onClick={onBack} className="h-11 px-2 font-extrabold text-[13px] text-dim">
+        <Button variant="text" size="sm" onClick={onBack}>
           ← Back
-        </button>
+        </Button>
       </div>
       <div className="max-w-md mx-auto px-6 pb-8">
         <div className="text-center">
-          <h1 className="text-2xl font-extrabold text-ink-strong">How to play</h1>
-          <p className="text-dim font-semibold text-sm mt-1">Four rules, one minute.</p>
-          <button onClick={onTutorial} className="h-11 px-3 font-extrabold text-[13px] text-p1-lip">
+          <h1 className="text-title font-extrabold text-ink-strong">How to play</h1>
+          <p className="text-dim font-semibold text-small mt-1">Four rules, one minute.</p>
+          <Button variant="text" size="sm" accent="p1" onClick={onTutorial}>
             Or learn by playing — try the tutorial ›
-          </button>
+          </Button>
         </div>
         <Rule />
 
         <h2 className="font-extrabold text-lg text-ink-strong mb-1.5">1 · Chain words</h2>
-        <p className="font-semibold text-[13.5px] text-ink leading-relaxed">
+        <p className="font-semibold text-body text-ink leading-relaxed">
           Your word must start with the <b>last letters</b> of theirs — at least two — and add
           at least <b>two new letters</b> of its own.
         </p>
@@ -74,13 +75,13 @@ export function HowTo({
             <Tiles word="type" side="them" headTint={2} />
           </div>
         </div>
-        <p className="font-semibold text-xs text-dim">
+        <p className="font-semibold text-caption text-dim">
           Pale tiles are letters that got used up by the overlap.
         </p>
         <Rule />
 
         <h2 className="font-extrabold text-lg text-ink-strong mb-1.5">2 · Grab more, score more</h2>
-        <p className="font-semibold text-[13.5px] text-ink leading-relaxed">
+        <p className="font-semibold text-body text-ink leading-relaxed">
           Points = <b>overlap × overlap</b>, plus one point for every letter you add after the
           overlap. The starters show your options:
         </p>
@@ -96,7 +97,7 @@ export function HowTo({
         <Rule />
 
         <h2 className="font-extrabold text-lg text-ink-strong mb-1.5">3 · Lives &amp; winning</h2>
-        <p className="font-semibold text-[13.5px] text-ink leading-relaxed">
+        <p className="font-semibold text-body text-ink leading-relaxed">
           You have <b>3 lives</b>{' '}
           <span className="inline-flex gap-1 mx-0.5 align-baseline">
             <span className="w-2.5 h-2.5 rounded-full bg-p1 shadow-[0_2px_0_var(--color-p1-lip)]" />
@@ -106,7 +107,7 @@ export function HowTo({
           . Run your friend out of theirs and you win on the spot — otherwise, most points when the
           chain hits <b>20 words</b>.
         </p>
-        <p className="font-semibold text-[13.5px] text-ink leading-relaxed mt-2">
+        <p className="font-semibold text-body text-ink leading-relaxed mt-2">
           Lives go when you get stuck and pass — or in a challenge. And if you <i>both</i> pass on
           the same word, the chain snaps: those words are settled, and whoever's up starts a fresh
           chain with any word. Which brings us to the fun part.
@@ -116,17 +117,17 @@ export function HowTo({
         <h2 className="font-extrabold text-lg text-ink-strong mb-1.5">
           4 · If it sounds real, play it
         </h2>
-        <p className="font-semibold text-[13.5px] text-ink leading-relaxed">
+        <p className="font-semibold text-body text-ink leading-relaxed">
           Your word doesn't have to be real — it just has to <i>sound</i> real. Nothing gets
           checked when you play it.
         </p>
-        <p className="font-semibold text-[13.5px] text-ink leading-relaxed mt-2">
+        <p className="font-semibold text-body text-ink leading-relaxed mt-2">
           But your friend can tap your word and challenge it{' '}
           <FlagIcon className="inline w-4 h-4 align-[-2px] text-p2-lip" />: If your word{' '}
           <b>stands</b>, the challenge costs your friend a life. If it's <b>rejected</b>, the word
           is struck and the lost life is yours.
         </p>
-        <p className="font-extrabold text-[13px] text-ink-strong mt-3">
+        <p className="font-extrabold text-body text-ink-strong mt-3">
           Bluffing is legal; getting caught is not.
         </p>
         <Rule />
@@ -135,15 +136,12 @@ export function HowTo({
           That's it. Now you're ready to play.
         </p>
         <div className="flex flex-col gap-3 mt-6 pb-8 max-w-xs mx-auto">
-          <button
-            onClick={onPlayLlama}
-            className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5"
-          >
+          <Button variant="cta" accent="p1" onClick={onPlayLlama}>
             Try it against a llama
-          </button>
-          <button onClick={onBack} className="h-11 rounded-xl font-extrabold text-dim">
+          </Button>
+          <Button variant="text" onClick={onBack}>
             Got it
-          </button>
+          </Button>
         </div>
       </div>
     </div>

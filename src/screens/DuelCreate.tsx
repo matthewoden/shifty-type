@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { getSavedName, saveMatchAuth, saveName } from '../multi/storage'
+import { Button } from '../components/ui/Button'
 
 interface DuelCreateProps {
   onEnterMatch: (code: string) => void
@@ -48,9 +49,9 @@ export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
         <p className="text-ink-strong font-extrabold text-lg animate-pulse motion-reduce:animate-none">
           Setting up your match…
         </p>
-        <button onClick={onBack} className="h-11 px-4 font-extrabold text-dim">
+        <Button variant="text" onClick={onBack}>
           ← Back
-        </button>
+        </Button>
       </div>
     )
   }
@@ -63,9 +64,9 @@ export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
 
   return (
     <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-5 p-6">
-      <h2 className="text-2xl font-extrabold text-ink-strong">Challenge a friend</h2>
+      <h2 className="text-title font-extrabold text-ink-strong">Challenge a friend</h2>
       <div className="flex flex-col gap-3.5 w-full max-w-xs">
-        <label className="text-[13px] font-bold text-ink">
+        <label className="text-body font-bold text-ink">
           Your name
           <input
             value={name}
@@ -77,21 +78,17 @@ export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
             className="mt-1 w-full h-12 bg-white rounded-xl px-3.5 font-extrabold text-lg text-ink-strong shadow-[0_4px_0_#E2DDD3] outline-none placeholder:text-dim placeholder:font-bold"
           />
         </label>
-        <button
-          onClick={submit}
-          disabled={pending}
-          className="h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 disabled:opacity-50"
-        >
+        <Button variant="cta" accent="p2" size="lg" onClick={submit} disabled={pending}>
           Start the match
-        </button>
-        <p className="text-center text-[12.5px] font-semibold text-dim">
+        </Button>
+        <p className="text-center text-caption font-semibold text-dim">
           You'll play your opening word, then send your friend an invite.
         </p>
-        {error && <p className="text-[13px] font-bold text-p2-lip text-center">{error}</p>}
+        {error && <p className="text-body font-bold text-p2-lip text-center">{error}</p>}
       </div>
-      <button onClick={onBack} className="h-11 px-4 font-extrabold text-dim">
+      <Button variant="text" onClick={onBack}>
         ← Back
-      </button>
+      </Button>
     </div>
   )
 }

@@ -7,6 +7,8 @@ import { opponentOf, type MatchState, type PlayerId } from '../game'
 import { playerTextClass, sideOf, tileClass, type Side } from './tiles'
 import { TileRail } from './WordTiles'
 import { FlagIcon } from './icons'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 
 export function Overlay({ children }: { children: React.ReactNode }) {
   return (
@@ -52,12 +54,9 @@ export function VerdictStamp({
         {stamp}
       </div>
       <p className="text-ink font-bold max-w-xs break-words">{copy}</p>
-      <button
-        onClick={onDismiss}
-        className="h-13 px-8 rounded-2xl font-extrabold bg-ink-strong text-white shadow-[0_4px_0_#262E38] active:translate-y-0.5"
-      >
+      <Button variant="cta" accent="ink" onClick={onDismiss} className="px-8">
         Continue
-      </button>
+      </Button>
     </Overlay>
   )
 }
@@ -76,30 +75,22 @@ export function ConfirmChallengeSheet({
   onCancel: () => void
 }) {
   return (
-    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onCancel}>
-      <div
-        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* The word on trial rides a rail — a long one swipes to read. */}
-        <TileRail word={word} side="them" />
-        <p className="font-bold text-ink text-[15px]">
-          Challenge this word? Incorrect answers lose a life.
-        </p>
-        <button
-          onClick={onConfirm}
-          className="h-13 rounded-2xl font-extrabold bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center justify-center gap-2"
-        >
-          <FlagIcon className="w-5 h-5 text-white" /> Not a word!
-        </button>
-        <button onClick={onCancel} className="h-11 rounded-xl font-extrabold text-dim">
-          Never mind
-        </button>
-        {whisper && (
-          <p className="text-center text-[11.5px] font-bold italic text-dim -mt-1">{whisper}</p>
-        )}
-      </div>
-    </div>
+    <Sheet onClose={onCancel}>
+      {/* The word on trial rides a rail — a long one swipes to read. */}
+      <TileRail word={word} side="them" />
+      <p className="font-bold text-ink text-status">
+        Challenge this word? Incorrect answers lose a life.
+      </p>
+      <Button variant="cta" accent="p2" onClick={onConfirm}>
+        <FlagIcon className="w-5 h-5 text-white" /> Not a word!
+      </Button>
+      <Button variant="text" onClick={onCancel}>
+        Never mind
+      </Button>
+      {whisper && (
+        <p className="text-center text-caption font-bold italic text-dim -mt-1">{whisper}</p>
+      )}
+    </Sheet>
   )
 }
 
@@ -147,7 +138,7 @@ function PointsBar({
       : 'bg-p2 shadow-[0_3px_0_var(--color-p2-lip)]'
   return (
     <div className="w-full">
-      <div className="flex justify-between font-extrabold text-[13px]">
+      <div className="flex justify-between font-extrabold text-body">
         <span className={playerTextClass(side)}>{name}</span>
         <span className="text-ink-strong">{shown} pts</span>
       </div>
@@ -206,9 +197,9 @@ export function GameOverPanel({
         : `You're out of lives — ${them.name} wins.`
   return (
     <Overlay>
-      <h2 className="text-2xl font-extrabold text-ink-strong">{heading}</h2>
+      <h2 className="text-title font-extrabold text-ink-strong">{heading}</h2>
       {sendoff && (
-        <p className="font-bold text-ink text-[13.5px] max-w-xs -mt-1">
+        <p className="font-bold text-ink text-body max-w-xs -mt-1">
           <span className="font-extrabold text-p2-lip">LLOYD</span> — {sendoff}
         </p>
       )}
@@ -230,7 +221,7 @@ export function GameOverPanel({
               small
               className="flex-1 min-w-0"
             />
-            <span className="text-[10px] font-extrabold text-dim whitespace-nowrap">
+            <span className="text-note font-extrabold text-dim whitespace-nowrap">
               {i === 0 ? 'opener' : `+${link.points}`}
               {link.challengeSurvived ? ' · real' : ''}
             </span>
@@ -239,23 +230,16 @@ export function GameOverPanel({
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
         {primary && (
-          <button
-            onClick={primary.onClick}
-            className="h-13 rounded-2xl font-extrabold bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5"
-          >
+          <Button variant="cta" accent="p2" onClick={primary.onClick}>
             {primary.label}
-          </button>
+          </Button>
         )}
-        <button
-          onClick={onRematch}
-          disabled={busy}
-          className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5 disabled:opacity-50"
-        >
+        <Button variant="cta" accent="p1" onClick={onRematch} disabled={busy}>
           {rematchLabel}
-        </button>
-        <button onClick={onExit} className="h-11 rounded-xl font-extrabold text-dim">
+        </Button>
+        <Button variant="text" onClick={onExit}>
           {backLabel === 'home' ? 'Back home' : `Back to ${backLabel}`}
-        </button>
+        </Button>
       </div>
     </Overlay>
   )

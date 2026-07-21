@@ -8,6 +8,8 @@
 import { useState } from 'react'
 import { hasAnySeats, restoreSeatsFromText } from '../multi/storage'
 import { ClipboardIcon } from './icons'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 import { isStandalone } from './useInstallPrompt'
 
 const DISMISSED_KEY = 'wordchain.paste.dismissed'
@@ -72,88 +74,59 @@ export function PasteBadge({
   return (
     <>
       {sheet.kind === 'closed' && (
-        <button
-          onClick={tryClipboard}
-          className="h-10 px-4 rounded-full self-center bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center gap-2 font-extrabold text-[13px] text-ink"
-        >
+        <Button variant="pill" accent="white" size="sm" onClick={tryClipboard} className="self-center">
           <ClipboardIcon className="w-4 h-4 text-p1-lip" />
           Have a game link?
-        </button>
+        </Button>
       )}
       {sheet.kind === 'ask' && (
-        <div
-          className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10"
-          onClick={() => setSheet({ kind: 'closed' })}
-        >
-          <div
-            className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="font-extrabold text-lg text-ink-strong">Bring your matches over</h2>
-            <p className="text-[13px] font-semibold text-ink -mt-2">
-              {sheet.miss
-                ? "Hmm — that didn't look like a game link. Drop it here instead:"
-                : 'Copied a game link? Drop it here and your matches follow you in:'}
+        <Sheet onClose={() => setSheet({ kind: 'closed' })}>
+          <h2 className="font-extrabold text-lg text-ink-strong">Bring your matches over</h2>
+          <p className="text-body font-semibold text-ink -mt-2">
+            {sheet.miss
+              ? "Hmm — that didn't look like a game link. Drop it here instead:"
+              : 'Copied a game link? Drop it here and your matches follow you in:'}
+          </p>
+          <textarea
+            value={field}
+            onChange={(e) => {
+              setField(e.target.value)
+              setFieldMiss(false)
+            }}
+            rows={3}
+            placeholder="https://shifty-type…#seats=…"
+            className="rounded-xl border-[2.5px] border-dashed border-dim bg-board px-3 py-2 text-caption font-bold text-ink-strong break-all focus:outline-none focus:border-p1"
+          />
+          {fieldMiss && (
+            <p className="text-body font-bold text-p2-lip -mt-2">
+              Still not a game link — double-check the copy.
             </p>
-            <textarea
-              value={field}
-              onChange={(e) => {
-                setField(e.target.value)
-                setFieldMiss(false)
-              }}
-              rows={3}
-              placeholder="https://shifty-type…#seats=…"
-              className="rounded-xl border-[2.5px] border-dashed border-dim bg-board px-3 py-2 text-[12px] font-bold text-ink-strong break-all focus:outline-none focus:border-p1"
-            />
-            {fieldMiss && (
-              <p className="text-[13px] font-bold text-p2-lip -mt-2">
-                Still not a game link — double-check the copy.
-              </p>
-            )}
-            <button
-              onClick={submitField}
-              disabled={!field.trim()}
-              className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5 disabled:opacity-50"
-            >
-              Bring them over
-            </button>
-            <button onClick={dismiss} className="h-11 rounded-xl font-extrabold text-dim">
-              Not now
-            </button>
-          </div>
-        </div>
+          )}
+          <Button variant="cta" accent="p1" onClick={submitField} disabled={!field.trim()}>
+            Bring them over
+          </Button>
+          <Button variant="text" onClick={dismiss}>
+            Not now
+          </Button>
+        </Sheet>
       )}
       {sheet.kind === 'done' && (
-        <div
-          className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10"
-          onClick={() => setSheet({ kind: 'closed' })}
-        >
-          <div
-            className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="font-extrabold text-lg text-ink-strong">Welcome back!</h2>
-            <p className="text-[13px] font-semibold text-ink -mt-2">
-              {sheet.result.restored === 1
-                ? 'Your match moved in, right where you left it.'
-                : `${sheet.result.restored} matches moved in, right where you left them.`}
-            </p>
-            {sheet.result.active && (
-              <button
-                onClick={() => onOpenMatch(sheet.result.active as string)}
-                className="h-13 rounded-2xl font-extrabold bg-ink-strong text-white shadow-[0_4px_0_#262E38] active:translate-y-0.5"
-              >
-                Open your match · {sheet.result.active}
-              </button>
-            )}
-            <button
-              onClick={() => setSheet({ kind: 'closed' })}
-              className="h-11 rounded-xl font-extrabold text-dim"
-            >
-              Done
-            </button>
-          </div>
-        </div>
+        <Sheet onClose={() => setSheet({ kind: 'closed' })}>
+          <h2 className="font-extrabold text-lg text-ink-strong">Welcome back!</h2>
+          <p className="text-body font-semibold text-ink -mt-2">
+            {sheet.result.restored === 1
+              ? 'Your match moved in, right where you left it.'
+              : `${sheet.result.restored} matches moved in, right where you left them.`}
+          </p>
+          {sheet.result.active && (
+            <Button variant="cta" accent="ink" onClick={() => onOpenMatch(sheet.result.active as string)}>
+              Open your match · {sheet.result.active}
+            </Button>
+          )}
+          <Button variant="text" onClick={() => setSheet({ kind: 'closed' })}>
+            Done
+          </Button>
+        </Sheet>
       )}
     </>
   )

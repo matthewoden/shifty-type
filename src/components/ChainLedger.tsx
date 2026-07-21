@@ -15,6 +15,8 @@ import type { CSSProperties, ReactNode } from 'react'
 import { MAX_WORD_LENGTH, opponentOf, type ChainLink, type Player, type PlayerId } from '../game'
 import { FlagIcon } from './icons'
 import { playerTextClass, sideOf } from './tiles'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 import { TileRail, WordTiles } from './WordTiles'
 
 const TILE_W = 23
@@ -1131,32 +1133,27 @@ function DetailCard({
 }) {
   const side = sideOf(link.owner, you)
   return (
-    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/30 flex items-end z-20" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-9 flex flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <TileRail word={link.word} side={side} />
-        <p className="font-bold text-ink text-[14px]">
-          <span className={`font-extrabold ${playerTextClass(side)}`}>
-            {players[link.owner].name}
-          </span>{' '}
-          · word {index + 1}
-          {index === 0
-            ? ` · the opener, ${link.points} points`
-            : link.overlap === 0
-              ? ` · started a fresh chain after the snap, ${link.points} points`
-              : ` · overlapped ${link.overlap} letters for ${link.points} points`}
+    <Sheet onClose={onClose} z={20} scrim="light" cardClass="gap-3">
+      <TileRail word={link.word} side={side} />
+      <p className="font-bold text-ink text-[14px]">
+        <span className={`font-extrabold ${playerTextClass(side)}`}>
+          {players[link.owner].name}
+        </span>{' '}
+        · word {index + 1}
+        {index === 0
+          ? ` · the opener, ${link.points} points`
+          : link.overlap === 0
+            ? ` · started a fresh chain after the snap, ${link.points} points`
+            : ` · overlapped ${link.overlap} letters for ${link.points} points`}
+      </p>
+      {link.challengeSurvived && (
+        <p className="font-bold text-ink text-[14px] flex items-center gap-1.5">
+          <FlagIcon className="w-4 h-4 text-p2-lip" /> Challenged — and it was real.
         </p>
-        {link.challengeSurvived && (
-          <p className="font-bold text-ink text-[14px] flex items-center gap-1.5">
-            <FlagIcon className="w-4 h-4 text-p2-lip" /> Challenged — and it was real.
-          </p>
-        )}
-        <button onClick={onClose} className="h-11 rounded-xl font-extrabold text-dim self-start">
-          Close
-        </button>
-      </div>
-    </div>
+      )}
+      <Button variant="text" onClick={onClose} className="self-start -ml-4">
+        Close
+      </Button>
+    </Sheet>
   )
 }

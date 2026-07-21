@@ -12,6 +12,11 @@ export function sideOf(owner: PlayerId, you: PlayerId): Side {
 
 const TILE_MD =
   'w-[23px] h-8 shrink-0 rounded-[7px] flex items-center justify-center font-extrabold text-lg uppercase select-none'
+
+/** Horizontal pitch of one md tile: 23px wide + the 3px gap-[3px] between
+ *  tiles. Anything indenting by whole tiles (TileLockup, HowTo diagrams)
+ *  must use this, so a tile resize can't silently misalign them. */
+export const TILE_STEP = 26
 const TILE_SM =
   'w-[17px] h-6 shrink-0 rounded-[5px] flex items-center justify-center font-extrabold text-[13px] uppercase select-none'
 

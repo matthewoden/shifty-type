@@ -4,6 +4,7 @@
 // this bar only has to sell the handshake and point at the alternative.
 
 import { HandshakeIcon } from './icons'
+import { Button } from './ui/Button'
 
 interface LastCallBarProps {
   /** Whoever played the final word. */
@@ -17,19 +18,15 @@ interface LastCallBarProps {
 export function LastCallBar({ finisherName, word, busy = false, onShake }: LastCallBarProps) {
   return (
     <div className="px-5 pb-10 pt-2 text-center">
-      <p className="font-extrabold text-[15px] text-ink-strong">
+      <p className="font-extrabold text-status text-ink-strong">
         Last call — {finisherName} played the final word.
       </p>
-      <p className="font-semibold text-xs text-dim mt-1 break-words">
+      <p className="font-semibold text-caption text-dim mt-1 break-words">
         Shake on it to end the match, or tap {word.toUpperCase()} to challenge it.
       </p>
-      <button
-        onClick={onShake}
-        disabled={busy}
-        className="mt-3 h-12 px-6 rounded-full bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 inline-flex items-center gap-2 font-extrabold text-[14px] disabled:opacity-60"
-      >
+      <Button variant="pill" accent="p2" size="lg" onClick={onShake} disabled={busy} className="mt-3">
         <HandshakeIcon className="w-5 h-5 text-white" /> Shake on it
-      </button>
+      </Button>
     </div>
   )
 }

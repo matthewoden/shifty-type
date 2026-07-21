@@ -7,6 +7,8 @@
 
 import { useState } from 'react'
 import { ClipboardIcon, PaperPlaneTiltIcon } from './icons'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 
 interface NoteSheetProps {
   code: string
@@ -52,52 +54,43 @@ export function NoteSheet({ code, friendName, tableWord, onClose }: NoteSheetPro
   }
 
   return (
-    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col items-center gap-4 text-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-11 h-1.5 rounded-full bg-board-lo -mt-2" aria-hidden />
-        <h2 className="font-extrabold text-xl text-ink-strong text-balance">
-          Slide {friendName} a note?
-        </h2>
-        <p className="font-semibold text-[13.5px] text-ink -mt-1 max-w-[17rem]">
-          It sends as a regular text — straight from you, not from us.
+    <Sheet onClose={onClose} grabber cardClass="items-center gap-4 text-center">
+      <h2 className="font-extrabold text-headline text-ink-strong text-balance">
+        Slide {friendName} a note?
+      </h2>
+      <p className="font-semibold text-body text-ink -mt-1 max-w-[17rem]">
+        It sends as a regular text — straight from you, not from us.
+      </p>
+
+      <div className="bg-board rounded-2xl px-4 py-3.5 w-full text-left shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
+        <p className="text-small font-semibold text-ink">
+          {tableWord ? (
+            <>
+              Psst — I played <b className="text-ink-strong">{tableWord.toUpperCase()}</b> and
+              it&apos;s your move. No rush… well, some rush.
+            </>
+          ) : (
+            text
+          )}
         </p>
-
-        <div className="bg-board rounded-2xl px-4 py-3.5 w-full text-left shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
-          <p className="text-[14.5px] font-semibold text-ink">
-            {tableWord ? (
-              <>
-                Psst — I played <b className="text-ink-strong">{tableWord.toUpperCase()}</b> and
-                it&apos;s your move. No rush… well, some rush.
-              </>
-            ) : (
-              text
-            )}
-          </p>
-          <p className="mt-2 text-[12.5px] font-bold text-p1-lip break-all">{link}</p>
-        </div>
-
-        <button
-          onClick={share}
-          className="h-13 w-full rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 flex items-center justify-center gap-2"
-        >
-          <PaperPlaneTiltIcon className="w-5 h-5 text-white" /> Send the note
-        </button>
-
-        <button
-          onClick={copyNote}
-          className="h-12 w-full rounded-xl font-extrabold text-[13px] text-ink bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center justify-center gap-2"
-        >
-          <ClipboardIcon className="w-4 h-4 text-dim" />
-          {copied ? 'Copied!' : 'Copy the note'}
-        </button>
-
-        <button onClick={onClose} className="h-11 px-4 font-extrabold text-dim -mb-1">
-          Let them mull
-        </button>
+        <p className="mt-2 text-caption font-bold text-p1-lip break-all">{link}</p>
       </div>
-    </div>
+
+      <Button variant="cta" accent="p2" onClick={share} className="w-full text-lg">
+        <PaperPlaneTiltIcon className="w-5 h-5 text-white" /> Send the note
+      </Button>
+
+      <button
+        onClick={copyNote}
+        className="h-12 w-full rounded-xl font-extrabold text-ui text-ink bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center justify-center gap-2"
+      >
+        <ClipboardIcon className="w-4 h-4 text-dim" />
+        {copied ? 'Copied!' : 'Copy the note'}
+      </button>
+
+      <Button variant="text" onClick={onClose} className="-mb-1">
+        Let them mull
+      </Button>
+    </Sheet>
   )
 }

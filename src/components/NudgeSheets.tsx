@@ -8,28 +8,17 @@
 import { useState } from 'react'
 import { buildSeatLink } from '../multi/storage'
 import { CallBellIcon } from './icons'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 import { isIos } from './useInstallPrompt'
-
-function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
-  )
-}
 
 function Step({ n, children }: { n: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-6.5 h-6.5 rounded-full bg-p1-tint text-p1-tint-ink font-extrabold text-[13px] flex items-center justify-center shrink-0">
+      <span className="w-6.5 h-6.5 rounded-full bg-p1-tint text-p1-tint-ink font-extrabold text-ui flex items-center justify-center shrink-0">
         {n}
       </span>
-      <p className="text-sm font-bold text-ink">{children}</p>
+      <p className="text-small font-bold text-ink">{children}</p>
     </div>
   )
 }
@@ -42,22 +31,19 @@ export function SoftAskSheet({ onConfirm, onClose }: { onConfirm: () => void; on
       <h2 className="font-extrabold text-lg text-ink-strong flex items-center gap-2">
         <CallBellIcon className="w-5.5 h-5.5 text-p1-lip" /> Turn on notifications?
       </h2>
-      <p className="text-[13px] font-semibold text-ink -mt-2">
+      <p className="text-body font-semibold text-ink -mt-2">
         We'll notify you when the game needs you — a word played, a challenge thrown, a friend
         jumped in. Nothing else, ever.
       </p>
-      <p className="text-[13px] font-semibold text-dim -mt-1">
+      <p className="text-body font-semibold text-dim -mt-1">
         Your phone will ask once to make it official.
       </p>
-      <button
-        onClick={onConfirm}
-        className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5"
-      >
+      <Button variant="cta" accent="p1" onClick={onConfirm}>
         Turn them on
-      </button>
-      <button onClick={onClose} className="h-11 rounded-xl font-extrabold text-dim">
+      </Button>
+      <Button variant="text" onClick={onClose}>
         Not now
-      </button>
+      </Button>
     </Sheet>
   )
 }
@@ -78,24 +64,21 @@ function ReAddCard({ onClose }: { onClose: () => void }) {
   return (
     <Sheet onClose={onClose}>
       <h2 className="font-extrabold text-lg text-ink-strong">One extra step</h2>
-      <p className="text-[13px] font-semibold text-ink -mt-2">
+      <p className="text-body font-semibold text-ink -mt-2">
         You'll need to delete and re-add the game. Copy this link to open the web version, then
         click Add to Home Screen.
       </p>
-      <button
-        onClick={copy}
-        className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5"
-      >
+      <Button variant="cta" accent="p1" onClick={copy}>
         {copied ? 'Copied!' : 'Copy game link'}
-      </button>
+      </Button>
       {showLink && (
-        <p className="text-[11px] font-bold text-ink-strong bg-board rounded-xl px-3 py-2 break-all select-all">
+        <p className="text-caption font-bold text-ink-strong bg-board rounded-xl px-3 py-2 break-all select-all">
           {buildSeatLink()}
         </p>
       )}
-      <button onClick={onClose} className="h-11 rounded-xl font-extrabold text-dim">
+      <Button variant="text" onClick={onClose}>
         Got it
-      </button>
+      </Button>
     </Sheet>
   )
 }
@@ -112,7 +95,7 @@ export function BellOffSheet({ onClose }: { onClose: () => void }) {
       <h2 className="font-extrabold text-lg text-ink-strong flex items-center gap-2">
         <CallBellIcon className="w-5.5 h-5.5 text-dim" /> Notifications are switched off
       </h2>
-      <p className="text-[13px] font-semibold text-ink -mt-2">
+      <p className="text-body font-semibold text-ink -mt-2">
         Your phone said no to notifications a while back, and it won't let us ask twice. Flipping
         the switch takes two seconds:
       </p>
@@ -139,27 +122,24 @@ export function BellOffSheet({ onClose }: { onClose: () => void }) {
           <Step n="3">
             Turn on <b className="text-ink-strong">Notifications</b>
           </Step>
-          <p className="text-[13px] font-semibold text-dim">
+          <p className="text-body font-semibold text-dim">
             Playing in the browser instead? Tap the padlock by the address and allow notifications
             there.
           </p>
         </>
       )}
-      <p className="text-[13px] font-semibold text-ink">And that's it! You're all set.</p>
+      <p className="text-body font-semibold text-ink">And that's it! You're all set.</p>
       {ios && (
         <button
           onClick={() => setReadd(true)}
-          className="text-left text-[13px] font-bold text-p1-lip"
+          className="text-left text-body font-bold text-p1-lip"
         >
           Not in the list? One extra step →
         </button>
       )}
-      <button
-        onClick={onClose}
-        className="h-13 rounded-2xl font-extrabold bg-ink-strong text-white shadow-[0_4px_0_#262E38] active:translate-y-0.5"
-      >
+      <Button variant="cta" accent="ink" onClick={onClose}>
         Got it
-      </button>
+      </Button>
     </Sheet>
   )
 }

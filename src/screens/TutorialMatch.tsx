@@ -11,6 +11,8 @@ import { useComposer } from '../components/useComposer'
 import { useDeckKeyboard } from '../components/useDeckKeyboard'
 import { ConfirmChallengeSheet, GameOverPanel } from '../components/overlays'
 import { LastCallBar } from '../components/LastCallBar'
+import { LlamaMark } from '../components/LlamaMark'
+import { Button } from '../components/ui/Button'
 import { gripOptions, lastCallActorOf } from '../game'
 import { api } from '../lib/api'
 import { SENDOFF_LOSS, SENDOFF_WIN, SUGGESTED_WORD, WHISPER, type BubbleCopy } from '../solo/tutorial'
@@ -54,19 +56,12 @@ function Bubble({ copy, tapnext, delay }: { copy: BubbleCopy; tapnext: boolean; 
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center gap-1.5 mb-1">
-        <span className="flex gap-[2px]">
-          <span className="w-[15px] h-[15px] rounded bg-p2 text-white text-[10px] font-extrabold flex items-center justify-center shadow-[0_2px_0_var(--color-p2-lip)]">
-            L
-          </span>
-          <span className="w-[15px] h-[15px] rounded bg-p2 text-white text-[10px] font-extrabold flex items-center justify-center shadow-[0_2px_0_var(--color-p2-lip)]">
-            L
-          </span>
-        </span>
+        <LlamaMark size="xs" />
         <span className="text-[9px] font-extrabold tracking-[1.6px] text-p2-lip uppercase">
           {copy.eyebrow === 'lesson' ? 'The lesson' : 'Lloyd'}
         </span>
       </div>
-      <p className="text-[13.5px] leading-snug font-semibold text-ink-strong">
+      <p className="text-body leading-snug font-semibold text-ink-strong">
         <BubbleText text={copy.text} />
       </p>
       {tapnext && (
@@ -152,9 +147,9 @@ export function TutorialMatch({
       {/* Above the tap-to-continue gate (z-[5]) so ← Home always works,
           below the sheets/stamps/game-over overlays (z-10). */}
       <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5 relative z-[6]">
-        <button onClick={onExit} className="h-11 px-2 font-extrabold text-[13px] text-dim">
+        <Button variant="text" size="sm" onClick={onExit}>
           ← Home
-        </button>
+        </Button>
         <PassButton disabled={!t.playerTurn || beat !== 'done'} onPass={t.pass} />
       </div>
       <Hud state={state} you="p1" active={active} pulse={t.botThinking} />
@@ -196,7 +191,7 @@ export function TutorialMatch({
         message={t.event?.kind === 'bot-passed' ? 'Lloyd is stuck and passes — a life slips away.' : null}
       />
       {t.error && (
-        <div className="mx-3.5 mb-2 text-center text-[13px] font-bold text-p2-lip bg-white rounded-xl py-2 shadow-[0_3px_0_#E2DDD3]">
+        <div className="mx-3.5 mb-2 text-center text-body font-bold text-p2-lip bg-white rounded-xl py-2 shadow-[0_3px_0_#E2DDD3]">
           {t.error}
         </div>
       )}

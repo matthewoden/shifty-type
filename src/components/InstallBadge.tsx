@@ -5,6 +5,9 @@
 
 import { useState } from 'react'
 import { DeviceMobileIcon, PlusSquareIcon, ShareIcon } from './icons'
+import { tileClass } from './tiles'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 import {
   consumeInstallLink,
   installLinkUrl,
@@ -23,37 +26,29 @@ export function IosHowToSheet({ onClose }: { onClose: () => void }) {
     ['3', <>Tap <b className="text-ink-strong">Add</b> — your games come with you</>, null],
   ]
   return (
-    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="font-extrabold text-lg text-ink-strong">Put it on your phone</h2>
-        <p className="text-[13px] font-semibold text-ink -mt-2">
-          Safari can pin Shifty Type to your home screen — it opens like an app, notifies you
-          when it's your move, and llama games work with no wifi.
-        </p>
-        {steps.map(([n, copy, glyph]) => (
-          <div key={n} className="flex items-center gap-3">
-            <span className="w-6.5 h-6.5 rounded-full bg-p1-tint text-p1-tint-ink font-extrabold text-[13px] flex items-center justify-center shrink-0">
-              {n}
+    <Sheet onClose={onClose}>
+      <h2 className="font-extrabold text-lg text-ink-strong">Put it on your phone</h2>
+      <p className="text-body font-semibold text-ink -mt-2">
+        Safari can pin Shifty Type to your home screen — it opens like an app, notifies you
+        when it's your move, and llama games work with no wifi.
+      </p>
+      {steps.map(([n, copy, glyph]) => (
+        <div key={n} className="flex items-center gap-3">
+          <span className="w-6.5 h-6.5 rounded-full bg-p1-tint text-p1-tint-ink font-extrabold text-ui flex items-center justify-center shrink-0">
+            {n}
+          </span>
+          <p className="text-small font-bold text-ink">{copy}</p>
+          {glyph && (
+            <span className="w-7.5 h-7.5 rounded-lg bg-board text-p1-lip flex items-center justify-center shrink-0 ml-auto">
+              {glyph}
             </span>
-            <p className="text-sm font-bold text-ink">{copy}</p>
-            {glyph && (
-              <span className="w-7.5 h-7.5 rounded-lg bg-board text-p1-lip flex items-center justify-center shrink-0 ml-auto">
-                {glyph}
-              </span>
-            )}
-          </div>
-        ))}
-        <button
-          onClick={onClose}
-          className="h-13 rounded-2xl font-extrabold bg-ink-strong text-white shadow-[0_4px_0_#262E38] active:translate-y-0.5"
-        >
-          Got it
-        </button>
-      </div>
-    </div>
+          )}
+        </div>
+      ))}
+      <Button variant="cta" accent="ink" onClick={onClose}>
+        Got it
+      </Button>
+    </Sheet>
   )
 }
 
@@ -70,39 +65,34 @@ export function SafariHandoffSheet({ onClose }: { onClose: () => void }) {
       .catch(() => setCopied(false))
   }
   return (
-    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
-        onClick={(e) => e.stopPropagation()}
+    <Sheet onClose={onClose}>
+      <h2 className="font-extrabold text-lg text-ink-strong">Safari does this bit</h2>
+      <p className="text-body font-semibold text-ink -mt-2">
+        This browser can't pin the game to your home screen. Hop over to Safari and the
+        home-screen steps will be waiting:
+      </p>
+      <a
+        href={safariHandoffUrl()}
+        className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5 flex items-center justify-center"
       >
-        <h2 className="font-extrabold text-lg text-ink-strong">Safari does this bit</h2>
-        <p className="text-[13px] font-semibold text-ink -mt-2">
-          This browser can't pin the game to your home screen. Hop over to Safari and the
-          home-screen steps will be waiting:
-        </p>
-        <a
-          href={safariHandoffUrl()}
-          className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5 flex items-center justify-center"
-        >
-          Open in Safari
-        </a>
-        <p className="text-[13px] font-semibold text-ink">
-          If nothing happens, copy the link and paste it into Safari:
-        </p>
-        <p className="text-[13px] font-bold text-ink-strong bg-board rounded-xl px-3 py-2 break-all select-all">
-          {installLinkUrl()}
-        </p>
-        <button
-          onClick={copy}
-          className="h-11 rounded-xl font-extrabold text-p1-lip bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5"
-        >
-          {copied ? 'Copied!' : 'Copy the link'}
-        </button>
-        <button onClick={onClose} className="h-11 rounded-xl font-extrabold text-dim">
-          Done
-        </button>
-      </div>
-    </div>
+        Open in Safari
+      </a>
+      <p className="text-body font-semibold text-ink">
+        If nothing happens, copy the link and paste it into Safari:
+      </p>
+      <p className="text-caption font-bold text-ink-strong bg-board rounded-xl px-3 py-2 break-all select-all">
+        {installLinkUrl()}
+      </p>
+      <button
+        onClick={copy}
+        className="h-11 rounded-xl font-extrabold text-p1-lip bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5"
+      >
+        {copied ? 'Copied!' : 'Copy the link'}
+      </button>
+      <Button variant="text" onClick={onClose}>
+        Done
+      </Button>
+    </Sheet>
   )
 }
 
@@ -110,14 +100,18 @@ function InstallCard({ onAdd, onDismiss }: { onAdd: () => void; onDismiss: () =>
   return (
     <div className="fixed inset-x-0 bottom-5 px-4 flex justify-center z-10">
       <div className="relative w-full max-w-[398px] bg-white rounded-[18px] shadow-[0_4px_0_#E2DDD3] p-3.5 pl-4 flex items-center gap-3">
-        <span className="w-10 h-11 rounded-[11px] bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] flex items-center justify-center font-extrabold text-[22px] shrink-0">
-          s
+        {/* The mark the home screen actually gets: the pwa icon's S/T tiles.
+            mb offsets the lip shadow so the visual block centers (LlamaMark
+            does the same). */}
+        <span className="flex gap-[2px] shrink-0 mb-[3px]">
+          <span className={tileClass('you', false, true)}>s</span>
+          <span className={tileClass('them', false, true)}>t</span>
         </span>
         <div className="flex-1 min-w-0">
-          <p className="font-extrabold text-[15px] leading-tight text-ink-strong">
+          <p className="font-extrabold text-status leading-tight text-ink-strong">
             Put it on your phone
           </p>
-          <p className="text-xs font-semibold text-ink leading-snug mt-0.5">
+          <p className="text-caption font-semibold text-ink leading-snug mt-0.5">
             No app store. It notifies you when it's your move — and llama games need no
             wifi at all.
           </p>
@@ -142,13 +136,10 @@ function InstallCard({ onAdd, onDismiss }: { onAdd: () => void; onDismiss: () =>
 
 function InstallPill({ onAdd }: { onAdd: () => void }) {
   return (
-    <button
-      onClick={onAdd}
-      className="h-10 px-4 rounded-full self-center bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center gap-2 font-extrabold text-[13px] text-ink"
-    >
+    <Button variant="pill" accent="white" size="sm" onClick={onAdd} className="self-center">
       <DeviceMobileIcon className="w-4 h-4 text-p1-lip" />
       Add to home screen
-    </button>
+    </Button>
   )
 }
 

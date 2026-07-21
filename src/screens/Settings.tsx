@@ -17,6 +17,7 @@ import {
   useInstallKind,
 } from '../components/useInstallPrompt'
 import { CallBellIcon, DeviceMobileIcon } from '../components/icons'
+import { Button } from '../components/ui/Button'
 
 interface SettingsProps {
   onBack: () => void
@@ -24,7 +25,7 @@ interface SettingsProps {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-extrabold uppercase tracking-wider text-dim px-1 mb-1.5">
+    <p className="text-label font-extrabold uppercase tracking-wider text-dim px-1 mb-1.5">
       {children}
     </p>
   )
@@ -99,13 +100,13 @@ export function Settings({ onBack }: SettingsProps) {
   return (
     <div className="min-h-dvh bg-board flex flex-col">
       <div className="flex items-center px-3.5 pt-2 pb-2.5">
-        <button onClick={onBack} className="h-11 px-2 font-extrabold text-[13px] text-dim">
+        <Button variant="text" size="sm" onClick={onBack}>
           ← Home
-        </button>
+        </Button>
       </div>
 
       <div className="flex-1 w-full max-w-md mx-auto px-4 pb-10 flex flex-col gap-6">
-        <h1 className="text-2xl font-extrabold text-ink-strong px-1">Settings</h1>
+        <h1 className="text-title font-extrabold text-ink-strong px-1">Settings</h1>
 
         {/* Name */}
         <section>
@@ -125,12 +126,12 @@ export function Settings({ onBack }: SettingsProps) {
             <button
               onClick={save}
               disabled={!dirty}
-              className="px-5 rounded-xl font-extrabold text-[15px] bg-p1 text-white shadow-[0_3px_0_var(--color-p1-lip)] active:translate-y-0.5 disabled:opacity-40 disabled:active:translate-y-0"
+              className="px-5 rounded-xl font-extrabold text-status bg-p1 text-white shadow-[0_3px_0_var(--color-p1-lip)] active:translate-y-0.5 disabled:opacity-40 disabled:active:translate-y-0"
             >
               Save
             </button>
           </div>
-          <p className={`text-[12px] font-semibold px-1 mt-2 ${justSaved ? 'text-p1-lip' : 'text-dim'}`}>
+          <p className={`text-caption font-semibold px-1 mt-2 ${justSaved ? 'text-p1-lip' : 'text-dim'}`}>
             {justSaved
               ? 'Saved ✓ — new games will use it.'
               : 'The name new games use. Games already going keep the name you joined with.'}
@@ -145,10 +146,10 @@ export function Settings({ onBack }: SettingsProps) {
               <CallBellIcon className="w-5 h-5 text-p1-lip" />
             </span>
             <div className="flex-1 min-w-0">
-              <p className="font-extrabold text-[15px] text-ink-strong leading-tight">
+              <p className="font-extrabold text-status text-ink-strong leading-tight">
                 Notify me for every game
               </p>
-              <p className="text-[12px] font-semibold text-dim leading-snug mt-0.5">
+              <p className="text-caption font-semibold text-dim leading-snug mt-0.5">
                 {nstat === 'unsupported' ? 'Needs the installed app' : 'A heads-up the moment it’s your move.'}
               </p>
             </div>
@@ -160,7 +161,7 @@ export function Settings({ onBack }: SettingsProps) {
               />
             )}
           </div>
-          <p className="text-[12px] font-semibold text-dim px-1 mt-2">{notifyNote}</p>
+          <p className="text-caption font-semibold text-dim px-1 mt-2">{notifyNote}</p>
         </section>
 
         {/* Install */}
@@ -172,10 +173,10 @@ export function Settings({ onBack }: SettingsProps) {
                 <DeviceMobileIcon className="w-5 h-5 text-p1-lip" />
               </span>
               <div className="flex-1 min-w-0">
-                <p className="font-extrabold text-[15px] text-ink-strong leading-tight">
+                <p className="font-extrabold text-status text-ink-strong leading-tight">
                   On your Home Screen
                 </p>
-                <p className="text-[12px] font-semibold text-dim leading-snug mt-0.5">
+                <p className="text-caption font-semibold text-dim leading-snug mt-0.5">
                   Installed — notifications and offline play are on.
                 </p>
               </div>
@@ -193,10 +194,10 @@ export function Settings({ onBack }: SettingsProps) {
                 <DeviceMobileIcon className="w-5 h-5 text-p1-lip" />
               </span>
               <div className="flex-1 min-w-0">
-                <p className="font-extrabold text-[15px] text-ink-strong leading-tight">
+                <p className="font-extrabold text-status text-ink-strong leading-tight">
                   Add to Home Screen
                 </p>
-                <p className="text-[12px] font-semibold text-dim leading-snug mt-0.5">
+                <p className="text-caption font-semibold text-dim leading-snug mt-0.5">
                   Play offline · get notified.
                 </p>
               </div>
@@ -205,7 +206,7 @@ export function Settings({ onBack }: SettingsProps) {
           </section>
         ) : null}
 
-        <p className="text-[12px] font-semibold text-dim text-center mt-auto pt-4">Shifty Type</p>
+        <p className="text-caption font-semibold text-dim text-center mt-auto pt-4">Shifty Type</p>
       </div>
 
       {sheet === 'ios' && <IosHowToSheet onClose={() => setSheet(null)} />}

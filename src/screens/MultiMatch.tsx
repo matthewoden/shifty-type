@@ -22,6 +22,7 @@ import { InviteSheet } from '../components/InviteSheet'
 import { NoteSheet } from '../components/NoteSheet'
 import { CallBellIcon, PaperPlaneTiltIcon, ShareIcon } from '../components/icons'
 import { LastCallBar } from '../components/LastCallBar'
+import { Button } from '../components/ui/Button'
 
 interface MultiMatchProps {
   code: string
@@ -160,7 +161,9 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="text"
+            size="sm"
             onClick={() => {
               // A duel you opened but never played a word into is nothing yet —
               // don't leave it lying around as a resumable "trash" game.
@@ -170,11 +173,10 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
               }
               onExit()
             }}
-            className="h-11 px-2 font-extrabold text-[13px] text-dim"
           >
             ← {backLabel}
-          </button>
-          <span className="font-extrabold text-[13px] text-dim tracking-widest">{code}</span>
+          </Button>
+          <span className="font-extrabold text-ui text-dim tracking-widest">{code}</span>
         </div>
         <PassButton disabled={!myTurn || m.busy} onPass={() => void m.send({ type: 'pass' })} />
       </div>
@@ -195,12 +197,12 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
       />
       <Toast message={m.toast} />
       {m.error && (
-        <div className="mx-3.5 mb-2 text-center text-[13px] font-bold text-p2-lip bg-white rounded-xl px-4 py-2.5 shadow-[0_3px_0_#E2DDD3]">
+        <div className="mx-3.5 mb-2 text-center text-body font-bold text-p2-lip bg-white rounded-xl px-4 py-2.5 shadow-[0_3px_0_#E2DDD3]">
           {m.error}
         </div>
       )}
       {openingNeeded && (
-        <p className="mx-3.5 mb-1 text-center text-[13px] font-bold text-ink-strong bg-white rounded-xl py-2 px-3 shadow-[0_3px_0_#E2DDD3]">
+        <p className="mx-3.5 mb-1 text-center text-body font-bold text-ink-strong bg-white rounded-xl py-2 px-3 shadow-[0_3px_0_#E2DDD3]">
           Play your opening word — anything goes.{' '}
           <span className="font-semibold text-dim">You'll invite your friend the moment it lands.</span>
         </p>
@@ -222,24 +224,21 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
         />
       ) : awaiting ? (
         <div className="px-5 pb-10 pt-2 text-center">
-          <p className="font-extrabold text-[15px] text-ink-strong">
+          <p className="font-extrabold text-status text-ink-strong">
             Waiting for your friend to jump in…
           </p>
-          <p className="font-semibold text-xs text-dim mt-1">
+          <p className="font-semibold text-caption text-dim mt-1">
             {nudge.status === 'on'
               ? "we'll notify you when they jump in"
               : 'share the invite and they drop straight into their turn'}
           </p>
-          <button
-            onClick={() => setInviteOpen(true)}
-            className="mt-3 h-11 px-5 rounded-full bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 inline-flex items-center gap-2 font-extrabold text-[13px]"
-          >
+          <Button variant="pill" accent="p2" onClick={() => setInviteOpen(true)} className="mt-3">
             <ShareIcon className="w-4 h-4 text-white" /> Invite a friend
-          </button>
+          </Button>
         </div>
       ) : lastCall ? (
         <div className="px-5 pb-10 pt-2 text-center">
-          <p className="font-extrabold text-[15px] text-ink-strong">
+          <p className="font-extrabold text-status text-ink-strong">
             {oppHere ? (
               <>
                 <PresenceDot /> {oppName}'s eyeing your last word…
@@ -248,7 +247,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
               <>Your last word is waiting for an answer.</>
             )}
           </p>
-          <p className="font-semibold text-xs text-dim mt-1">
+          <p className="font-semibold text-caption text-dim mt-1">
             {oppName} ends the match by shaking on it — or challenging it
           </p>
           <div className="mt-3 flex flex-col items-center gap-2">
@@ -263,7 +262,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
         </div>
       ) : (
         <div className="px-5 pb-10 pt-2 text-center">
-          <p className="font-extrabold text-[15px] text-ink-strong">
+          <p className="font-extrabold text-status text-ink-strong">
             {oppHere ? (
               <>
                 <PresenceDot /> {oppName}'s here, mulling it over…
@@ -274,7 +273,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
               <>{oppName}'s move — we'll be here.</>
             )}
           </p>
-          <p className="font-semibold text-xs text-dim mt-1">
+          <p className="font-semibold text-caption text-dim mt-1">
             {nudge.status === 'on'
               ? "we'll notify you the moment they play"
               : m.live
@@ -351,13 +350,10 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
  *  someone sitting across from you. */
 function NotePill({ onOpen }: { onOpen: () => void }) {
   return (
-    <button
-      onClick={onOpen}
-      className="h-11 px-4 rounded-full bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 inline-flex items-center gap-2 font-extrabold text-[13px] text-ink"
-    >
+    <Button variant="pill" accent="white" onClick={onOpen}>
       <PaperPlaneTiltIcon className="w-4 h-4 text-p2-lip" />
       Slide them a note
-    </button>
+    </Button>
   )
 }
 
@@ -383,7 +379,7 @@ function BellButton({
     <button
       onClick={denied ? onFix : onAsk}
       disabled={status === 'pending'}
-      className={`h-11 px-4 rounded-full bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 inline-flex items-center gap-2 font-extrabold text-[13px] disabled:opacity-60 ${denied ? 'text-dim' : 'text-ink'} ${className}`}
+      className={`h-11 px-4 rounded-full bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 inline-flex items-center gap-2 font-extrabold text-ui disabled:opacity-60 ${denied ? 'text-dim' : 'text-ink'} ${className}`}
     >
       <CallBellIcon className={`w-4 h-4 ${denied ? 'text-dim' : 'text-p1-lip'}`} />
       {denied ? "Notifications are off — turn them back on" : status === 'pending' ? 'Asking…' : label}
@@ -452,10 +448,10 @@ function CenteredNote({
       >
         {text}
       </p>
-      {hint && <p className="text-ink font-semibold text-sm max-w-xs">{hint}</p>}
-      <button onClick={onExit} className="h-11 px-4 font-extrabold text-dim">
+      {hint && <p className="text-ink font-semibold text-small max-w-xs">{hint}</p>}
+      <Button variant="text" onClick={onExit}>
         ← {backLabel}
-      </button>
+      </Button>
     </div>
   )
 }

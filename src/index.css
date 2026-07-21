@@ -27,6 +27,45 @@
   /* A challenge verdict: REJECTED always stamps this red (a word died);
      STANDS uses p1-lip. Not part of the indigo/coral player palette. */
   --color-verdict-no: #D8503A;
+
+  /* The type roles. Every document-like surface (screens, sheets, overlays)
+     sets text with these; weight and color stay per-site utilities
+     (extrabold = headings/labels/buttons, semibold = body, bold = inline
+     emphasis and errors). Board surfaces (Hud, Deck, ChainLedger, tiles)
+     are pixel-tuned against tile geometry and keep their own sizes.
+       title    — screen h1
+       headline — big sheet headlines
+       heading  — card/sheet headings, prominent one-liners
+       status   — match-status lines, row titles
+       small    — secondary copy, step text
+       body     — paragraph copy
+       caption  — footnotes under cards and buttons
+       label    — uppercase kickers/section labels (pair with tracking-*)
+       note     — margin receipts (recap points, ghost-tile takes)
+       ui       — labels on controls: buttons, pills, chips, badges. The
+                  line-height matches the inherited default (these sit
+                  flex-centered, so it rarely matters) — retune control
+                  labels here, never by nudging body. */
+  --text-title: 24px;
+  --text-title--line-height: 32px;
+  --text-headline: 20px;
+  --text-headline--line-height: 28px;
+  --text-heading: 18px;
+  --text-heading--line-height: 28px;
+  --text-status: 15px;
+  --text-status--line-height: 22px;
+  --text-small: 14px;
+  --text-small--line-height: 20px;
+  --text-body: 13.5px;
+  --text-body--line-height: 20px;
+  --text-caption: 12px;
+  --text-caption--line-height: 17px;
+  --text-label: 11px;
+  --text-label--line-height: 14px;
+  --text-note: 10px;
+  --text-note--line-height: 14px;
+  --text-ui: 13px;
+  --text-ui--line-height: 1.5;
 }
 
 /* The ledger hides the native scrollbar (it clashes with the flat card look);
