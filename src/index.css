@@ -91,6 +91,104 @@ body {
   }
 }
 
+/* Screen navigation. Forward taps slide the new screen in from the right
+   while the old one parks a third of the way off and dims; Back plays the
+   same move in reverse — the leaving screen slides away right, the one
+   underneath eases back to center. App.tsx owns the layer swap and listens
+   for the driving animation's end; reduced motion collapses every run to a
+   blink so that event still fires. */
+.nav-stage {
+  position: relative;
+  height: 100dvh;
+  /* clip, not hidden: hidden still scrolls programmatically, and focusing an
+     input mid-slide would scroll the stage sideways and snap the screen into
+     place. clip forbids all scrolling. */
+  overflow: clip;
+}
+.nav-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-board);
+}
+.nav-layer::after {
+  /* The scrim over a parked under-screen. position: fixed — inside the
+     layer's animated transform, that pins it to the layer's own viewport,
+     so a scrolled-down outgoing page still dims edge to edge (the park
+     keyframes carry an explicit from-transform to guarantee the containing
+     block from frame one). */
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: rgba(62, 72, 84, 0.14);
+  opacity: 0;
+}
+.nav-slide-in {
+  z-index: 1;
+  box-shadow: 0 0 28px rgba(62, 72, 84, 0.25);
+  animation: nav-slide-in 340ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes nav-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+.nav-slide-out {
+  z-index: 1;
+  box-shadow: 0 0 28px rgba(62, 72, 84, 0.25);
+  animation: nav-slide-out 340ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes nav-slide-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+.nav-park {
+  animation: nav-park 340ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.nav-park::after {
+  animation: nav-dim 340ms ease both;
+}
+@keyframes nav-park {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33%);
+  }
+}
+.nav-unpark {
+  animation: nav-unpark 340ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.nav-unpark::after {
+  animation: nav-dim 340ms ease both reverse;
+}
+@keyframes nav-unpark {
+  from {
+    transform: translateX(-33%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes nav-dim {
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-slide-in,
+  .nav-slide-out,
+  .nav-park,
+  .nav-park::after,
+  .nav-unpark,
+  .nav-unpark::after {
+    animation-duration: 0.01s;
+  }
+}
+
 /* The home logo plays itself in: SHIFTY pops in solid, TYPE types itself
    in tile by tile (same fill-pop as the ghost seeds), and SHIFTY's tail TY
    "spends" (solid → tint) as the grip lands. */

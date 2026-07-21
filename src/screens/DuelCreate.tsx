@@ -18,6 +18,12 @@ export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
   const saved = getSavedName()
   const [name, setName] = useState(saved)
   const [pending, setPending] = useState(!!saved)
+  const nameRef = useRef<HTMLInputElement>(null)
+  // Not autoFocus: focusing mid-slide lets the browser yank the focused input
+  // into view, which scrolls the nav stage and snaps the screen into place.
+  useEffect(() => {
+    nameRef.current?.focus({ preventScroll: true })
+  }, [])
   const [error, setError] = useState<string | null>(null)
   const started = useRef(false)
 
@@ -74,7 +80,7 @@ export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
             onKeyDown={(e) => e.key === 'Enter' && submit()}
             maxLength={20}
             placeholder="e.g. Matt"
-            autoFocus
+            ref={nameRef}
             className="mt-1 w-full h-12 bg-white rounded-xl px-3.5 font-extrabold text-lg text-ink-strong shadow-[0_4px_0_#E2DDD3] outline-none placeholder:text-dim placeholder:font-bold"
           />
         </label>

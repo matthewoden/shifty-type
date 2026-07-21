@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { getSavedName, saveMatchAuth, saveName } from '../multi/storage'
 import { Button } from '../components/ui/Button'
@@ -13,6 +13,11 @@ interface JoinByCodeProps {
 function CodeCells({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const ref = useRef<HTMLInputElement>(null)
   const cells = value.padEnd(4, ' ').slice(0, 4).split('')
+  // Not autoFocus: focusing mid-slide lets the browser yank the focused input
+  // into view, which scrolls the nav stage and snaps the screen into place.
+  useEffect(() => {
+    ref.current?.focus({ preventScroll: true })
+  }, [])
   return (
     <div className="relative" onClick={() => ref.current?.focus()}>
       <input
@@ -24,7 +29,6 @@ function CodeCells({ value, onChange }: { value: string; onChange: (v: string) =
         autoCapitalize="characters"
         autoCorrect="off"
         spellCheck={false}
-        autoFocus
         aria-label="Their match code"
         className="absolute inset-0 w-full h-full opacity-0"
       />
