@@ -32,6 +32,12 @@ const MATCH_TTL_MS = 60 * 24 * 60 * 60 * 1000 // 60 days of silence → cleanup
 // quiet spell: any move re-arms it, the deletion alarm follows if it stays
 // quiet. (.dev.vars can override REMINDER_DELAY_MS to test the alarm chain.)
 const REMIND_AFTER_MS = 7 * 24 * 60 * 60 * 1000
+/** A seat is only warm while its heartbeat is fresh: the client pings every
+ *  25s, so two missed beats plus slack. Hidden desktop tabs keep their socket
+ *  open but stop pinging, and vanished phones leave corpses the runtime may
+ *  not close for minutes — both must read as "away", because the presence
+ *  copy promises real attention and the note pill hides behind it. */
+const PRESENCE_TIMEOUT_MS = 60 * 1000
 
 // 32 unambiguous characters (no 0/O/1/I) — 32 divides 256, so random bytes
 // map to codes without modulo bias.
@@ -139,12 +145,28 @@ export class MatchDO extends DurableObject<Env> {
       .filter((ws) => ws.readyState === WebSocket.READY_STATE_OPEN)
   }
 
+  private presenceTimeoutMs(): number {
+    // Test seam: .dev.vars only, never set in production.
+    const override = Number((this.env as { PRESENCE_TIMEOUT_MS?: string }).PRESENCE_TIMEOUT_MS ?? '')
+    return override > 0 ? override : PRESENCE_TIMEOUT_MS
+  }
+
+  /** An open socket whose last heartbeat (runtime-answered ping, or the open
+   *  itself for a socket too young to have pinged) is recent enough to count. */
+  private fresh(ws: WebSocket): boolean {
+    const opened = (ws.deserializeAttachment() as { openedAt?: number } | null)?.openedAt ?? 0
+    const beat = this.ctx.getWebSocketAutoResponseTimestamp(ws)?.getTime() ?? opened
+    return Date.now() - beat < this.presenceTimeoutMs()
+  }
+
   /** Live-socket presence. Ephemeral by design: computed from the accepted
-   *  sockets (which survive hibernation), never stored, never in revision. */
+   *  sockets (which survive hibernation), never stored, never in revision.
+   *  Broadcasts still go to every open socket — freshness only decides who
+   *  counts as sitting here. */
   private presence(): Presence {
     return {
-      p1: this.socketsFor('p1').length > 0,
-      p2: this.socketsFor('p2').length > 0,
+      p1: this.socketsFor('p1').some((ws) => this.fresh(ws)),
+      p2: this.socketsFor('p2').some((ws) => this.fresh(ws)),
     }
   }
 
@@ -225,7 +247,8 @@ export class MatchDO extends DurableObject<Env> {
     // The player tag lets broadcast() and presence() find this socket after
     // hibernation; the attachment survives eviction alongside it.
     this.ctx.acceptWebSocket(pair[1], [you])
-    pair[1].serializeAttachment({ you })
+    // openedAt seeds the freshness clock until the first ping lands.
+    pair[1].serializeAttachment({ you, openedAt: Date.now() })
     // Everyone (including the newcomer) gets a fresh view: the newcomer's
     // initial sync and the opponent's "they're at the table" in one move.
     this.broadcast(m)

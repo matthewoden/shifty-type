@@ -4,7 +4,7 @@
 // fallback for flakey wifi, and both paths dedupe on `revision`.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { lastCallActorOf } from '../game'
+import { lastCallActorOf, opponentOf } from '../game'
 import { api } from '../lib/api'
 import type { ClientMove, LastEvent, MatchView, SocketPush } from '../lib/protocol'
 
@@ -18,6 +18,11 @@ const POLL_MS = 8000
 // socket silently died (radio handoff, dead wifi) → close and reconnect.
 const HEARTBEAT_MS = 25_000
 const RECONNECT_MAX_MS = 30_000
+// The DO stops counting a socket as "here" once its heartbeat goes stale
+// (60s server-side) — but a vanished friend fires no event, so while the view
+// claims they're present we re-check on a slow clock and let the
+// unchanged-merge in refresh() clear the seat.
+const PRESENCE_RECHECK_MS = 30_000
 
 /** Is the local player the one who must act right now? Challenges resolve
  *  instantly, so it's whose turn the phase names — or, at last call, whoever
@@ -157,6 +162,13 @@ export function useMultiMatch(code: string, token: string) {
       if (document.visibilityState !== 'visible') return
       attempts = 0
       clearTimeout(reconnectTimer)
+      // A hidden tab keeps its socket but stops pinging, so the DO has been
+      // counting this seat as cold — ping now rather than waiting out the
+      // interval, so coming back reads as sitting down.
+      if (ws && ws.readyState === WebSocket.OPEN && !awaitingPong) {
+        awaitingPong = true
+        ws.send('ping')
+      }
       connect()
     }
     document.addEventListener('visibilitychange', wake)
@@ -190,6 +202,21 @@ export function useMultiMatch(code: string, token: string) {
       clearInterval(interval)
       document.removeEventListener('visibilitychange', tick)
     }
+  }, [refresh])
+
+  // While the friend shows as present, re-verify on a slow clock: presence
+  // decays server-side but produces no push when it does. Only runs while
+  // we're the one watching (their move) — that's the only time it's shown.
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState !== 'visible') return
+      const current = viewRef.current
+      if (!current || myMove(current)) return
+      if (!current.presence?.[opponentOf(current.you)]) return
+      void refresh()
+    }
+    const interval = setInterval(tick, PRESENCE_RECHECK_MS)
+    return () => clearInterval(interval)
   }, [refresh])
 
   // Toasts clear themselves.
