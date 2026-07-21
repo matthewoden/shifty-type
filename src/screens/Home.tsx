@@ -104,7 +104,7 @@ export function Home({
                     Challenge a friend
                 </Button>
                 <Button variant="cta" accent="p1" size="lg" onClick={onSolo}>
-                    Play against a local llama
+                    Play locally against a llama
                 </Button>
                 <Button
                     variant="cta"
@@ -112,7 +112,7 @@ export function Home({
                     size="sm"
                     onClick={onJoinCode}
                 >
-                    Join with a code
+                    Join a game with a code
                 </Button>
                 <div className="flex justify-center gap-1 items-center">
                     <Button variant="text" size="sm" onClick={onHowTo}>
