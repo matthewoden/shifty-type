@@ -12,6 +12,13 @@ interface DeckKeys {
   onPlay: () => void
 }
 
+/** Tell the on-screen deck a physical key landed, so the matching chiclet
+ *  can dip like a tap. An event, not a prop — the hook lives in the screen,
+ *  the deck two components away, and nothing in between needs to know. */
+function announce(key: string): void {
+  window.dispatchEvent(new CustomEvent('deckpress', { detail: key }))
+}
+
 export function useDeckKeyboard(enabled: boolean, keys: DeckKeys): void {
   // The handlers close over fresh state each render; the listener reads the
   // latest through a ref so it never rebinds on every keystroke.
@@ -26,9 +33,11 @@ export function useDeckKeyboard(enabled: boolean, keys: DeckKeys): void {
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
       if (/^[a-zA-Z]$/.test(e.key)) {
         ref.current.onKey(e.key)
+        announce(e.key.toLowerCase())
       } else if (e.key === 'Backspace') {
         e.preventDefault() // some browsers still treat bare Backspace as Back
         ref.current.onBackspace()
+        announce('backspace')
       } else if (e.key === 'Enter') {
         // A focused real button (Pass confirm, a sheet action) keeps its
         // native Enter — except deck keys themselves, where focus is just

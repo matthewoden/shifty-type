@@ -40,7 +40,31 @@ function keyStyle(letter: string, glowKey: string | undefined, hints: KeyHints |
   return { cls: KEY_OFF, off: true }
 }
 
+/** The chiclet-down look for a physical keypress, inline so it composes with
+ *  any key variant: the dip always lands; the flattened lip only shows on
+ *  plain keys (the lit/glow shadows are !important, same as under a real
+ *  tap's active:). */
+const PRESSED_STYLE = { translate: '0 2px', boxShadow: '0 1px 0 #DDD8CE' } as const
+const PRESS_MS = 130
+
 export function Deck({ disabled, rise = false, glowKey, keyHints, onKey, onBackspace }: DeckProps) {
+  // Physical typing echoes on the deck: useDeckKeyboard announces each press
+  // and the matching chiclet dips like a tap, so desktop players see their
+  // keystrokes land on the board's own keyboard.
+  const [pressed, setPressed] = useState<string | null>(null)
+  useEffect(() => {
+    let timer: number | undefined
+    const onPress = (e: Event) => {
+      setPressed((e as CustomEvent<string>).detail)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setPressed(null), PRESS_MS)
+    }
+    window.addEventListener('deckpress', onPress)
+    return () => {
+      window.removeEventListener('deckpress', onPress)
+      window.clearTimeout(timer)
+    }
+  }, [])
   return (
     // Installed to the home screen, the page runs under the iOS home
     // indicator — pad the deck past it (max() keeps 1rem in browsers).
@@ -59,6 +83,7 @@ export function Deck({ disabled, rise = false, glowKey, keyHints, onKey, onBacks
                 disabled={disabled || style.off}
                 onClick={() => onKey(letter)}
                 className={style.cls ? `${KEY} ${style.cls}` : KEY}
+                style={pressed === letter && !disabled && !style.off ? PRESSED_STYLE : undefined}
               >
                 {letter}
               </button>
@@ -71,6 +96,7 @@ export function Deck({ disabled, rise = false, glowKey, keyHints, onKey, onBacks
               onClick={onBackspace}
               aria-label="Backspace"
               className={`${KEY} max-w-[54px] flex-[1.6] text-lg text-ink`}
+              style={pressed === 'backspace' && !disabled ? PRESSED_STYLE : undefined}
             >
               ⌫
             </button>
