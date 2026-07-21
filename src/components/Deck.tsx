@@ -7,12 +7,15 @@
 
 import { useEffect, useState } from 'react'
 import type { KeyHints } from '../game'
+import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 
 const KEY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'] as const
 
 interface DeckProps {
   disabled: boolean
-  /** Slide up on mount — multiplayer, where the deck's arrival is the turn signal. */
+  /** Slide up on mount — every match surface passes it: the deck's arrival
+   *  is the turn signal, paired with the hud-drop up top on match entry. */
   rise?: boolean
   /** Tutorial-only: this letter's key glows indigo (the guided next press). */
   glowKey?: string
@@ -108,44 +111,50 @@ export function Deck({ disabled, rise = false, glowKey, keyHints, onKey, onBacks
 }
 
 /** Pass as a real button — top bar, opposite corner of the screen from the
- *  keys, still behind its two-step confirm (it costs a life). */
+ *  keys, still behind its two-step confirm (it costs a life). The confirm is
+ *  the same bottom sheet the challenge uses: the two costs-a-life decisions
+ *  share one shape. */
 export function PassButton({ disabled, onPass }: { disabled: boolean; onPass: () => void }) {
   const [confirm, setConfirm] = useState(false)
   useEffect(() => {
     if (disabled) setConfirm(false)
   }, [disabled])
 
-  if (confirm)
-    return (
-      <div className="fixed inset-x-0 top-0 z-20 max-w-[430px] mx-auto bg-board px-3.5 py-2 flex items-center gap-2.5 shadow-[0_3px_0_#E2DDD3]">
-        <span className="text-ui font-bold text-ink">Pass and lose a life?</span>
-        <button
-          type="button"
-          onClick={() => {
-            setConfirm(false)
-            onPass()
-          }}
-          className="ml-auto h-10 px-3.5 rounded-xl font-extrabold text-ui bg-p2 text-white shadow-[0_3px_0_var(--color-p2-lip)] active:translate-y-0.5"
-        >
-          Yes, Pass
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfirm(false)}
-          className="h-10 px-3.5 rounded-xl font-extrabold text-ui bg-white text-ink shadow-[0_3px_0_#DDD8CE] active:translate-y-0.5"
-        >
-          Wait, no
-        </button>
-      </div>
-    )
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => setConfirm(true)}
-      className="h-11 px-4 rounded-[13px] font-extrabold text-ui bg-white text-ink shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 active:shadow-[0_2px_0_#E2DDD3] disabled:opacity-40 disabled:active:translate-y-0"
-    >
-      Pass?
-    </button>
+    <>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setConfirm(true)}
+        className="h-11 px-4 rounded-[13px] font-extrabold text-ui bg-white text-ink shadow-[0_4px_0_#E2DDD3] active:translate-y-0.5 active:shadow-[0_2px_0_#E2DDD3] disabled:opacity-40 disabled:active:translate-y-0"
+      >
+        Pass?
+      </button>
+      {confirm && (
+        <Sheet onClose={() => setConfirm(false)}>
+          {(close) => (
+            <>
+              <p className="font-bold text-ink text-status">
+                Pass and lose a life? The word stays in play — and if you both
+                pass on it, the chain snaps.
+              </p>
+              <Button
+                variant="cta"
+                accent="p2"
+                onClick={() => {
+                  setConfirm(false)
+                  onPass()
+                }}
+              >
+                Yes, pass
+              </Button>
+              <Button variant="text" onClick={close}>
+                Wait, no
+              </Button>
+            </>
+          )}
+        </Sheet>
+      )}
+    </>
   )
 }
