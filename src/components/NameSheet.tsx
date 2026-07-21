@@ -39,7 +39,7 @@ export function NameSheet({
       : 'bg-p1 shadow-[0_4px_0_var(--color-p1-lip)]'
 
   return (
-    <div className="fixed inset-0 bg-ink-strong/40 flex items-end z-30" onClick={onClose}>
+    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-30" onClick={onClose}>
       <div
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-3.5"
         onClick={(e) => e.stopPropagation()}

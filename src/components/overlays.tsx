@@ -10,7 +10,7 @@ import { FlagIcon } from './icons'
 
 export function Overlay({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-board/95 flex flex-col items-center justify-center gap-5 p-8 text-center z-10">
+    <div className="fixed inset-0 max-w-[430px] mx-auto bg-board/95 flex flex-col items-center justify-center gap-5 p-8 text-center z-10">
       {children}
     </div>
   )
@@ -76,7 +76,7 @@ export function ConfirmChallengeSheet({
   onCancel: () => void
 }) {
   return (
-    <div className="fixed inset-0 bg-ink-strong/40 flex items-end z-10" onClick={onCancel}>
+    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onCancel}>
       <div
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}

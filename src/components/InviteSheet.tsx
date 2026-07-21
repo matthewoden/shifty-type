@@ -56,7 +56,7 @@ export function InviteSheet({ code, openingWord, bell, onClose }: InviteSheetPro
   }
 
   return (
-    <div className="fixed inset-0 bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
+    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
       <div
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col items-center gap-4 text-center"
         onClick={(e) => e.stopPropagation()}

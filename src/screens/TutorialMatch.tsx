@@ -8,6 +8,7 @@ import { Deck, PassButton } from '../components/Deck'
 import { Hud } from '../components/Hud'
 import { Toast } from '../components/Toast'
 import { useComposer } from '../components/useComposer'
+import { useDeckKeyboard } from '../components/useDeckKeyboard'
 import { ConfirmChallengeSheet, GameOverPanel } from '../components/overlays'
 import { LastCallBar } from '../components/LastCallBar'
 import { gripOptions, lastCallActorOf } from '../game'
@@ -103,6 +104,19 @@ export function TutorialMatch({
   const newest = state.chain[state.chain.length - 1]
   const composerActive = t.playerTurn && t.passive
   const composer = useComposer(newest?.word ?? null, composerActive)
+
+  const playTyped = () => {
+    if (t.playWord(composer.typed)) composer.clear()
+  }
+  // Desktop: physical keys work in the tutorial too — same composer,
+  // same guardrails (the composer refuses off-grip letters either way).
+  useDeckKeyboard(composerActive && !confirmingChallenge, {
+    onKey: composer.key,
+    onBackspace: composer.backspace,
+    onPlay: () => {
+      if (composer.canPlay) playTyped()
+    },
+  })
   const fan =
     t.playerTurn && t.passive && !composer.typed && newest ? gripOptions(newest.word) : null
   const canChallenge =
@@ -154,9 +168,7 @@ export function TutorialMatch({
           composer={composer.typed ? { ...composer, hintTail } : null}
           fan={fan}
           onSeed={composer.seed}
-          onPlay={() => {
-            if (t.playWord(composer.typed)) composer.clear()
-          }}
+          onPlay={playTyped}
         />
         {t.bubbles.length > 0 && (
           <div className="absolute top-2 left-3.5 right-3.5 flex flex-col gap-2.5 z-[6] pointer-events-none">

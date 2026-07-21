@@ -1131,7 +1131,7 @@ function DetailCard({
 }) {
   const side = sideOf(link.owner, you)
   return (
-    <div className="fixed inset-0 bg-ink-strong/30 flex items-end z-20" onClick={onClose}>
+    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/30 flex items-end z-20" onClick={onClose}>
       <div
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-9 flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}

@@ -5,6 +5,7 @@ import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
 import { PresenceDot } from '../components/PresenceDot'
 import { useComposer } from '../components/useComposer'
+import { useDeckKeyboard } from '../components/useDeckKeyboard'
 import { gripOptions, isChainBroken, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { opponentOf } from '../game'
@@ -75,6 +76,23 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   const [bellSheet, setBellSheet] = useState<'ask' | 'fix' | null>(null)
   // The note sheet — the nudge that rides a regular text instead of push.
   const [noteOpen, setNoteOpen] = useState(false)
+
+  const playTyped = () => {
+    void m.send({ type: 'play', word: composer.typed }).then((ok) => {
+      if (ok) composer.clear()
+    })
+  }
+  // Desktop: physical keys drive the same composer as the on-screen deck.
+  useDeckKeyboard(
+    isMyTurn && !m.busy && !confirmingChallenge && !bellSheet && !noteOpen && !m.stamp,
+    {
+      onKey: composer.key,
+      onBackspace: composer.backspace,
+      onPlay: () => {
+        if (composer.canPlay && !m.busy) playTyped()
+      },
+    },
+  )
   const bellSheets = bellSheet && (
     bellSheet === 'ask' ? (
       <SoftAskSheet
@@ -173,11 +191,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
         freshStart={broken && !terminal && !lastCall ? (myTurn ? 'mine' : 'theirs') : null}
         revealOnMount={revealRef.current ?? false}
         onSeed={composer.seed}
-        onPlay={() => {
-          void m.send({ type: 'play', word: composer.typed }).then((ok) => {
-            if (ok) composer.clear()
-          })
-        }}
+        onPlay={playTyped}
       />
       <Toast message={m.toast} />
       {m.error && (

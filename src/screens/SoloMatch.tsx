@@ -5,6 +5,7 @@ import { Toast } from '../components/Toast'
 import { Hud } from '../components/Hud'
 import { PresenceDot } from '../components/PresenceDot'
 import { useComposer } from '../components/useComposer'
+import { useDeckKeyboard } from '../components/useDeckKeyboard'
 import { gripOptions, gripTargetOf, isChainBroken, lastCallActorOf } from '../game'
 import { ConfirmChallengeSheet, GameOverPanel, VerdictStamp } from '../components/overlays'
 import { LastCallBar } from '../components/LastCallBar'
@@ -38,6 +39,21 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
   const gripTarget = gripTargetOf(state)
   const composer = useComposer(gripTarget?.word ?? null, playerTurn)
   const fan = playerTurn && !composer.typed && gripTarget ? gripOptions(gripTarget.word) : null
+
+  const playTyped = () => {
+    if (m.playWord(composer.typed)) composer.clear()
+  }
+  // Desktop: physical keys drive the same composer as the on-screen deck.
+  useDeckKeyboard(
+    playerTurn && !confirmingChallenge && m.event?.kind !== 'verdict' && !m.terminal,
+    {
+      onKey: composer.key,
+      onBackspace: composer.backspace,
+      onPlay: () => {
+        if (composer.canPlay) playTyped()
+      },
+    },
+  )
   const canChallenge =
     (playerTurn || playerLastCall) &&
     newest !== undefined &&
@@ -75,9 +91,7 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
         openerCaret={playerTurn && state.chain.length === 0}
         freshStart={broken && !m.terminal ? (playerTurn ? 'mine' : 'theirs') : null}
         onSeed={composer.seed}
-        onPlay={() => {
-          if (m.playWord(composer.typed)) composer.clear()
-        }}
+        onPlay={playTyped}
       />
       <Toast
         message={

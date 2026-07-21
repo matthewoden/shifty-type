@@ -23,7 +23,7 @@ export function IosHowToSheet({ onClose }: { onClose: () => void }) {
     ['3', <>Tap <b className="text-ink-strong">Add</b> — your games come with you</>, null],
   ]
   return (
-    <div className="fixed inset-0 bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
+    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
       <div
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}
@@ -70,7 +70,7 @@ export function SafariHandoffSheet({ onClose }: { onClose: () => void }) {
       .catch(() => setCopied(false))
   }
   return (
-    <div className="fixed inset-0 bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
+    <div className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10" onClick={onClose}>
       <div
         className="bg-white w-full max-w-[430px] mx-auto rounded-t-3xl p-6 pb-[max(2.25rem,calc(env(safe-area-inset-bottom)+1rem))] flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}

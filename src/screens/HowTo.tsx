@@ -46,11 +46,15 @@ export function HowTo({
 }) {
   return (
     <div className="min-h-dvh bg-board">
-      <div className="max-w-md mx-auto px-6 py-8">
-        <button onClick={onBack} className="h-11 -ml-2 px-2 font-extrabold text-[13px] text-dim">
+      {/* Same slim top bar as Settings and the match screens — the back
+          button rides at the same height everywhere. */}
+      <div className="flex items-center px-3.5 pt-2 pb-2.5">
+        <button onClick={onBack} className="h-11 px-2 font-extrabold text-[13px] text-dim">
           ← Back
         </button>
-        <div className="text-center mt-2">
+      </div>
+      <div className="max-w-md mx-auto px-6 pb-8">
+        <div className="text-center">
           <h1 className="text-2xl font-extrabold text-ink-strong">How to play</h1>
           <p className="text-dim font-semibold text-sm mt-1">Four rules, one minute.</p>
           <button onClick={onTutorial} className="h-11 px-3 font-extrabold text-[13px] text-p1-lip">
@@ -128,7 +132,7 @@ export function HowTo({
         <Rule />
 
         <p className="text-center font-extrabold text-ink-strong">
-          That's it. Go make up a word.
+          That's it. Now you're ready to play.
         </p>
         <div className="flex flex-col gap-3 mt-6 pb-8 max-w-xs mx-auto">
           <button

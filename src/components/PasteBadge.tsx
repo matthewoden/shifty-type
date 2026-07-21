@@ -82,7 +82,7 @@ export function PasteBadge({
       )}
       {sheet.kind === 'ask' && (
         <div
-          className="fixed inset-0 bg-ink-strong/40 flex items-end z-10"
+          className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10"
           onClick={() => setSheet({ kind: 'closed' })}
         >
           <div
@@ -125,7 +125,7 @@ export function PasteBadge({
       )}
       {sheet.kind === 'done' && (
         <div
-          className="fixed inset-0 bg-ink-strong/40 flex items-end z-10"
+          className="fixed inset-0 max-w-[430px] mx-auto bg-ink-strong/40 flex items-end z-10"
           onClick={() => setSheet({ kind: 'closed' })}
         >
           <div
