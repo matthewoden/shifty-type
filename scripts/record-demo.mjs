@@ -170,7 +170,7 @@ async function attempt(browser, plan, n) {
   try {
     await page.goto(BASE)
     await page.waitForTimeout(3000) // let the home screen and logo type-in land
-    await page.getByRole('button', { name: /play against a local llama/i }).click()
+    await page.getByRole('button', { name: /play locally against a llama/i }).click()
     await page.waitForTimeout(2200) // linger on the llama picker
     await page.getByRole('button', { name: /lloyd/i }).click()
     await page.waitForTimeout(2500) // arrive at the empty board before typing
