@@ -24,7 +24,15 @@ interface SoloSetupProps {
  */
 export function SoloSetup({ onStart, onBack }: SoloSetupProps) {
   return (
-    <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-6 p-6">
+    <div className="min-h-dvh bg-board flex flex-col">
+      {/* Same slim top bar as Settings and the match screens — back always
+          rides at the same height, named for where it leads. */}
+      <div className="flex items-center px-3.5 pt-2 pb-2.5">
+        <Button variant="text" size="sm" onClick={onBack}>
+          ← Home
+        </Button>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 pt-0">
       <div className="flex flex-col items-center gap-2.5">
         <TileLockup top="swell" bottom="llamas" pace="quick" kicker="Meet these" />
         <p className="text-ink font-bold text-status mt-6 setup-fade">Pick a llama to play against.</p>
@@ -41,9 +49,7 @@ export function SoloSetup({ onStart, onBack }: SoloSetupProps) {
           </button>
         ))}
       </div>
-      <Button variant="text" onClick={onBack} className="setup-fade">
-        ← Back
-      </Button>
+      </div>
     </div>
   )
 }

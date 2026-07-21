@@ -492,16 +492,15 @@ export function Lobby({
 
     return (
         <div className="min-h-dvh bg-board flex flex-col">
-            <div className="px-5 pt-7 pb-2 max-w-[430px] w-full mx-auto">
-                <Button
-                    variant="text"
-                    size="sm"
-                    onClick={onBack}
-                    className="-ml-3"
-                >
-                    ← Back
+            {/* Same slim top bar as every other screen — back always rides at
+                the same height, named for where it leads. */}
+            <div className="flex items-center px-3.5 pt-2 pb-2.5">
+                <Button variant="text" size="sm" onClick={onBack}>
+                    ← Home
                 </Button>
-                {/* Top bar: title + the Edit pill (→ filled Done while active).
+            </div>
+            <div className="px-5 pb-2 max-w-[430px] w-full mx-auto">
+                {/* Title + the Edit pill (→ filled Done while active).
             Joining by code lives on Home, so it's not duplicated here. */}
                 <div className="flex items-center justify-between gap-3 mt-1">
                     <h1 className="text-title font-extrabold text-ink-strong">

@@ -9,16 +9,20 @@ export function TutorialWelcome({
   onPlay,
   onRules,
   onBack,
+  backLabel = 'Home',
 }: {
   onPlay: () => void
   onRules: () => void
   onBack: () => void
+  /** Where back leads — "Home", or "Invite" when the player detoured here
+   *  from an invite landing (backFromDetour returns them to it). */
+  backLabel?: string
 }) {
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
       <div className="flex items-center px-3.5 pt-2 pb-2.5">
         <Button variant="text" size="sm" onClick={onBack}>
-          ← Home
+          ← {backLabel}
         </Button>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 text-center">

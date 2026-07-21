@@ -468,16 +468,21 @@ function CenteredNote({
   backLabel?: string
 }) {
   return (
-    <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-4 p-8 text-center">
-      <p
-        className={`text-ink-strong font-extrabold text-lg ${pulse ? 'animate-pulse motion-reduce:animate-none' : ''}`}
-      >
-        {text}
-      </p>
-      {hint && <p className="text-ink font-semibold text-small max-w-xs">{hint}</p>}
-      <Button variant="text" onClick={onExit}>
-        ← {backLabel}
-      </Button>
+    <div className="min-h-dvh bg-board flex flex-col">
+      {/* Back rides the same slim top bar as the board it stands in for. */}
+      <div className="flex items-center px-3.5 pt-2 pb-2.5">
+        <Button variant="text" size="sm" onClick={onExit}>
+          ← {backLabel}
+        </Button>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 pt-0 text-center">
+        <p
+          className={`text-ink-strong font-extrabold text-lg ${pulse ? 'animate-pulse motion-reduce:animate-none' : ''}`}
+        >
+          {text}
+        </p>
+        {hint && <p className="text-ink font-semibold text-small max-w-xs">{hint}</p>}
+      </div>
     </div>
   )
 }

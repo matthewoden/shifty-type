@@ -31,7 +31,15 @@ export function DuelCreate({ onStart, onBack }: DuelCreateProps) {
   }
 
   return (
-    <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-5 p-6">
+    <div className="min-h-dvh bg-board flex flex-col">
+      {/* Same slim top bar as Settings and the match screens — back always
+          rides at the same height, named for where it leads. */}
+      <div className="flex items-center px-3.5 pt-2 pb-2.5">
+        <Button variant="text" size="sm" onClick={onBack}>
+          ← Home
+        </Button>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6 pt-0">
       <h2 className="text-title font-extrabold text-ink-strong">Challenge a friend</h2>
       <div className="flex flex-col gap-3.5 w-full max-w-xs">
         <label className="text-body font-bold text-ink">
@@ -54,9 +62,7 @@ export function DuelCreate({ onStart, onBack }: DuelCreateProps) {
         </p>
         {error && <p className="text-body font-bold text-p2-lip text-center">{error}</p>}
       </div>
-      <Button variant="text" onClick={onBack}>
-        ← Back
-      </Button>
+      </div>
     </div>
   )
 }

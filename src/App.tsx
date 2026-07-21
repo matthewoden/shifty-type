@@ -139,9 +139,10 @@ export default function App() {
     navigate({ name: 'invite', code }, kind)
   }
   // Back out of How-to / the tutorial: to the pending invite if there is one,
-  // otherwise Home.
+  // otherwise Home. The label always names where it actually leads.
   const backFromDetour = () =>
     pendingInvite ? showInvite(pendingInvite, 'pop') : goHome()
+  const detourBackLabel = pendingInvite ? 'Invite' : 'Home'
 
   // The tutorial ending, for a player who arrived from an invite: drop them
   // straight into that match. A returning device (name saved) joins and enters
@@ -181,6 +182,7 @@ export default function App() {
         return (
           <HowTo
             onBack={backFromDetour}
+            backLabel={detourBackLabel}
             onPlayLlama={() => enterSolo(newSoloSave('easy'))}
             onTutorial={() => navigate({ name: 'tutorial-welcome' })}
           />
@@ -191,12 +193,14 @@ export default function App() {
             onPlay={() => navigate({ name: 'tutorial' })}
             onRules={() => navigate({ name: 'howto' })}
             onBack={backFromDetour}
+            backLabel={detourBackLabel}
           />
         )
       case 'tutorial':
         return (
           <TutorialMatch
             onExit={backFromDetour}
+            backLabel={detourBackLabel}
             onDuel={startDuel}
             onRematchLloyd={() => enterSolo(newSoloSave('easy', 'p2'))}
             resumeInvite={pendingInvite}

@@ -57,10 +57,14 @@ function Rule() {
 
 export function HowTo({
     onBack,
+    backLabel = "Home",
     onPlayLlama,
     onTutorial,
 }: {
     onBack: () => void;
+    /** Where back leads — "Home", or "Invite" when the reader detoured here
+     *  from an invite landing (backFromDetour returns them to it). */
+    backLabel?: string;
     onPlayLlama: () => void;
     onTutorial: () => void;
 }) {
@@ -70,7 +74,7 @@ export function HowTo({
           button rides at the same height everywhere. */}
             <div className="flex items-center px-3.5 pt-2 pb-2.5">
                 <Button variant="text" size="sm" onClick={onBack}>
-                    ← Back
+                    ← {backLabel}
                 </Button>
             </div>
             <div className="max-w-md mx-auto px-6 pb-8">

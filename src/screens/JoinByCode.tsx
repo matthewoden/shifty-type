@@ -80,7 +80,15 @@ export function JoinByCode({ onEnterMatch, onBack }: JoinByCodeProps) {
   }
 
   return (
-    <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-6 p-6">
+    <div className="min-h-dvh bg-board flex flex-col">
+      {/* Same slim top bar as Settings and the match screens — back always
+          rides at the same height, named for where it leads. */}
+      <div className="flex items-center px-3.5 pt-2 pb-2.5">
+        <Button variant="text" size="sm" onClick={onBack}>
+          ← Home
+        </Button>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 pt-0">
       <div className="text-center">
         <h2 className="text-title font-extrabold text-ink-strong">Join a friend's match</h2>
         <p className="mt-1.5 text-body font-semibold text-ink max-w-[15rem] mx-auto">
@@ -118,10 +126,7 @@ export function JoinByCode({ onEnterMatch, onBack }: JoinByCodeProps) {
           Sent a <b className="text-ink">link</b> instead? Just tap it — no code needed.
         </p>
       </div>
-
-      <Button variant="text" onClick={onBack}>
-        ← Back
-      </Button>
+      </div>
     </div>
   )
 }

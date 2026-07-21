@@ -21,6 +21,9 @@ import { SoloVerdict } from './SoloMatch'
 
 interface TutorialMatchProps {
   onExit: () => void
+  /** Where the back button leads — "Home", or "Invite" when the player
+   *  detoured here from an invite landing (onExit returns them to it). */
+  backLabel?: string
   onDuel: () => void
   onRematchLloyd: () => void
   /** Set when the player reached the tutorial from an invite: the ending sends
@@ -75,6 +78,7 @@ function Bubble({ copy, tapnext, delay }: { copy: BubbleCopy; tapnext: boolean; 
 
 export function TutorialMatch({
   onExit,
+  backLabel = 'Home',
   onDuel,
   onRematchLloyd,
   resumeInvite,
@@ -151,7 +155,7 @@ export function TutorialMatch({
             400ms window where the first tap advances the beat instead.) */}
         <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5 relative z-[6]">
           <Button variant="text" size="sm" onClick={onExit}>
-            ← Home
+            ← {backLabel}
           </Button>
           <PassButton disabled={!t.playerTurn || beat !== 'done'} onPass={t.pass} />
         </div>
