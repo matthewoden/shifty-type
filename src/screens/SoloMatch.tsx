@@ -74,13 +74,15 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
-        <Button variant="text" size="sm" onClick={onExit}>
-          ← {backLabel}
-        </Button>
-        <PassButton disabled={!playerTurn} onPass={m.pass} />
+      <div className="hud-drop">
+        <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
+          <Button variant="text" size="sm" onClick={onExit}>
+            ← {backLabel}
+          </Button>
+          <PassButton disabled={!playerTurn} onPass={m.pass} />
+        </div>
+        <Hud state={state} you="p1" active={active} pulse={m.botThinking} />
       </div>
-      <Hud state={state} you="p1" active={active} pulse={m.botThinking} />
       <ChainLedger
         chain={state.chain}
         you="p1"
@@ -126,6 +128,7 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
       ) : (
         <Deck
           disabled={!playerTurn}
+          rise
           keyHints={playerTurn ? composer.keyHints : null}
           onKey={composer.key}
           onBackspace={composer.backspace}

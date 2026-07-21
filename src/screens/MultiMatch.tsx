@@ -159,28 +159,30 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="text"
-            size="sm"
-            onClick={() => {
-              // A duel you opened but never played a word into is nothing yet —
-              // don't leave it lying around as a resumable "trash" game.
-              if (state.chain.length === 0 && state.awaitingOpponent) {
-                removeMatchAuth(code)
-                clearActiveCode()
-              }
-              onExit()
-            }}
-          >
-            ← {backLabel}
-          </Button>
-          <span className="font-extrabold text-ui text-dim tracking-widest">{code}</span>
+      <div className="hud-drop">
+        <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="text"
+              size="sm"
+              onClick={() => {
+                // A duel you opened but never played a word into is nothing yet —
+                // don't leave it lying around as a resumable "trash" game.
+                if (state.chain.length === 0 && state.awaitingOpponent) {
+                  removeMatchAuth(code)
+                  clearActiveCode()
+                }
+                onExit()
+              }}
+            >
+              ← {backLabel}
+            </Button>
+            <span className="font-extrabold text-ui text-dim tracking-widest">{code}</span>
+          </div>
+          <PassButton disabled={!myTurn || m.busy} onPass={() => void m.send({ type: 'pass' })} />
         </div>
-        <PassButton disabled={!myTurn || m.busy} onPass={() => void m.send({ type: 'pass' })} />
+        <Hud state={state} you={you} active={active} />
       </div>
-      <Hud state={state} you={you} active={active} />
       <ChainLedger
         chain={state.chain}
         you={you}
@@ -202,7 +204,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
         </div>
       )}
       {openingNeeded && (
-        <p className="mx-3.5 mb-1 text-center text-body font-bold text-ink-strong bg-white rounded-xl py-2 px-3 shadow-[0_3px_0_#E2DDD3]">
+        <p className="mx-3.5 mt-2 mb-1 text-center text-body font-bold text-ink-strong bg-white rounded-xl py-2 px-3 shadow-[0_3px_0_#E2DDD3]">
           Play your opening word — anything goes.{' '}
           <span className="font-semibold text-dim">You'll invite your friend the moment it lands.</span>
         </p>

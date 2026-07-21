@@ -414,17 +414,28 @@ body {
   }
 }
 
-/* The deck slides up when your turn arrives — the arrival IS the signal. */
+/* The deck slides up when your turn arrives — the arrival IS the signal.
+   On match entry the top bar + scoreboard drop in from above on the same
+   clock (hud-drop), so the two halves of the table set themselves at once. */
 .deck-rise {
-  animation: deck-rise 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.05);
+  animation: deck-rise 0.4s cubic-bezier(0.2, 0.8, 0.3, 1.05);
 }
 @keyframes deck-rise {
   from {
     transform: translateY(100%);
   }
 }
+.hud-drop {
+  animation: hud-drop 0.4s cubic-bezier(0.2, 0.8, 0.3, 1.05);
+}
+@keyframes hud-drop {
+  from {
+    transform: translateY(-100%);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .deck-rise {
+  .deck-rise,
+  .hud-drop {
     animation: none;
   }
 }

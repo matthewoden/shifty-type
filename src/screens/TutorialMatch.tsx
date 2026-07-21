@@ -144,15 +144,19 @@ export function TutorialMatch({
 
   return (
     <div className="h-dvh bg-board flex flex-col overflow-hidden">
-      {/* Above the tap-to-continue gate (z-[5]) so ← Home always works,
-          below the sheets/stamps/game-over overlays (z-10). */}
-      <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5 relative z-[6]">
-        <Button variant="text" size="sm" onClick={onExit}>
-          ← Home
-        </Button>
-        <PassButton disabled={!t.playerTurn || beat !== 'done'} onPass={t.pass} />
+      <div className="hud-drop">
+        {/* Above the tap-to-continue gate (z-[5]) so ← Home always works,
+            below the sheets/stamps/game-over overlays (z-10). (While the
+            drop-in plays, the transform traps this z under the gate — a
+            400ms window where the first tap advances the beat instead.) */}
+        <div className="flex items-center justify-between px-3.5 pt-2 pb-2.5 relative z-[6]">
+          <Button variant="text" size="sm" onClick={onExit}>
+            ← Home
+          </Button>
+          <PassButton disabled={!t.playerTurn || beat !== 'done'} onPass={t.pass} />
+        </div>
+        <Hud state={state} you="p1" active={active} pulse={t.botThinking} />
       </div>
-      <Hud state={state} you="p1" active={active} pulse={t.botThinking} />
       <div className="flex-1 relative flex flex-col min-h-0">
         <ChainLedger
           chain={state.chain}
@@ -203,6 +207,7 @@ export function TutorialMatch({
       ) : (
         <Deck
           disabled={!composerActive}
+          rise
           glowKey={glowKey}
           keyHints={beat === 'firstWord' ? null : composer.keyHints}
           onKey={composer.key}
