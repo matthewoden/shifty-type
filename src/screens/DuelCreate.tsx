@@ -1,23 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
-import { api } from '../lib/api'
-import { getSavedName, saveMatchAuth, saveName } from '../multi/storage'
+import { saveName } from '../multi/storage'
 import { Button } from '../components/ui/Button'
 
 interface DuelCreateProps {
-  onEnterMatch: (code: string) => void
+  onStart: () => void
   onBack: () => void
 }
 
 /**
- * Start a duel. A returning player (name already saved) skips straight to a
- * fresh match and their opening word — no form. A first-timer gets a single
- * name field. Either way the match is created in the opener's turn, so the
- * next screen is the board, not a lobby.
+ * The name gate before a first duel. Nothing is created here — the board
+ * opens locally and the match only exists once the opening word is played
+ * (see MultiMatch's draft mode). Returning players (name already saved) skip
+ * this screen entirely; App routes them straight to the draft board.
  */
-export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
-  const saved = getSavedName()
-  const [name, setName] = useState(saved)
-  const [pending, setPending] = useState(!!saved)
+export function DuelCreate({ onStart, onBack }: DuelCreateProps) {
+  const [name, setName] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
   // Not autoFocus: focusing mid-slide lets the browser yank the focused input
   // into view, which scrolls the nav stage and snaps the screen into place.
@@ -25,47 +22,12 @@ export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
     nameRef.current?.focus({ preventScroll: true })
   }, [])
   const [error, setError] = useState<string | null>(null)
-  const started = useRef(false)
-
-  async function create(displayName: string) {
-    setPending(true)
-    setError(null)
-    saveName(displayName)
-    const r = await api.create(displayName)
-    if (!r.ok) {
-      setPending(false)
-      return setError(r.error)
-    }
-    saveMatchAuth(r.code, { token: r.token, you: 'p1' })
-    onEnterMatch(r.code)
-  }
-
-  // Known player: set the match up immediately, no name step.
-  useEffect(() => {
-    if (saved && !started.current) {
-      started.current = true
-      void create(saved)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  if (saved && pending && !error) {
-    return (
-      <div className="min-h-dvh bg-board flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-ink-strong font-extrabold text-lg animate-pulse motion-reduce:animate-none">
-          Setting up your match…
-        </p>
-        <Button variant="text" onClick={onBack}>
-          ← Back
-        </Button>
-      </div>
-    )
-  }
 
   function submit() {
     const displayName = name.trim()
     if (!displayName) return setError("Pick a name first, so your friend knows who they're playing.")
-    void create(displayName)
+    saveName(displayName)
+    onStart()
   }
 
   return (
@@ -84,7 +46,7 @@ export function DuelCreate({ onEnterMatch, onBack }: DuelCreateProps) {
             className="mt-1 w-full h-12 bg-white rounded-xl px-3.5 font-extrabold text-lg text-ink-strong shadow-[0_4px_0_#E2DDD3] outline-none placeholder:text-dim placeholder:font-bold"
           />
         </label>
-        <Button variant="cta" accent="p2" size="lg" onClick={submit} disabled={pending}>
+        <Button variant="cta" accent="p2" size="lg" onClick={submit}>
           Start the match
         </Button>
         <p className="text-center text-caption font-semibold text-dim">

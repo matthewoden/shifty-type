@@ -4,9 +4,10 @@
 // fallback for flakey wifi, and both paths dedupe on `revision`.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { lastCallActorOf, opponentOf } from '../game'
+import { createMatch, lastCallActorOf, opponentOf } from '../game'
 import { api } from '../lib/api'
 import type { ClientMove, LastEvent, MatchView, SocketPush } from '../lib/protocol'
+import { saveMatchAuth } from './storage'
 
 /** A resolved challenge (STANDS/REJECTED) gets a full-screen stamp; the rest
  *  get toasts. */
@@ -35,8 +36,39 @@ function myMove(view: MatchView): boolean {
   return false
 }
 
-export function useMultiMatch(code: string, token: string) {
-  const [view, setView] = useState<MatchView | null>(null)
+/** What a duel looks like before it exists: the opener's board, their turn,
+ *  empty chain. Revision -1 so the server's first real view always wins. */
+function draftView(name: string): MatchView {
+  return {
+    code: '',
+    you: 'p1',
+    state: createMatch(name),
+    revision: -1,
+    lastEvent: null,
+    presence: { p1: true, p2: false },
+  }
+}
+
+export interface DraftDuel {
+  /** The opener's display name, for the local board and the create call. */
+  name: string
+  /** Fires once the opening word lands and the match exists server-side. */
+  onCreated?: (code: string) => void
+}
+
+export function useMultiMatch(
+  codeProp: string | null,
+  tokenProp: string | null,
+  draft?: DraftDuel,
+) {
+  // A draft duel has no server match until the opening word is sent — the
+  // create response supplies code + token and the hook goes live in place.
+  const [createdAuth, setCreatedAuth] = useState<{ code: string; token: string } | null>(null)
+  const code = codeProp ?? createdAuth?.code ?? null
+  const token = tokenProp ?? createdAuth?.token ?? null
+  const [view, setView] = useState<MatchView | null>(() =>
+    codeProp === null && draft ? draftView(draft.name) : null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [stamp, setStamp] = useState<StampEvent | null>(null)
@@ -73,6 +105,7 @@ export function useMultiMatch(code: string, token: string) {
   }, [])
 
   const refresh = useCallback(async () => {
+    if (!code || !token) return // draft: nothing server-side to fetch yet
     const current = viewRef.current
     const r = await api.get(code, token, current?.revision)
     if (!r.ok) {
@@ -105,6 +138,7 @@ export function useMultiMatch(code: string, token: string) {
   // open (initial sync) and after every state or presence change. Mobile
   // browsers kill the socket in the background — we reconnect on return.
   useEffect(() => {
+    if (!code || !token) return // draft: no match to watch yet
     let ws: WebSocket | null = null
     let gone = false // effect cleaned up
     let attempts = 0
@@ -226,8 +260,30 @@ export function useMultiMatch(code: string, token: string) {
     return () => clearTimeout(t)
   }, [toast])
 
+  const draftName = draft?.name
+  const onCreated = draft?.onCreated
+
   const send = useCallback(
     async (move: ClientMove): Promise<boolean> => {
+      // Draft duel: the opening word IS the create — the match (and its
+      // Durable Object) only comes into being when this succeeds. A failed
+      // create leaves the local board (and the typed word) intact to retry.
+      if (!code || !token) {
+        if (move.type !== 'play' || !draftName) return false
+        setBusy(true)
+        const r = await api.create(draftName, move.word)
+        setBusy(false)
+        if (!r.ok) {
+          setError(r.error)
+          return false
+        }
+        saveMatchAuth(r.code, { token: r.token, you: 'p1' })
+        setCreatedAuth({ code: r.code, token: r.token })
+        setError(null)
+        adopt(r.view, true)
+        onCreated?.(r.code)
+        return true
+      }
       setBusy(true)
       const r = await api.move(code, token, move)
       setBusy(false)
@@ -241,10 +297,11 @@ export function useMultiMatch(code: string, token: string) {
       adopt(r.view, true)
       return true
     },
-    [code, token, adopt, refresh],
+    [code, token, adopt, refresh, draftName, onCreated],
   )
 
   const rematch = useCallback(async () => {
+    if (!code || !token) return
     setBusy(true)
     const r = await api.rematch(code, token)
     setBusy(false)

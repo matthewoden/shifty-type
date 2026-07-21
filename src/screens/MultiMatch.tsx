@@ -25,15 +25,35 @@ import { LastCallBar } from '../components/LastCallBar'
 import { Button } from '../components/ui/Button'
 
 interface MultiMatchProps {
-  code: string
-  token: string
+  /** Null = draft duel: a purely local board — the match (and its Durable
+   *  Object) is only created when the opening word is played. */
+  code: string | null
+  token: string | null
+  /** Draft only: the opener's name for the local board and the create call. */
+  draftName?: string
+  /** Draft only: the opening word landed and the match now exists. */
+  onCreated?: (code: string) => void
   onExit: () => void
   /** Where the back button returns to, for its label ("Home" or "Games"). */
   backLabel?: string
 }
 
-export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMatchProps) {
-  const m = useMultiMatch(code, token)
+export function MultiMatch({
+  code: codeProp,
+  token,
+  draftName,
+  onCreated,
+  onExit,
+  backLabel = 'Home',
+}: MultiMatchProps) {
+  const m = useMultiMatch(
+    codeProp,
+    token,
+    draftName !== undefined ? { name: draftName, onCreated } : undefined,
+  )
+  // A draft board has no code until the opening word lands; the create
+  // response's view carries the real one before the App swaps the screen.
+  const code = codeProp ?? (m.view?.code ? m.view.code : null)
   const [confirmingChallenge, setConfirmingChallenge] = useState(false)
   // The invite sheet opens itself once the opener has played and rides atop
   // the board until a friend joins; dismissing it leaves a re-open button.
@@ -65,12 +85,13 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
   const revealRef = useRef<boolean | null>(null)
   if (view && revealRef.current === null) {
     const last = view.state.chain[view.state.chain.length - 1]
-    revealRef.current = !!last && last.owner !== view.you && newestRowKey !== loadSeenNewest(code)
+    revealRef.current =
+      !!last && !!code && last.owner !== view.you && newestRowKey !== loadSeenNewest(code)
   }
   useEffect(() => {
-    if (newestRowKey) saveSeenNewest(code, newestRowKey)
+    if (code && newestRowKey) saveSeenNewest(code, newestRowKey)
   }, [code, newestRowKey])
-  const nudge = useNudge(code, token)
+  const nudge = useNudge(code ?? undefined, token ?? undefined)
   useClearBadge()
   // 'ask' = our friendly pre-prompt (guards the one-shot OS dialog);
   // 'fix' = the way back after a denied permission.
@@ -166,9 +187,10 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
               variant="text"
               size="sm"
               onClick={() => {
-                // A duel you opened but never played a word into is nothing yet —
-                // don't leave it lying around as a resumable "trash" game.
-                if (state.chain.length === 0 && state.awaitingOpponent) {
+                // A duel opened before the word-first flow could be saved with
+                // an empty chain — don't leave it as a resumable "trash" game.
+                // (A draft board has no code and nothing stored to clean.)
+                if (code && state.chain.length === 0 && state.awaitingOpponent) {
                   removeMatchAuth(code)
                   clearActiveCode()
                 }
@@ -177,7 +199,9 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
             >
               ← {backLabel}
             </Button>
-            <span className="font-extrabold text-ui text-dim tracking-widest">{code}</span>
+            {code && (
+              <span className="font-extrabold text-ui text-dim tracking-widest">{code}</span>
+            )}
           </div>
           <PassButton disabled={!myTurn || m.busy} onPass={() => void m.send({ type: 'pass' })} />
         </div>
@@ -304,7 +328,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           onCancel={() => setConfirmingChallenge(false)}
         />
       )}
-      {awaiting && !myTurn && inviteOpen && (
+      {awaiting && !myTurn && inviteOpen && code && (
         <InviteSheet
           code={code}
           openingWord={state.chain[0]?.word ?? null}
@@ -319,7 +343,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           onClose={() => setInviteOpen(false)}
         />
       )}
-      {noteOpen && (
+      {noteOpen && code && (
         <NoteSheet
           code={code}
           friendName={oppName}

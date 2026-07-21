@@ -351,15 +351,22 @@ export class MatchDO extends DurableObject<Env> {
     return null
   }
 
-  async create(code: string, name: string): Promise<CreateResponse> {
+  /** A match only comes into being with its opening word: the client keeps
+   *  the pre-word board local, so backing out costs nothing server-side. A
+   *  rejected word returns before any storage write — an object that never
+   *  stores anything simply evaporates instead of idling for 60 days. */
+  async create(code: string, name: string, word: string): Promise<CreateResponse> {
     if (await this.load()) return { ok: false, error: 'exists' }
+    const opened = applyMove(newMatchState(name), 'p1', { type: 'play', word })
+    if (!opened.ok) return { ok: false, error: opened.error }
     const token = crypto.randomUUID()
     const m: StoredMatch = {
       code,
-      state: newMatchState(name),
+      state: opened.state,
       tokens: { p1: token, p2: null },
       opener: 'p1',
       revision: 0,
+      lastEvent: { kind: 'play', word: opened.state.chain[0].word, by: 'p1' },
     }
     await this.persist(m)
     return { ok: true, code, token, view: this.viewFor(m, 'p1') }
@@ -604,15 +611,19 @@ export default {
       return json({ ok: true, worker: 'shifty-type', matchDO: pong })
     }
 
-    // POST /api/match — create a match, retrying on code collision
+    // POST /api/match — create a match around its opening word, retrying on
+    // code collision. A bad word is the player's error, not a collision —
+    // surface it instead of burning retries.
     if (pathname === '/api/match' && request.method === 'POST') {
       const body = await readBody(request)
       const name = cleanName(body.name)
+      const word = typeof body.word === 'string' ? body.word : ''
       for (let attempt = 0; attempt < 5; attempt++) {
         const code = randomCode()
         const stub = env.MATCH_DO.get(env.MATCH_DO.idFromName(code))
-        const res = await stub.create(code, name)
+        const res = await stub.create(code, name, word)
         if (res.ok) return json(res)
+        if (res.error !== 'exists') return json(res, 400)
       }
       return json({ ok: false, error: 'Could not find a free match code — try again.' }, 500)
     }

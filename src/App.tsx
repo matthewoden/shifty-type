@@ -22,6 +22,7 @@ type Screen =
   | { name: 'solo-setup' }
   | { name: 'solo'; save: SoloSave; from?: 'lobby' }
   | { name: 'duel-create' }
+  | { name: 'duel-draft' }
   | { name: 'join-code' }
   | { name: 'invite'; code: string }
   | { name: 'howto' }
@@ -120,6 +121,18 @@ export default function App() {
     window.history.pushState(null, '', `/m/${code}`)
     navigate({ name: 'duel', code, from })
   }
+  // "Challenge a friend": straight to a local draft board — no match exists
+  // until the opening word is played. First-timers detour through the name
+  // gate. Nothing is created (or left behind) by merely looking.
+  const startDuel = () => {
+    navigate(getSavedName() ? { name: 'duel-draft' } : { name: 'duel-create' })
+  }
+  // The opening word landed and the match now exists: adopt its address
+  // without remounting — same key, so the board never flickers mid-play.
+  const draftCreated = (code: string) => {
+    window.history.pushState(null, '', `/m/${code}`)
+    setCurrent((c) => ({ screen: { name: 'duel', code }, key: c.key }))
+  }
   const showInvite = (code: string, kind: NavKind = 'push') => {
     setPendingInvite(code)
     window.history.pushState(null, '', `/m/${code}`)
@@ -184,7 +197,7 @@ export default function App() {
         return (
           <TutorialMatch
             onExit={backFromDetour}
-            onDuel={() => navigate({ name: 'duel-create' })}
+            onDuel={startDuel}
             onRematchLloyd={() => enterSolo(newSoloSave('easy', 'p2'))}
             resumeInvite={pendingInvite}
             onResumeInvite={resumeInvite}
@@ -196,13 +209,23 @@ export default function App() {
             onBack={goHome}
             onOpenMatch={(code) => enterDuel(code, 'lobby')}
             onResumeSolo={(save) => enterSolo(save, 'lobby')}
-            onNewDuel={() => navigate({ name: 'duel-create' })}
+            onNewDuel={startDuel}
           />
         )
       case 'settings':
         return <Settings onBack={goHome} />
       case 'duel-create':
-        return <DuelCreate onEnterMatch={enterDuel} onBack={goHome} />
+        return <DuelCreate onStart={() => navigate({ name: 'duel-draft' })} onBack={goHome} />
+      case 'duel-draft':
+        return (
+          <MultiMatch
+            code={null}
+            token={null}
+            draftName={getSavedName() || 'Anonymous'}
+            onCreated={draftCreated}
+            onExit={goHome}
+          />
+        )
       case 'join-code':
         return <JoinByCode onEnterMatch={enterDuel} onBack={goHome} />
       case 'invite': {
@@ -257,7 +280,7 @@ export default function App() {
           <Home
             onHowTo={() => navigate({ name: 'howto' })}
             onSolo={() => navigate({ name: 'solo-setup' })}
-            onDuel={() => navigate({ name: 'duel-create' })}
+            onDuel={startDuel}
             onJoinCode={() => navigate({ name: 'join-code' })}
             onTutorial={() => navigate({ name: 'tutorial-welcome' })}
             onOpenGames={() => navigate({ name: 'lobby' })}

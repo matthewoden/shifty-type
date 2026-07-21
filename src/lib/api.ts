@@ -34,8 +34,10 @@ async function req<T extends { ok: boolean }>(
 }
 
 export const api = {
-  create(name: string) {
-    return req<CreateResponse>('/api/match', { method: 'POST', body: { name } })
+  /** A match is born with its opening word already played — until then the
+   *  board is purely local and nothing exists server-side. */
+  create(name: string, word: string) {
+    return req<CreateResponse>('/api/match', { method: 'POST', body: { name, word } })
   },
   join(code: string, name: string) {
     return req<JoinResponse>(`/api/match/${code}/join`, { method: 'POST', body: { name } })
