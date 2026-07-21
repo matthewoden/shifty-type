@@ -209,11 +209,11 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
       ) : awaiting ? (
         <div className="px-5 pb-10 pt-2 text-center">
           <p className="font-extrabold text-[15px] text-ink-strong">
-            Waiting for your friend to take a seat…
+            Waiting for your friend to jump in…
           </p>
           <p className="font-semibold text-xs text-dim mt-1">
             {nudge.status === 'on'
-              ? "we'll notify you when they sit down"
+              ? "we'll notify you when they jump in"
               : 'share the invite and they drop straight into their turn'}
           </p>
           <button
@@ -296,7 +296,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           bell={
             <BellButton
               status={nudge.status}
-              label="Notify me when they sit down"
+              label="Notify me when they jump in"
               onAsk={() => setBellSheet('ask')}
               onFix={() => setBellSheet('fix')}
             />

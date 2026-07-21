@@ -91,7 +91,7 @@ function nudgeBody(m: StoredMatch): string {
       // Unreachable in practice — an accept always lands in a terminal phase.
       return `${name} shook on ${word} — that's game.`
     case 'rematch':
-      return `${name} dealt a new chain — rematch is on.`
+      return `${name} started a fresh chain — rematch is on.`
   }
 }
 
@@ -544,7 +544,7 @@ export class MatchDO extends DurableObject<Env> {
       if (this.presence().p1) return
       this.pushTo('p1', {
         title: 'Shifty Type',
-        body: 'Your match is still open — invite a friend to take the seat.',
+        body: 'Your match is still open — invite a friend to join in.',
         code: m.code,
         tag: 'quiet-matches',
       })

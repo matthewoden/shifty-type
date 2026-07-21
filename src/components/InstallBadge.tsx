@@ -20,7 +20,7 @@ export function IosHowToSheet({ onClose }: { onClose: () => void }) {
   const steps: [string, React.ReactNode, React.ReactNode][] = [
     ['1', <>Tap <b className="text-ink-strong">Share</b> in the bar below</>, <ShareIcon className="w-5 h-5" />],
     ['2', <>Scroll down to <b className="text-ink-strong">Add to Home Screen</b></>, <PlusSquareIcon className="w-5 h-5" />],
-    ['3', <>Tap <b className="text-ink-strong">Add</b> — your seat's saved</>, null],
+    ['3', <>Tap <b className="text-ink-strong">Add</b> — your games come with you</>, null],
   ]
   return (
     <div className="fixed inset-0 bg-ink-strong/40 flex items-end z-10" onClick={onClose}>

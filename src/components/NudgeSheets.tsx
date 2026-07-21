@@ -44,7 +44,7 @@ export function SoftAskSheet({ onConfirm, onClose }: { onConfirm: () => void; on
       </h2>
       <p className="text-[13px] font-semibold text-ink -mt-2">
         We'll notify you when the game needs you — a word played, a challenge thrown, a friend
-        taking their seat. Nothing else, ever.
+        jumped in. Nothing else, ever.
       </p>
       <p className="text-[13px] font-semibold text-dim -mt-1">
         Your phone will ask once to make it official.

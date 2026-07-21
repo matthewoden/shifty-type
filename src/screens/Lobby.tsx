@@ -201,7 +201,11 @@ function OpponentRow({
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="font-extrabold text-ink-strong truncate">{name}</span>
           {live && !editing && (
-            <span className="w-2 h-2 rounded-full bg-[#34C759] shrink-0" aria-label="online now" />
+            // The same coral lamp the match footer wears — one color, one meaning.
+            <span
+              className="w-2 h-2 rounded-full bg-p2 shrink-0 animate-pulse motion-reduce:animate-none"
+              aria-label="here now"
+            />
           )}
         </span>
         <span className="block mt-0.5">
@@ -260,7 +264,7 @@ function PendingRow({
               Opened with <b className="text-ink">{word}</b>
             </>
           ) : (
-            'Invite a friend to take the seat'
+            'Invite a friend to jump in'
           )}
         </span>
       </span>

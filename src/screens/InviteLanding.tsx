@@ -125,7 +125,7 @@ export function InviteLanding({ code, onEnterMatch, onHowTo, onTutorial, onBack 
           disabled={pending}
           className="h-14 rounded-2xl font-extrabold text-lg bg-p2 text-white shadow-[0_4px_0_var(--color-p2-lip)] active:translate-y-0.5 disabled:opacity-50"
         >
-          {pending ? 'Taking your seat…' : 'Get started'}
+          {pending ? 'Joining the game…' : 'Get started'}
         </button>
         <button
           onClick={onHowTo}
