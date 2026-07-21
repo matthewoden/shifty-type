@@ -19,7 +19,7 @@ interface NoteSheetProps {
 /** The note as it sends — the preview below renders exactly this text. */
 function noteText(tableWord: string | null): string {
   return tableWord
-    ? `Psst — ${tableWord.toUpperCase()} is on the table and it's your move. No rush… well, some rush.`
+    ? `Psst — I played ${tableWord.toUpperCase()} and it's your move. No rush… well, some rush.`
     : "Psst — it's your move. No rush… well, some rush."
 }
 
@@ -69,8 +69,8 @@ export function NoteSheet({ code, friendName, tableWord, onClose }: NoteSheetPro
           <p className="text-[14.5px] font-semibold text-ink">
             {tableWord ? (
               <>
-                Psst — <b className="text-ink-strong">{tableWord.toUpperCase()}</b> is on the
-                table and it&apos;s your move. No rush… well, some rush.
+                Psst — I played <b className="text-ink-strong">{tableWord.toUpperCase()}</b> and
+                it&apos;s your move. No rush… well, some rush.
               </>
             ) : (
               text

@@ -66,8 +66,8 @@ export function InviteSheet({ code, openingWord, bell, onClose }: InviteSheetPro
           {!word
             ? 'Invite your friend'
             : word.length >= MOUTHFUL
-              ? "Nice — that's a whole mouthful on the table"
-              : `Nice — ${word}'s on the table`}
+              ? "Nice — that's a whole mouthful to open with"
+              : `Nice — ${word}'s in play`}
         </h2>
         <p className="font-semibold text-[13.5px] text-ink -mt-1 max-w-[16rem]">
           Send the invite. Your friend opens it and it's their move.

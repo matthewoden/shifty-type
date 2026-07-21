@@ -231,7 +231,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
                 <PresenceDot /> {oppName}'s eyeing your last word…
               </>
             ) : (
-              <>Your last word is on the table.</>
+              <>Your last word is waiting for an answer.</>
             )}
           </p>
           <p className="font-semibold text-xs text-dim mt-1">
@@ -252,7 +252,7 @@ export function MultiMatch({ code, token, onExit, backLabel = 'Home' }: MultiMat
           <p className="font-extrabold text-[15px] text-ink-strong">
             {oppHere ? (
               <>
-                <PresenceDot /> {oppName}'s at the table, mulling it over…
+                <PresenceDot /> {oppName}'s here, mulling it over…
               </>
             ) : broken ? (
               <>{oppName} starts a fresh chain — we'll be here.</>

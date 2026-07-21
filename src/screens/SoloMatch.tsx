@@ -105,7 +105,7 @@ export function SoloMatch({ save, onExit, backLabel = 'Home' }: SoloMatchProps) 
             <PresenceDot />{' '}
             {botLastCall
               ? `${botName}'s eyeing your last word…`
-              : `${botName}'s at the table, mulling it over…`}
+              : `${botName}'s here, mulling it over…`}
           </p>
         </div>
       ) : (

@@ -357,7 +357,7 @@ export class MatchDO extends DurableObject<Env> {
     if (!this.presence().p1)
       this.pushTo('p1', {
         title: 'Shifty Type',
-        body: `${m.state.players.p2.name} sat down at your table.`,
+        body: `${m.state.players.p2.name} joined the game.`,
         code: m.code,
       })
     return { ok: true, token, view: this.viewFor(m, 'p2') }
