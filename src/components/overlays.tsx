@@ -76,19 +76,23 @@ export function ConfirmChallengeSheet({
 }) {
   return (
     <Sheet onClose={onCancel}>
-      {/* The word on trial rides a rail — a long one swipes to read. */}
-      <TileRail word={word} side="them" />
-      <p className="font-bold text-ink text-status">
-        Challenge this word? Incorrect answers lose a life.
-      </p>
-      <Button variant="cta" accent="p2" onClick={onConfirm}>
-        <FlagIcon className="w-5 h-5 text-white" /> Not a word!
-      </Button>
-      <Button variant="text" onClick={onCancel}>
-        Never mind
-      </Button>
-      {whisper && (
-        <p className="text-center text-caption font-bold italic text-dim -mt-1">{whisper}</p>
+      {(close) => (
+        <>
+          {/* The word on trial rides a rail — a long one swipes to read. */}
+          <TileRail word={word} side="them" />
+          <p className="font-bold text-ink text-status">
+            Challenge this word? Incorrect answers lose a life.
+          </p>
+          <Button variant="cta" accent="p2" onClick={onConfirm}>
+            <FlagIcon className="w-5 h-5 text-white" /> Not a word!
+          </Button>
+          <Button variant="text" onClick={close}>
+            Never mind
+          </Button>
+          {whisper && (
+            <p className="text-center text-caption font-bold italic text-dim -mt-1">{whisper}</p>
+          )}
+        </>
       )}
     </Sheet>
   )

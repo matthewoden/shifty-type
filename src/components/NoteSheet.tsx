@@ -63,58 +63,60 @@ export function NoteSheet({
     }
 
     return (
-        <Sheet
-            onClose={onClose}
-            grabber
-            cardClass="items-center gap-4 text-center"
-        >
-            <h2 className="font-extrabold text-headline text-ink-strong text-balance">
-                Slide {friendName} a note?
-            </h2>
-            <p className="font-semibold text-body text-ink -mt-1 max-w-[17rem]">
-                It sends as a regular text — straight from you, not from us.
-            </p>
+        <Sheet onClose={onClose} cardClass="items-center gap-4 text-center">
+            {(close) => (
+                <>
+                    <h2 className="font-extrabold text-headline text-ink-strong text-balance">
+                        Slide {friendName} a note?
+                    </h2>
+                    <p className="font-semibold text-body text-ink -mt-1 max-w-[17rem]">
+                        It sends as a regular text — straight from you, not
+                        from us.
+                    </p>
 
-            <div className="bg-board rounded-2xl px-4 py-3.5 w-full text-left shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
-                <p className="text-small font-semibold text-ink">
-                    {tableWord ? (
-                        <>
-                            Psst — I played{" "}
-                            <b className="text-ink-strong">
-                                {tableWord.toUpperCase()}
-                            </b>{" "}
-                            and it&apos;s your move. No rush… well, some rush.
-                        </>
-                    ) : (
-                        text
-                    )}
-                </p>
-                <p className="mt-2 text-caption font-bold text-p1-lip break-all">
-                    {link}
-                </p>
-            </div>
+                    <div className="bg-board rounded-2xl px-4 py-3.5 w-full text-left shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
+                        <p className="text-small font-semibold text-ink">
+                            {tableWord ? (
+                                <>
+                                    Psst — I played{" "}
+                                    <b className="text-ink-strong">
+                                        {tableWord.toUpperCase()}
+                                    </b>{" "}
+                                    and it&apos;s your move. No rush… well,
+                                    some rush.
+                                </>
+                            ) : (
+                                text
+                            )}
+                        </p>
+                        <p className="mt-2 text-caption font-bold text-p1-lip break-all">
+                            {link}
+                        </p>
+                    </div>
 
-            <Button
-                variant="cta"
-                accent="p2"
-                onClick={share}
-                className="w-full text-lg"
-            >
-                <PaperPlaneTiltIcon className="w-5 h-5 text-white" /> Send the
-                note
-            </Button>
+                    <Button
+                        variant="cta"
+                        accent="p2"
+                        onClick={share}
+                        className="w-full text-lg"
+                    >
+                        <PaperPlaneTiltIcon className="w-5 h-5 text-white" />{" "}
+                        Send the note
+                    </Button>
 
-            <button
-                onClick={copyNote}
-                className="h-12 w-full rounded-xl font-extrabold text-ui text-ink bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center justify-center gap-2"
-            >
-                <ClipboardIcon className="w-4 h-4 text-dim" />
-                {copied ? "Copied!" : "Copy the note"}
-            </button>
+                    <button
+                        onClick={copyNote}
+                        className="h-12 w-full rounded-xl font-extrabold text-ui text-ink bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center justify-center gap-2"
+                    >
+                        <ClipboardIcon className="w-4 h-4 text-dim" />
+                        {copied ? "Copied!" : "Copy the note"}
+                    </button>
 
-            <Button variant="text" onClick={onClose} className="-mb-1">
-                Let them mull it over.
-            </Button>
+                    <Button variant="text" onClick={close} className="-mb-1">
+                        Let them mull it over.
+                    </Button>
+                </>
+            )}
         </Sheet>
     );
 }

@@ -1134,26 +1134,30 @@ function DetailCard({
   const side = sideOf(link.owner, you)
   return (
     <Sheet onClose={onClose} z={20} scrim="light" cardClass="gap-3">
-      <TileRail word={link.word} side={side} />
-      <p className="font-bold text-ink text-[14px]">
-        <span className={`font-extrabold ${playerTextClass(side)}`}>
-          {players[link.owner].name}
-        </span>{' '}
-        · word {index + 1}
-        {index === 0
-          ? ` · the opener, ${link.points} points`
-          : link.overlap === 0
-            ? ` · started a fresh chain after the snap, ${link.points} points`
-            : ` · overlapped ${link.overlap} letters for ${link.points} points`}
-      </p>
-      {link.challengeSurvived && (
-        <p className="font-bold text-ink text-[14px] flex items-center gap-1.5">
-          <FlagIcon className="w-4 h-4 text-p2-lip" /> Challenged — and it was real.
-        </p>
+      {(close) => (
+        <>
+          <TileRail word={link.word} side={side} />
+          <p className="font-bold text-ink text-[14px]">
+            <span className={`font-extrabold ${playerTextClass(side)}`}>
+              {players[link.owner].name}
+            </span>{' '}
+            · word {index + 1}
+            {index === 0
+              ? ` · the opener, ${link.points} points`
+              : link.overlap === 0
+                ? ` · started a fresh chain after the snap, ${link.points} points`
+                : ` · overlapped ${link.overlap} letters for ${link.points} points`}
+          </p>
+          {link.challengeSurvived && (
+            <p className="font-bold text-ink text-[14px] flex items-center gap-1.5">
+              <FlagIcon className="w-4 h-4 text-p2-lip" /> Challenged — and it was real.
+            </p>
+          )}
+          <Button variant="text" onClick={close} className="self-start -ml-4">
+            Close
+          </Button>
+        </>
       )}
-      <Button variant="text" onClick={onClose} className="self-start -ml-4">
-        Close
-      </Button>
     </Sheet>
   )
 }

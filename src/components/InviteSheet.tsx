@@ -58,55 +58,59 @@ export function InviteSheet({ code, openingWord, bell, onClose }: InviteSheetPro
   }
 
   return (
-    <Sheet onClose={onClose} grabber cardClass="items-center gap-4 text-center">
-      <h2 className="font-extrabold text-headline text-ink-strong text-balance">
-        {!word
-          ? 'Invite your friend'
-          : word.length >= MOUTHFUL
-            ? "Nice — that's a whole mouthful to open with"
-            : `Nice — ${word}'s in play`}
-      </h2>
-      <p className="font-semibold text-body text-ink -mt-1 max-w-[16rem]">
-        Send the invite. Your friend opens it and it's their move.
-      </p>
+    <Sheet onClose={onClose} cardClass="items-center gap-4 text-center">
+      {(close) => (
+        <>
+          <h2 className="font-extrabold text-headline text-ink-strong text-balance">
+            {!word
+              ? 'Invite your friend'
+              : word.length >= MOUTHFUL
+                ? "Nice — that's a whole mouthful to open with"
+                : `Nice — ${word}'s in play`}
+          </h2>
+          <p className="font-semibold text-body text-ink -mt-1 max-w-[16rem]">
+            Send the invite. Your friend opens it and it's their move.
+          </p>
 
-      {openingWord && (
-        <div className="bg-board rounded-2xl py-3 w-full flex flex-col items-center gap-2 shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
-          <span className="text-label font-extrabold uppercase tracking-wider text-p1-lip">
-            You opened with
-          </span>
-          {/* A long opener rides the rail — one proud line, swipe to read;
-              the peek glide advertises the swipe as the sheet opens. */}
-          <TileRail word={openingWord} side="you" align="center" peek className="w-full" />
-        </div>
+          {openingWord && (
+            <div className="bg-board rounded-2xl py-3 w-full flex flex-col items-center gap-2 shadow-[inset_0_0_0_2px_var(--color-board-lo)]">
+              <span className="text-label font-extrabold uppercase tracking-wider text-p1-lip">
+                You opened with
+              </span>
+              {/* A long opener rides the rail — one proud line, swipe to read;
+                  the peek glide advertises the swipe as the sheet opens. */}
+              <TileRail word={openingWord} side="you" align="center" peek className="w-full" />
+            </div>
+          )}
+
+          <Button variant="cta" accent="p2" onClick={share} className="w-full text-lg">
+            <ShareIcon className="w-5 h-5 text-white" /> Share the invite
+          </Button>
+
+          <div className="flex gap-2.5 w-full">
+            <button
+              onClick={() => copy(inviteLink(code))}
+              className="flex-1 h-12 rounded-xl font-extrabold text-ui text-ink bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center justify-center gap-2"
+            >
+              <ClipboardIcon className="w-4 h-4 text-dim" />
+              {copied ? 'Copied!' : 'Copy link'}
+            </button>
+            <button
+              onClick={() => copy(code)}
+              aria-label={`Match code ${code}, tap to copy`}
+              className="h-12 px-4 rounded-xl font-extrabold text-ink-strong bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 tracking-[0.2em]"
+            >
+              {code}
+            </button>
+          </div>
+
+          {bell}
+
+          <Button variant="text" onClick={close} className="-mb-1">
+            Show the board
+          </Button>
+        </>
       )}
-
-      <Button variant="cta" accent="p2" onClick={share} className="w-full text-lg">
-        <ShareIcon className="w-5 h-5 text-white" /> Share the invite
-      </Button>
-
-      <div className="flex gap-2.5 w-full">
-        <button
-          onClick={() => copy(inviteLink(code))}
-          className="flex-1 h-12 rounded-xl font-extrabold text-ui text-ink bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 flex items-center justify-center gap-2"
-        >
-          <ClipboardIcon className="w-4 h-4 text-dim" />
-          {copied ? 'Copied!' : 'Copy link'}
-        </button>
-        <button
-          onClick={() => copy(code)}
-          aria-label={`Match code ${code}, tap to copy`}
-          className="h-12 px-4 rounded-xl font-extrabold text-ink-strong bg-board shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5 tracking-[0.2em]"
-        >
-          {code}
-        </button>
-      </div>
-
-      {bell}
-
-      <Button variant="text" onClick={onClose} className="-mb-1">
-        Show the board
-      </Button>
     </Sheet>
   )
 }

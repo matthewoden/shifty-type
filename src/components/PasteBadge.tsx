@@ -65,10 +65,11 @@ export function PasteBadge({
     else setFieldMiss(true)
   }
 
-  const dismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, '1')
-    setHidden(true)
+  // "Not now" marks the flag right away but lets the sheet slide out before
+  // the pill (and the sheet with it) unmounts — onAskClosed picks the flag up.
+  const askClosed = () => {
     setSheet({ kind: 'closed' })
+    if (localStorage.getItem(DISMISSED_KEY) === '1') setHidden(true)
   }
 
   return (
@@ -80,52 +81,70 @@ export function PasteBadge({
         </Button>
       )}
       {sheet.kind === 'ask' && (
-        <Sheet onClose={() => setSheet({ kind: 'closed' })}>
-          <h2 className="font-extrabold text-lg text-ink-strong">Bring your matches over</h2>
-          <p className="text-body font-semibold text-ink -mt-2">
-            {sheet.miss
-              ? "Hmm — that didn't look like a game link. Drop it here instead:"
-              : 'Copied a game link? Drop it here and your matches follow you in:'}
-          </p>
-          <textarea
-            value={field}
-            onChange={(e) => {
-              setField(e.target.value)
-              setFieldMiss(false)
-            }}
-            rows={3}
-            placeholder="https://shifty-type…#seats=…"
-            className="rounded-xl border-[2.5px] border-dashed border-dim bg-board px-3 py-2 text-caption font-bold text-ink-strong break-all focus:outline-none focus:border-p1"
-          />
-          {fieldMiss && (
-            <p className="text-body font-bold text-p2-lip -mt-2">
-              Still not a game link — double-check the copy.
-            </p>
+        <Sheet onClose={askClosed}>
+          {(close) => (
+            <>
+              <h2 className="font-extrabold text-lg text-ink-strong">Bring your matches over</h2>
+              <p className="text-body font-semibold text-ink -mt-2">
+                {sheet.miss
+                  ? "Hmm — that didn't look like a game link. Drop it here instead:"
+                  : 'Copied a game link? Drop it here and your matches follow you in:'}
+              </p>
+              <textarea
+                value={field}
+                onChange={(e) => {
+                  setField(e.target.value)
+                  setFieldMiss(false)
+                }}
+                rows={3}
+                placeholder="https://shifty-type…#seats=…"
+                className="rounded-xl border-[2.5px] border-dashed border-dim bg-board px-3 py-2 text-caption font-bold text-ink-strong break-all focus:outline-none focus:border-p1"
+              />
+              {fieldMiss && (
+                <p className="text-body font-bold text-p2-lip -mt-2">
+                  Still not a game link — double-check the copy.
+                </p>
+              )}
+              <Button variant="cta" accent="p1" onClick={submitField} disabled={!field.trim()}>
+                Bring them over
+              </Button>
+              <Button
+                variant="text"
+                onClick={() => {
+                  localStorage.setItem(DISMISSED_KEY, '1')
+                  close()
+                }}
+              >
+                Not now
+              </Button>
+            </>
           )}
-          <Button variant="cta" accent="p1" onClick={submitField} disabled={!field.trim()}>
-            Bring them over
-          </Button>
-          <Button variant="text" onClick={dismiss}>
-            Not now
-          </Button>
         </Sheet>
       )}
       {sheet.kind === 'done' && (
         <Sheet onClose={() => setSheet({ kind: 'closed' })}>
-          <h2 className="font-extrabold text-lg text-ink-strong">Welcome back!</h2>
-          <p className="text-body font-semibold text-ink -mt-2">
-            {sheet.result.restored === 1
-              ? 'Your match moved in, right where you left it.'
-              : `${sheet.result.restored} matches moved in, right where you left them.`}
-          </p>
-          {sheet.result.active && (
-            <Button variant="cta" accent="ink" onClick={() => onOpenMatch(sheet.result.active as string)}>
-              Open your match · {sheet.result.active}
-            </Button>
+          {(close) => (
+            <>
+              <h2 className="font-extrabold text-lg text-ink-strong">Welcome back!</h2>
+              <p className="text-body font-semibold text-ink -mt-2">
+                {sheet.result.restored === 1
+                  ? 'Your match moved in, right where you left it.'
+                  : `${sheet.result.restored} matches moved in, right where you left them.`}
+              </p>
+              {sheet.result.active && (
+                <Button
+                  variant="cta"
+                  accent="ink"
+                  onClick={() => onOpenMatch(sheet.result.active as string)}
+                >
+                  Open your match · {sheet.result.active}
+                </Button>
+              )}
+              <Button variant="text" onClick={close}>
+                Done
+              </Button>
+            </>
           )}
-          <Button variant="text" onClick={() => setSheet({ kind: 'closed' })}>
-            Done
-          </Button>
         </Sheet>
       )}
     </>

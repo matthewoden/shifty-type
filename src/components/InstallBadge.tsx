@@ -27,27 +27,31 @@ export function IosHowToSheet({ onClose }: { onClose: () => void }) {
   ]
   return (
     <Sheet onClose={onClose}>
-      <h2 className="font-extrabold text-lg text-ink-strong">Put it on your phone</h2>
-      <p className="text-body font-semibold text-ink -mt-2">
-        Safari can pin Shifty Type to your home screen — it opens like an app, notifies you
-        when it's your move, and llama games work with no wifi.
-      </p>
-      {steps.map(([n, copy, glyph]) => (
-        <div key={n} className="flex items-center gap-3">
-          <span className="w-6.5 h-6.5 rounded-full bg-p1-tint text-p1-tint-ink font-extrabold text-ui flex items-center justify-center shrink-0">
-            {n}
-          </span>
-          <p className="text-small font-bold text-ink">{copy}</p>
-          {glyph && (
-            <span className="w-7.5 h-7.5 rounded-lg bg-board text-p1-lip flex items-center justify-center shrink-0 ml-auto">
-              {glyph}
-            </span>
-          )}
-        </div>
-      ))}
-      <Button variant="cta" accent="ink" onClick={onClose}>
-        Got it
-      </Button>
+      {(close) => (
+        <>
+          <h2 className="font-extrabold text-lg text-ink-strong">Put it on your phone</h2>
+          <p className="text-body font-semibold text-ink -mt-2">
+            Safari can pin Shifty Type to your home screen — it opens like an app, notifies you
+            when it's your move, and llama games work with no wifi.
+          </p>
+          {steps.map(([n, copy, glyph]) => (
+            <div key={n} className="flex items-center gap-3">
+              <span className="w-6.5 h-6.5 rounded-full bg-p1-tint text-p1-tint-ink font-extrabold text-ui flex items-center justify-center shrink-0">
+                {n}
+              </span>
+              <p className="text-small font-bold text-ink">{copy}</p>
+              {glyph && (
+                <span className="w-7.5 h-7.5 rounded-lg bg-board text-p1-lip flex items-center justify-center shrink-0 ml-auto">
+                  {glyph}
+                </span>
+              )}
+            </div>
+          ))}
+          <Button variant="cta" accent="ink" onClick={close}>
+            Got it
+          </Button>
+        </>
+      )}
     </Sheet>
   )
 }
@@ -66,32 +70,36 @@ export function SafariHandoffSheet({ onClose }: { onClose: () => void }) {
   }
   return (
     <Sheet onClose={onClose}>
-      <h2 className="font-extrabold text-lg text-ink-strong">Safari does this bit</h2>
-      <p className="text-body font-semibold text-ink -mt-2">
-        This browser can't pin the game to your home screen. Hop over to Safari and the
-        home-screen steps will be waiting:
-      </p>
-      <a
-        href={safariHandoffUrl()}
-        className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5 flex items-center justify-center"
-      >
-        Open in Safari
-      </a>
-      <p className="text-body font-semibold text-ink">
-        If nothing happens, copy the link and paste it into Safari:
-      </p>
-      <p className="text-caption font-bold text-ink-strong bg-board rounded-xl px-3 py-2 break-all select-all">
-        {installLinkUrl()}
-      </p>
-      <button
-        onClick={copy}
-        className="h-11 rounded-xl font-extrabold text-p1-lip bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5"
-      >
-        {copied ? 'Copied!' : 'Copy the link'}
-      </button>
-      <Button variant="text" onClick={onClose}>
-        Done
-      </Button>
+      {(close) => (
+        <>
+          <h2 className="font-extrabold text-lg text-ink-strong">Safari does this bit</h2>
+          <p className="text-body font-semibold text-ink -mt-2">
+            This browser can't pin the game to your home screen. Hop over to Safari and the
+            home-screen steps will be waiting:
+          </p>
+          <a
+            href={safariHandoffUrl()}
+            className="h-13 rounded-2xl font-extrabold bg-p1 text-white shadow-[0_4px_0_var(--color-p1-lip)] active:translate-y-0.5 flex items-center justify-center"
+          >
+            Open in Safari
+          </a>
+          <p className="text-body font-semibold text-ink">
+            If nothing happens, copy the link and paste it into Safari:
+          </p>
+          <p className="text-caption font-bold text-ink-strong bg-board rounded-xl px-3 py-2 break-all select-all">
+            {installLinkUrl()}
+          </p>
+          <button
+            onClick={copy}
+            className="h-11 rounded-xl font-extrabold text-p1-lip bg-white shadow-[0_3px_0_#E2DDD3] active:translate-y-0.5"
+          >
+            {copied ? 'Copied!' : 'Copy the link'}
+          </button>
+          <Button variant="text" onClick={close}>
+            Done
+          </Button>
+        </>
+      )}
     </Sheet>
   )
 }
