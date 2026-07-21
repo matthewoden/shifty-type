@@ -2,7 +2,7 @@
 
 An async two-player word game about overlapping words and sneaky typos. Play it at **https://shifty-type.heymatthewoden.workers.dev** — no account, no install required (though the full feature set comes when you do the PWA install). Developed with claude while recovering in the hospital.
 
-https://github.com/user-attachments/assets/8b671593-f5ae-48b2-afd7-97da6855c588
+https://github.com/user-attachments/assets/d58945a9-824b-4b19-a05b-1b2d8038cfaa
 
 _A solo match against Lloyd ([source video](docs/demo.mp4))._
 
